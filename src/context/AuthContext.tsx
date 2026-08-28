@@ -25,19 +25,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const login = (usernameOrEmail: string, _password?: string, intendedRole?: Role): boolean => {
+  const login = (usernameOrEmail: string, password?: string, intendedRole?: Role): boolean => {
     const users = StorageService.getUsers();
     const cleanQuery = usernameOrEmail.trim().toLowerCase();
-    
-    // Find matching user by username or email
+    const cleanPassword = (password || '').trim();
+
+    // Strict Admin check
+    if (intendedRole === 'admin') {
+      if (cleanQuery !== 'admin@bitsathy.ac.in' || cleanPassword !== 'admin@1234') {
+        return false;
+      }
+      const adminUser = users.find((u) => u.role === 'admin' && u.email.toLowerCase() === 'admin@bitsathy.ac.in') || {
+        id: 'admin-root',
+        username: 'admin',
+        email: 'admin@bitsathy.ac.in',
+        name: 'Institutional Administrator',
+        role: 'admin' as Role,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        phone: '+91 (04295) 226000',
+        joinedDate: 'Jan 2018',
+        department: 'Central Academic Administration',
+        title: 'Chief Institutional Administrator',
+      };
+      StorageService.setCurrentUser(adminUser);
+      setUser(adminUser);
+      return true;
+    }
+
+    // Student & Teacher lookup
     let matched = users.find(
       (u) =>
-        u.username.toLowerCase() === cleanQuery ||
-        u.email.toLowerCase() === cleanQuery ||
-        (intendedRole && u.role === intendedRole && u.name.toLowerCase().includes(cleanQuery))
+        (u.username.toLowerCase() === cleanQuery || u.email.toLowerCase() === cleanQuery) &&
+        (!intendedRole || u.role === intendedRole)
     );
 
-    // If no exact match found, fall back to intended role default
     if (!matched && intendedRole) {
       matched = users.find((u) => u.role === intendedRole);
     }
@@ -45,14 +66,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (matched) {
       StorageService.setCurrentUser(matched);
       setUser(matched);
-      return true;
-    }
-
-    // Default to student Murat if no match found
-    const defaultStudent = users.find((u) => u.role === 'student') || users[0];
-    if (defaultStudent) {
-      StorageService.setCurrentUser(defaultStudent);
-      setUser(defaultStudent);
       return true;
     }
 
@@ -65,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = (userData: Partial<User>): boolean => {
-    const users = StorageService.getUsers();
     const newUser: User = {
       id: `user-${Date.now()}`,
       username: userData.username || `user_${Math.floor(Math.random() * 1000)}`,
@@ -76,7 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       avatar:
         userData.role === 'teacher'
           ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          : userData.role === 'admin'
+          ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
       joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
       ...userData,
     };

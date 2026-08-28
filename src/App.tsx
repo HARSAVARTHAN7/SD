@@ -6,7 +6,9 @@ import {
   Award,
   CalendarCheck,
   Calendar,
-  Users
+  Users,
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
@@ -15,6 +17,7 @@ import { Navbar } from './components/common/Navbar';
 import { ToastContainer } from './components/common/ToastContainer';
 import { StudentDashboard } from './components/student/StudentDashboard';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 
 // Student Portal Tabs
 const STUDENT_TABS = [
@@ -26,7 +29,7 @@ const STUDENT_TABS = [
   { id: 'timetable', label: 'Timetable', icon: Calendar },
 ];
 
-// Teacher Portal Tabs (Includes Monday to Saturday Timetable)
+// Teacher Portal Tabs
 const TEACHER_TABS = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'timetable', label: 'Timetable', icon: Calendar },
@@ -34,6 +37,15 @@ const TEACHER_TABS = [
   { id: 'courses', label: 'Courses & Classes', icon: BookOpen },
   { id: 'roster', label: 'Student Directory', icon: Users },
   { id: 'announcements', label: 'Notice Board', icon: Megaphone },
+];
+
+// Administrator Master Tabs
+const ADMIN_TABS = [
+  { id: 'overview', label: 'Master Overview', icon: LayoutDashboard },
+  { id: 'mentors', label: 'Mentor Allocation', icon: UserCheck },
+  { id: 'timetable', label: 'Master Timetable', icon: Calendar },
+  { id: 'directory', label: 'Faculty & Students', icon: Users },
+  { id: 'notices', label: 'Campus Broadcaster', icon: Megaphone },
 ];
 
 const MainApp: React.FC = () => {
@@ -53,7 +65,12 @@ const MainApp: React.FC = () => {
     );
   }
 
-  const activeTabs = role === 'student' ? STUDENT_TABS : TEACHER_TABS;
+  const activeTabs =
+    role === 'student'
+      ? STUDENT_TABS
+      : role === 'teacher'
+      ? TEACHER_TABS
+      : ADMIN_TABS;
 
   return (
     <div className="min-h-screen bg-[#F6F7FA] text-slate-800 flex flex-col justify-between">
@@ -69,8 +86,10 @@ const MainApp: React.FC = () => {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           {role === 'student' ? (
             <StudentDashboard currentTab={currentTab} />
-          ) : (
+          ) : role === 'teacher' ? (
             <TeacherDashboard currentTab={currentTab} />
+          ) : (
+            <AdminDashboard currentTab={currentTab} />
           )}
         </main>
       </div>

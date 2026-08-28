@@ -9,16 +9,33 @@ import {
 } from '../types';
 
 const STORAGE_KEYS = {
-  USERS: 'eduportal_users_v3',
-  COURSES: 'eduportal_courses_v3',
-  ATTENDANCE: 'eduportal_attendance_v3',
-  ANNOUNCEMENTS: 'eduportal_announcements_v3',
-  NOTIFICATIONS: 'eduportal_notifications_v3',
-  CURRENT_USER: 'eduportal_current_user_v3',
+  USERS: 'eduportal_users_v5',
+  COURSES: 'eduportal_courses_v5',
+  TIMETABLE: 'eduportal_timetable_v5',
+  ATTENDANCE: 'eduportal_attendance_v5',
+  ANNOUNCEMENTS: 'eduportal_announcements_v5',
+  NOTIFICATIONS: 'eduportal_notifications_v5',
+  CURRENT_USER: 'eduportal_current_user_v5',
 };
 
-// Seed default users
+// Seed default users including Admin and Faculty staff
 const DEFAULT_USERS: User[] = [
+  // System Administrator (admin@bitsathy.ac.in / admin@1234)
+  {
+    id: 'admin-root',
+    username: 'admin',
+    email: 'admin@bitsathy.ac.in',
+    password: 'admin@1234',
+    name: 'Institutional Administrator',
+    role: 'admin',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 (04295) 226000',
+    joinedDate: 'Jan 2018',
+    department: 'Central Academic Administration & Operations',
+    title: 'Chief Institutional Administrator',
+    employeeId: 'ADM-BIT-01',
+  },
+  // Student 1: Murat Gursoy
   {
     id: 'student-murat',
     username: 'MuratGursoy',
@@ -49,6 +66,7 @@ const DEFAULT_USERS: User[] = [
     guardianName: 'Selim Gürsoy',
     guardianContact: '+1 (555) 912-0044',
   },
+  // Teacher 1: Dr. Sarah Jenkins
   {
     id: 'teacher-sarah',
     username: 'SarahJenkins',
@@ -65,6 +83,41 @@ const DEFAULT_USERS: User[] = [
     employeeId: 'FAC-7742',
     officeHours: 'Mon & Thu 2:00 PM - 4:30 PM',
   },
+  // Teacher 2: Prof. Alan Cooper
+  {
+    id: 'teacher-alan',
+    username: 'AlanCooper',
+    email: 'alan.cooper@school.edu',
+    password: 'password123',
+    name: 'Prof. Alan Cooper',
+    role: 'teacher',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+    phone: '+1 (555) 819-3321',
+    joinedDate: 'Jul 2020',
+    department: 'Department of Computer Science & Engineering',
+    title: 'Associate Professor - Software Systems',
+    subjectsTaught: ['Advanced Computer Science', 'Data Structures', 'Database Systems'],
+    employeeId: 'FAC-8819',
+    officeHours: 'Tue & Fri 03:00 PM - 05:00 PM',
+  },
+  // Teacher 3: Prof. Elena Vance
+  {
+    id: 'teacher-elena',
+    username: 'ElenaVance',
+    email: 'elena.vance@school.edu',
+    password: 'password123',
+    name: 'Prof. Elena Vance',
+    role: 'teacher',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    phone: '+1 (555) 902-1144',
+    joinedDate: 'Jan 2021',
+    department: 'Department of Humanities & Rhetoric',
+    title: 'Faculty Lead - World Literature',
+    subjectsTaught: ['World Literature & Rhetoric', 'Critical Communication'],
+    employeeId: 'FAC-9021',
+    officeHours: 'Mon & Wed 01:00 PM - 03:00 PM',
+  },
+  // Student 2: Emma Watson
   {
     id: 'student-emma',
     username: 'EmmaWatson',
@@ -93,6 +146,7 @@ const DEFAULT_USERS: User[] = [
     gpa: 3.92,
     attendanceRate: 97.5,
   },
+  // Student 3: Lucas Vance
   {
     id: 'student-lucas',
     username: 'LucasVance',
@@ -107,9 +161,9 @@ const DEFAULT_USERS: User[] = [
     rollNo: '2024-420',
     semester: '5th Semester',
     department: 'Computer Science & Engineering',
-    mentorName: 'Dr. Sarah Jenkins',
-    mentorId: 'FAC-7742',
-    mentorPhone: '+1 (555) 782-9912',
+    mentorName: 'Prof. Alan Cooper',
+    mentorId: 'FAC-8819',
+    mentorPhone: '+1 (555) 819-3321',
     residenceType: 'Day Scholar',
     busRoute: 'Route #08 - South Bay Line',
     busNumber: 'BUS-019',
@@ -239,6 +293,18 @@ const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
   },
   {
     id: 'ann-2',
+    authorId: 'admin-root',
+    authorName: 'Institutional Administrator',
+    authorRole: 'Chief Institutional Administrator',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    title: '📢 Campus Master Schedule & Saturday Tutorial Timetable Activated',
+    content: 'The Central Academic Administration has officially enabled the Monday through Saturday master timetable. Day Scholar bus routes and Hostel room assignments have been synchronized.',
+    date: 'August 28, 2026',
+    priority: 'urgent',
+    targetCourse: 'All Students & Faculty',
+  },
+  {
+    id: 'ann-3',
     authorId: 'transport-office',
     authorName: 'Campus Transport Committee',
     authorRole: 'Transport Incharge',
@@ -251,7 +317,7 @@ const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
   },
 ];
 
-// Seed default timetable slots (including Saturday)
+// Seed default timetable slots (Monday to Saturday)
 export const DEFAULT_TIMETABLE: TimetableSlot[] = [
   // Monday
   { id: 't1', day: 'Monday', startTime: '09:00 AM', endTime: '10:15 AM', subject: 'AP Calculus BC', teacher: 'Dr. Sarah Jenkins', room: 'Room 304', color: 'bg-emerald-500/10 border-emerald-500 text-emerald-700' },
@@ -333,6 +399,9 @@ export const StorageService = {
     if (!localStorage.getItem(STORAGE_KEYS.COURSES)) {
       localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(DEFAULT_COURSES));
     }
+    if (!localStorage.getItem(STORAGE_KEYS.TIMETABLE)) {
+      localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(DEFAULT_TIMETABLE));
+    }
     if (!localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) {
       localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(DEFAULT_ATTENDANCE));
     }
@@ -347,6 +416,7 @@ export const StorageService = {
   resetDefaults() {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(DEFAULT_USERS));
     localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(DEFAULT_COURSES));
+    localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(DEFAULT_TIMETABLE));
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(DEFAULT_ATTENDANCE));
     localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(DEFAULT_ANNOUNCEMENTS));
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(DEFAULT_NOTIFICATIONS));
@@ -360,7 +430,7 @@ export const StorageService = {
 
   saveUser(user: User): void {
     const users = this.getUsers();
-    const existingIndex = users.findIndex((u) => u.id === user.id || u.username.toLowerCase() === user.username.toLowerCase());
+    const existingIndex = users.findIndex((u) => u.id === user.id || u.username.toLowerCase() === user.username.toLowerCase() || u.email.toLowerCase() === user.email.toLowerCase());
     if (existingIndex !== -1) {
       users[existingIndex] = { ...users[existingIndex], ...user };
     } else {
@@ -382,6 +452,71 @@ export const StorageService = {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     }
     notifyStoreUpdate();
+  },
+
+  // Timetable management for Admin and users
+  getTimetable(): TimetableSlot[] {
+    const data = localStorage.getItem(STORAGE_KEYS.TIMETABLE);
+    return data ? JSON.parse(data) : DEFAULT_TIMETABLE;
+  },
+
+  saveTimetable(slots: TimetableSlot[]): void {
+    localStorage.setItem(STORAGE_KEYS.TIMETABLE, JSON.stringify(slots));
+    notifyStoreUpdate();
+  },
+
+  addTimetableSlot(slot: Omit<TimetableSlot, 'id'>): TimetableSlot {
+    const list = this.getTimetable();
+    const newSlot: TimetableSlot = {
+      ...slot,
+      id: `slot-${Date.now()}`,
+    };
+    list.push(newSlot);
+    this.saveTimetable(list);
+    return newSlot;
+  },
+
+  updateTimetableSlot(slot: TimetableSlot): void {
+    const list = this.getTimetable();
+    const idx = list.findIndex((s) => s.id === slot.id);
+    if (idx !== -1) {
+      list[idx] = slot;
+      this.saveTimetable(list);
+    }
+  },
+
+  deleteTimetableSlot(id: string): void {
+    const list = this.getTimetable().filter((s) => s.id !== id);
+    this.saveTimetable(list);
+  },
+
+  // Mentor Assignment
+  assignMentorToStudent(studentId: string, mentorId: string, mentorName: string, mentorPhone: string): void {
+    const users = this.getUsers();
+    const st = users.find((u) => u.id === studentId || u.studentId === studentId);
+    if (st) {
+      st.mentorId = mentorId;
+      st.mentorName = mentorName;
+      st.mentorPhone = mentorPhone;
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+
+      // If current user is this student, sync session
+      const current = this.getCurrentUser();
+      if (current && current.id === st.id) {
+        this.setCurrentUser(st);
+      }
+
+      this.addNotification({
+        title: 'Mentor Assigned',
+        message: `Your academic mentor has been assigned as ${mentorName}.`,
+        timestamp: 'Just now',
+        read: false,
+        type: 'announcement',
+        roleTarget: 'student',
+      });
+
+      notifyStoreUpdate();
+    }
   },
 
   getCourses(): Course[] {

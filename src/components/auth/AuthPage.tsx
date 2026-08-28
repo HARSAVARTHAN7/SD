@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { User as UserIcon, Lock, Check, School, ArrowLeft, ArrowRight, GraduationCap, Briefcase } from 'lucide-react';
+import {
+  User as UserIcon,
+  Lock,
+  Check,
+  School,
+  ArrowLeft,
+  ArrowRight,
+  Shield,
+  ShieldAlert,
+  KeyRound,
+  AlertTriangle
+} from 'lucide-react';
 import { StudentIllustration } from '../illustrations/StudentIllustration';
 import { TeacherIllustration } from '../illustrations/TeacherIllustration';
 import { SignupModal } from './SignupModal';
@@ -12,8 +23,8 @@ export const AuthPage: React.FC = () => {
   const { login } = useAuth();
   const { showToast } = useApp();
 
-  // Screen State: 'select-role' | 'student-login' | 'teacher-login'
-  const [authStep, setAuthStep] = useState<'select-role' | 'student-login' | 'teacher-login'>('select-role');
+  // Screen State: 'select-role' | 'student-login' | 'teacher-login' | 'admin-login'
+  const [authStep, setAuthStep] = useState<'select-role' | 'student-login' | 'teacher-login' | 'admin-login'>('select-role');
 
   // Student Form State
   const [studentUsername, setStudentUsername] = useState('');
@@ -24,6 +35,11 @@ export const AuthPage: React.FC = () => {
   const [teacherUsername, setTeacherUsername] = useState('');
   const [teacherPassword, setTeacherPassword] = useState('');
   const [teacherRemember, setTeacherRemember] = useState(false);
+
+  // Admin Form State
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
 
   // Modals
   const [signupModalOpen, setSignupModalOpen] = useState(false);
@@ -54,6 +70,25 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  const handleAdminSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError('');
+
+    const cleanEmail = adminEmail.trim().toLowerCase();
+    const cleanPass = adminPassword.trim();
+
+    if (cleanEmail !== 'admin@bitsathy.ac.in' || cleanPass !== 'admin@1234') {
+      setAdminError('Access restricted: Only authorized institutional administrator (admin@bitsathy.ac.in) with valid key can login.');
+      showToast('Access Denied', 'Invalid administrator email or password.', 'error');
+      return;
+    }
+
+    const success = login(cleanEmail, cleanPass, 'admin');
+    if (success) {
+      showToast('Master Access Granted', 'Logged into Central Administrator Control Center.', 'success');
+    }
+  };
+
   const openSignUpFor = (role: Role) => {
     setSignupRole(role);
     setSignupModalOpen(true);
@@ -72,7 +107,20 @@ export const AuthPage: React.FC = () => {
           </h1>
         </div>
 
-        {authStep !== 'select-role' && (
+        {/* Right Corner Action: Admin Card / Back Button */}
+        {authStep === 'select-role' ? (
+          <button
+            onClick={() => {
+              setAuthStep('admin-login');
+              setAdminError('');
+            }}
+            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white font-bold text-xs shadow-lg hover:shadow-xl hover:scale-105 transition-all border border-slate-700/60 flex items-center gap-2 cursor-pointer group"
+            title="Institutional Administrator Login"
+          >
+            <Shield className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
+            <span>Admin</span>
+          </button>
+        ) : (
           <button
             onClick={() => setAuthStep('select-role')}
             className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 bg-white px-3.5 py-1.5 rounded-full border border-slate-200 shadow-xs transition-all hover:bg-slate-50 cursor-pointer"
@@ -111,7 +159,7 @@ export const AuthPage: React.FC = () => {
                     Student
                   </h3>
                   <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                    Access coursework, assignments, timetable, exam grades & attendance records.
+                    Access coursework, master timetable, notice board, GPA transcript & attendance records.
                   </p>
                 </div>
 
@@ -140,7 +188,7 @@ export const AuthPage: React.FC = () => {
                     Teacher
                   </h3>
                   <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                    Manage classes, create assignments, grade student submissions & roll-call attendance.
+                    Manage classes, timetable, student accommodation, notice circulars & roll-call attendance.
                   </p>
                 </div>
 
@@ -365,6 +413,131 @@ export const AuthPage: React.FC = () => {
                   className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                 >
                   ← Change role selection
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= STEP 4: ADMIN LOGIN PAGE ================= */}
+        {authStep === 'admin-login' && (
+          <div className="max-w-md mx-auto animate-fadeIn">
+            <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-2xl shadow-slate-400/20 border border-slate-200 flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div>
+                {/* Admin Icon & Badge */}
+                <div className="text-center pt-2 pb-4">
+                  <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-slate-900 to-indigo-900 text-amber-400 flex items-center justify-center mx-auto shadow-xl shadow-slate-900/20 mb-3">
+                    <ShieldAlert className="w-8 h-8" />
+                  </div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                    Institutional Control Center
+                  </span>
+                </div>
+
+                {/* Title & Subtitle */}
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                    Admin Login
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1.5 font-medium">
+                    Strictly for authorized institutional administrators
+                  </p>
+                </div>
+
+                {/* Admin Login Form */}
+                <form onSubmit={handleAdminSubmit} className="space-y-5 max-w-sm mx-auto">
+                  {/* Email Input */}
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                      Admin Email ID
+                    </label>
+                    <div className="relative flex items-center border border-slate-300 rounded-2xl bg-slate-50/70 px-3 py-2.5 focus-within:border-slate-800 focus-within:bg-white transition-all">
+                      <UserIcon className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                      <input
+                        type="email"
+                        required
+                        value={adminEmail}
+                        onChange={(e) => {
+                          setAdminEmail(e.target.value);
+                          setAdminError('');
+                        }}
+                        placeholder="admin@bitsathy.ac.in"
+                        className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Input */}
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                      Master Password
+                    </label>
+                    <div className="relative flex items-center border border-slate-300 rounded-2xl bg-slate-50/70 px-3 py-2.5 focus-within:border-slate-800 focus-within:bg-white transition-all">
+                      <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                      <input
+                        type="password"
+                        required
+                        value={adminPassword}
+                        onChange={(e) => {
+                          setAdminPassword(e.target.value);
+                          setAdminError('');
+                        }}
+                        placeholder="••••••••••••"
+                        className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Error Alert */}
+                  {adminError && (
+                    <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2 animate-fadeIn">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{adminError}</span>
+                    </div>
+                  )}
+
+                  {/* Quick Auto-Fill Demo Note */}
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-slate-800">Admin Authorization:</p>
+                      <p className="font-mono text-slate-500">admin@bitsathy.ac.in</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminEmail('admin@bitsathy.ac.in');
+                        setAdminPassword('admin@1234');
+                        setAdminError('');
+                      }}
+                      className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold text-[10px] cursor-pointer transition-colors"
+                    >
+                      Auto-Fill
+                    </button>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 hover:from-slate-800 hover:to-indigo-900 text-white font-bold text-sm shadow-xl shadow-slate-900/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <KeyRound className="w-4 h-4 text-amber-400" />
+                      <span>Access Admin Console</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Back Link */}
+              <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+                <button
+                  type="button"
+                  onClick={() => setAuthStep('select-role')}
+                  className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  ← Back to Selection
                 </button>
               </div>
             </div>
