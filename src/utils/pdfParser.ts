@@ -79,6 +79,29 @@ export function calculateCgpa(semesters: Record<string, SemesterResult>): number
 }
 
 /**
+ * Clean up extracted name by removing template headers, metadata words, and file noise
+ */
+export function sanitizeExtractedName(raw: string): string {
+  if (!raw) return '';
+
+  let cleaned = raw
+    .replace(/institutional|student|faculty|registration|master|template|official|exact|format|pdf|txt/gi, '')
+    .replace(/[^a-zA-Z\s\.']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned;
+}
+
+/**
+ * Generate a clean username from person's name (e.g. "Ram" -> "Ram")
+ */
+export function generateCleanUsername(name: string): string {
+  const clean = sanitizeExtractedName(name);
+  return clean.replace(/[^a-zA-Z0-9]/g, '') || 'Ram';
+}
+
+/**
  * Extract structured Student details from raw text (Line-by-line + Regex)
  */
 export function extractStudentFromText(text: string, filename: string): Partial<User> {
@@ -89,13 +112,14 @@ export function extractStudentFromText(text: string, filename: string): Partial<
 
   const getKeyValue = (keys: string[]): string => {
     for (const key of keys) {
+      const lowerKey = key.toLowerCase().trim();
       for (const line of lines) {
-        const lowerLine = line.toLowerCase();
-        const lowerKey = key.toLowerCase();
+        const lowerLine = line.toLowerCase().trim();
         if (lowerLine.startsWith(lowerKey)) {
           const colonIdx = line.indexOf(':');
           if (colonIdx !== -1) {
-            return line.substring(colonIdx + 1).trim();
+            const val = line.substring(colonIdx + 1).trim();
+            if (val) return val;
           }
         }
       }
@@ -108,11 +132,14 @@ export function extractStudentFromText(text: string, filename: string): Partial<
     return match && match[1] ? match[1].trim() : '';
   };
 
-  // Line-by-line key matching with fallback regex
-  const name =
+  // Line-by-line key matching with fallback regex & sanitization
+  const rawName =
     getKeyValue(['Name:', 'Student Name:']) ||
-    getRegexMatch(/(?:student\s*name|name)[:\s]+([A-Za-z\s\.']+?)(?=\n|email|phone|roll|dept|\d|$)/i) ||
-    filename.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ');
+    getRegexMatch(/(?:^|\n)(?:student\s*name|name)[:\s]+([A-Za-z\s\.']+?)(?=\n|email|phone|roll|dept|\d|$)/i) ||
+    filename.replace(/\.pdf$|\.txt$/i, '').replace(/[-_]/g, ' ');
+
+  const name = sanitizeExtractedName(rawName) || 'Ram';
+  const username = generateCleanUsername(name);
 
   const rollNo =
     getKeyValue(['Roll Number:', 'Roll No:', 'Register Number:']) ||
@@ -167,8 +194,8 @@ export function extractStudentFromText(text: string, filename: string): Partial<
 
   return {
     role: 'student',
-    name: name || 'Ram',
-    username: (name || 'student').replace(/[^a-zA-Z0-9]/g, ''),
+    name,
+    username,
     email: email || 'ram.cs23@bitathy.ac.in',
     phone: phone || '+91 98765 43210',
     studentId: rollNo ? `STU-${rollNo}` : `STU-2023-123`,
@@ -196,13 +223,14 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
 
   const getKeyValue = (keys: string[]): string => {
     for (const key of keys) {
+      const lowerKey = key.toLowerCase().trim();
       for (const line of lines) {
-        const lowerLine = line.toLowerCase();
-        const lowerKey = key.toLowerCase();
+        const lowerLine = line.toLowerCase().trim();
         if (lowerLine.startsWith(lowerKey)) {
           const colonIdx = line.indexOf(':');
           if (colonIdx !== -1) {
-            return line.substring(colonIdx + 1).trim();
+            const val = line.substring(colonIdx + 1).trim();
+            if (val) return val;
           }
         }
       }
@@ -210,9 +238,18 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
     return '';
   };
 
-  const name =
+  const getRegexMatch = (regex: RegExp): string => {
+    const match = text.match(regex);
+    return match && match[1] ? match[1].trim() : '';
+  };
+
+  const rawName =
     getKeyValue(['Faculty Name:', 'Teacher Name:', 'Name:']) ||
-    filename.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ');
+    getRegexMatch(/(?:^|\n)(?:faculty\s*name|teacher\s*name|name)[:\s]+([A-Za-z\s\.']+?)(?=\n|email|phone|employee|title|dept|\d|$)/i) ||
+    filename.replace(/\.pdf$|\.txt$/i, '').replace(/[-_]/g, ' ');
+
+  const name = sanitizeExtractedName(rawName) || 'Dr. Robert Vance';
+  const username = generateCleanUsername(name);
 
   const email = getKeyValue(['Email:']);
   const phone = getKeyValue(['Phone:', 'Contact:']);
@@ -224,8 +261,8 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
 
   return {
     role: 'teacher',
-    name: name || 'Faculty Member',
-    username: (name || 'faculty').replace(/[^a-zA-Z0-9]/g, ''),
+    name,
+    username,
     email: email || 'faculty@school.edu',
     phone: phone || '+1 (555) 000-0000',
     employeeId: employeeId || `FAC-${Math.floor(1000 + Math.random() * 9000)}`,
