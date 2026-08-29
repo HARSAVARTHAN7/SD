@@ -45,6 +45,7 @@ import { parsePdfText, extractStudentFromText, extractTeacherFromText, calculate
 
 interface AdminDashboardProps {
   currentTab: string;
+  onSelectTab?: (tab: string) => void;
 }
 
 // ── Blank student form ──────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ const blankTeacher = (): Partial<User> => ({
 // ── Helper to build a unique ID ─────────────────────────────────────────────
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSelectTab }) => {
   const { user } = useAuth();
   const {
     courses,
@@ -589,19 +590,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
           {/* Stat Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { label: 'Total Enrolled', value: `${students.length} Active Students`, sub: 'Semester 5 • 100% Retained', color: 'emerald', Icon: GraduationCap },
-              { label: 'Faculty Staff', value: `${teachers.length} Professors`, sub: 'Active Mentors & Chairs', color: 'purple', Icon: Users },
-              { label: 'Active Courses', value: `${courses.length} Subject Modules`, sub: 'AP Calculus, CS, Physics', color: 'sky', Icon: BookOpen },
-              { label: 'Timetable Slots', value: `${timetableSlots.length} Weekly Sessions`, sub: 'Mon - Sat Master Schedule', color: 'amber', Icon: Calendar },
-            ].map(({ label, value, sub, color, Icon }) => (
-              <div key={label} className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
+              { id: 'students', label: 'Total Enrolled', value: `${students.length} Active Students`, sub: 'Semester 5 • 100% Retained', color: 'emerald', Icon: GraduationCap },
+              { id: 'teachers', label: 'Faculty Staff', value: `${teachers.length} Professors`, sub: 'Active Mentors & Chairs', color: 'purple', Icon: Users },
+              { id: 'results', label: 'Result Publications', value: `${studentResults.length} Grade Reports`, sub: 'Auto SGPA/CGPA Cards', color: 'sky', Icon: BookOpen },
+              { id: 'timetable', label: 'Timetable Slots', value: `${timetableSlots.length} Weekly Sessions`, sub: 'Mon - Sat Master Schedule', color: 'amber', Icon: Calendar },
+            ].map(({ id, label, value, sub, color, Icon }) => (
+              <div
+                key={label}
+                onClick={() => {
+                  if (id === 'students') {
+                    setDirActiveTab('students');
+                    if (onSelectTab) onSelectTab('directory');
+                  } else if (id === 'teachers') {
+                    setDirActiveTab('teachers');
+                    if (onSelectTab) onSelectTab('directory');
+                  } else if (id === 'results') {
+                    if (onSelectTab) onSelectTab('results');
+                  } else if (id === 'timetable') {
+                    if (onSelectTab) onSelectTab('timetable');
+                  }
+                }}
+                className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all cursor-pointer group hover:border-slate-300"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-                  <div className={`w-10 h-10 rounded-2xl bg-${color}-50 text-${color}-600 flex items-center justify-center`}>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-700 transition-colors">{label}</span>
+                  <div className={`w-10 h-10 rounded-2xl bg-${color}-50 text-${color}-600 flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <Icon className="w-5 h-5" />
                   </div>
                 </div>
-                <p className="text-2xl font-extrabold text-slate-800 mt-3">{value}</p>
+                <p className="text-2xl font-extrabold text-slate-800 mt-3 flex items-center justify-between">
+                  {value}
+                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 group-hover:translate-x-1 transition-all" />
+                </p>
                 <p className={`text-xs text-${color}-600 font-semibold mt-1`}>{sub}</p>
               </div>
             ))}

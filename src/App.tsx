@@ -91,7 +91,7 @@ const MainApp: React.FC = () => {
           ) : role === 'teacher' ? (
             <TeacherDashboard currentTab={currentTab} />
           ) : (
-            <AdminDashboard currentTab={currentTab} />
+            <AdminDashboard currentTab={currentTab} onSelectTab={setCurrentTab} />
           )}
         </main>
       </div>
