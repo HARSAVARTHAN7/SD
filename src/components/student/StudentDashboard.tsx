@@ -50,6 +50,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   const [studentSelectedSemester, setStudentSelectedSemester] = useState<string>('Semester 5');
   const [showOfficialHallTicketModal, setShowOfficialHallTicketModal] = useState<boolean>(false);
   const [showPermanentRecordModal, setShowPermanentRecordModal] = useState<boolean>(false);
+  const [downloadSemModalOpen, setDownloadSemModalOpen] = useState<boolean>(false);
+  const [selectedDownloadSem, setSelectedDownloadSem] = useState<string>('Semester 5');
+  const [semDownloadError, setSemDownloadError] = useState<string | null>(null);
 
   // Attendance stats
   const myAttendanceRecords = attendance.filter((a) => a.studentId === user?.id);
@@ -466,7 +469,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => setShowPermanentRecordModal(true)}
+                onClick={() => {
+                  setSelectedDownloadSem(studentSelectedSemester);
+                  setSemDownloadError(null);
+                  setDownloadSemModalOpen(true);
+                }}
                 className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl font-extrabold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
               >
                 <Award className="w-4 h-4 text-slate-950" /> Download Permanent Record
@@ -476,13 +483,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                   if (myResultReport?.hallTicket && myResultReport.hallTicket.status === 'Issued') {
                     setShowOfficialHallTicketModal(true);
                   } else {
-                    showToast('Hall Ticket Pending', 'The official hall ticket has not been published by the admin yet.', 'warning');
+                    showToast('Hall Ticket Pending', 'The official hall ticket has not been published by the examination authority yet.', 'warning');
                   }
                 }}
                 className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-full font-bold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
-                title="Print official examination hall ticket"
+                title="View / Print official examination hall ticket"
               >
-                <Printer className="w-4 h-4 text-slate-600" /> Print Official Report
+                <Ticket className="w-4 h-4 text-slate-600" /> Hall Ticket
               </button>
             </div>
           </div>
@@ -1144,6 +1151,99 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Select Semester Result to Download */}
+      {downloadSemModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setDownloadSemModalOpen(false)}
+        >
+          <div
+            className="bg-white text-slate-900 rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-5 animate-scaleUp font-sans"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-amber-500">
+                <Award className="w-6 h-6" />
+                <h3 className="text-base font-extrabold text-slate-900">Select Semester to Download Result</h3>
+              </div>
+              <button
+                onClick={() => setDownloadSemModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <p className="text-slate-600 font-medium leading-relaxed">
+                Please select the target semester to verify publication status and generate your official grade transcript.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Select Academic Semester:
+                </label>
+                <select
+                  value={selectedDownloadSem}
+                  onChange={(e) => {
+                    setSelectedDownloadSem(e.target.value);
+                    setSemDownloadError(null);
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 cursor-pointer"
+                >
+                  {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => {
+                    const isPublished = Boolean(mySemesters[sem] && mySemesters[sem].grades && mySemesters[sem].grades.length > 0);
+                    return (
+                      <option key={sem} value={sem}>
+                        {sem} {isPublished ? '✓ (Results Published)' : '🔒 (Not Published)'}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {semDownloadError && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-800 text-xs font-semibold animate-fadeIn">
+                  <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span>{semDownloadError}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex items-center gap-3">
+              <button
+                onClick={() => setDownloadSemModalOpen(false)}
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const targetSemData = mySemesters[selectedDownloadSem];
+                  const isPublished = Boolean(targetSemData && targetSemData.grades && targetSemData.grades.length > 0);
+
+                  if (!isPublished) {
+                    const errorMsg = `Results Not Published: The official examination results for ${selectedDownloadSem} have not been published by the examination authority yet.`;
+                    setSemDownloadError(errorMsg);
+                    showToast('Results Not Published', `Official results for ${selectedDownloadSem} have not been published by the admin yet.`, 'error');
+                    return;
+                  }
+
+                  setStudentSelectedSemester(selectedDownloadSem);
+                  setSemDownloadError(null);
+                  setDownloadSemModalOpen(false);
+                  setShowPermanentRecordModal(true);
+                  showToast('Result Report Loaded', `Generated official permanent record for ${selectedDownloadSem}.`, 'success');
+                }}
+                className="flex-1 py-3 px-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg shadow-amber-400/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Award className="w-4 h-4" /> Download / View Report
+              </button>
             </div>
           </div>
         </div>
