@@ -8,7 +8,8 @@ import {
   Calendar,
   Users,
   UserCheck,
-  ShieldAlert
+  ShieldAlert,
+  KeyRound
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
@@ -25,7 +26,7 @@ const STUDENT_TABS = [
   { id: 'notices', label: 'Notice Board', icon: Megaphone },
   { id: 'courses', label: 'My Courses', icon: BookOpen },
   { id: 'grades', label: 'Grades & Report', icon: Award },
-  { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
+  { id: 'attendance', label: 'Attendance Register', icon: CalendarCheck },
   { id: 'timetable', label: 'Timetable', icon: Calendar },
 ];
 
@@ -43,6 +44,7 @@ const TEACHER_TABS = [
 // Administrator Master Tabs
 const ADMIN_TABS = [
   { id: 'overview', label: 'Master Overview', icon: LayoutDashboard },
+  { id: 'accounts', label: 'Account Management', icon: KeyRound },
   { id: 'mentors', label: 'Mentor Allocation', icon: UserCheck },
   { id: 'results', label: 'Result Publication', icon: Award },
   { id: 'timetable', label: 'Master Timetable', icon: Calendar },

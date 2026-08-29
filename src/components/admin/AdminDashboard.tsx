@@ -33,6 +33,7 @@ import {
   Award,
   Ticket,
   Printer,
+  KeyRound
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -133,6 +134,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const [slotRoom, setSlotRoom] = useState('');
   const [slotStartTime, setSlotStartTime] = useState('');
   const [slotEndTime, setSlotEndTime] = useState('');
+
+  // Account Management State
+  const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'student' | 'teacher'>('all');
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   // Mentor Assignment State
   const [assigningStudent, setAssigningStudent] = useState<User | null>(null);
@@ -637,6 +642,212 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ===== TAB: ACCOUNT MANAGEMENT (Password Change Requests) ===== */}
+      {currentTab === 'accounts' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <KeyRound className="w-7 h-7 text-indigo-600" /> Account Management Center
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Review and approve password change requests for Students & Faculty. Approving updates the password directly in the database.
+              </p>
+            </div>
+
+            {/* Role Filter Buttons */}
+            <div className="flex items-center gap-1.5 bg-slate-200/80 p-1.5 rounded-2xl">
+              <button
+                onClick={() => setAccountRoleFilter('all')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  accountRoleFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Requests ({changeRequests.filter((r) => r.description.includes('PASSWORD_RESET')).length})
+              </button>
+              <button
+                onClick={() => setAccountRoleFilter('student')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  accountRoleFilter === 'student' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Student Requests (
+                {
+                  changeRequests.filter(
+                    (r) => r.description.includes('PASSWORD_RESET') && (r.description.includes('Role=STUDENT') || r.teacherName === 'Student Account')
+                  ).length
+                }
+                )
+              </button>
+              <button
+                onClick={() => setAccountRoleFilter('teacher')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  accountRoleFilter === 'teacher' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Teacher Requests (
+                {
+                  changeRequests.filter(
+                    (r) => r.description.includes('PASSWORD_RESET') && (r.description.includes('Role=TEACHER') || r.teacherName === 'Teacher Account')
+                  ).length
+                }
+                )
+              </button>
+            </div>
+          </div>
+
+          {/* Requests List */}
+          <div className="space-y-4">
+            {(() => {
+              const resetRequests = changeRequests.filter((r) => {
+                const isReset = r.description.includes('PASSWORD_RESET');
+                if (!isReset) return false;
+                const isStudentReq = r.description.includes('Role=STUDENT') || r.teacherName === 'Student Account';
+                const isTeacherReq = r.description.includes('Role=TEACHER') || r.teacherName === 'Teacher Account';
+                if (accountRoleFilter === 'student') return isStudentReq;
+                if (accountRoleFilter === 'teacher') return isTeacherReq;
+                return true;
+              });
+
+              if (resetRequests.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-slate-800">No Pending Password Requests</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      All student and teacher password reset requests have been reviewed and updated in the database.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {resetRequests.map((req) => {
+                    // Extract email & new password from description
+                    let userEmail = req.studentName;
+                    let requestedNewPass = '';
+                    let isTeacherRole = req.description.includes('Role=TEACHER') || req.teacherName === 'Teacher Account';
+
+                    if (req.description.includes('Email=')) {
+                      const emailMatch = req.description.match(/Email=([^|]+)/);
+                      if (emailMatch) userEmail = emailMatch[1].trim();
+                    }
+                    if (req.description.includes('NewPassword=')) {
+                      const passMatch = req.description.match(/NewPassword=([^|]+)/);
+                      if (passMatch) requestedNewPass = passMatch[1].trim();
+                    }
+
+                    const isPassVisible = visiblePasswords[req.id] || false;
+
+                    return (
+                      <div
+                        key={req.id}
+                        className={`bg-white rounded-3xl p-6 border shadow-sm transition-all flex flex-col justify-between ${
+                          req.status === 'pending'
+                            ? isTeacherRole
+                              ? 'border-purple-200 bg-purple-50/20'
+                              : 'border-emerald-200 bg-emerald-50/20'
+                            : 'border-slate-200 opacity-60'
+                        }`}
+                      >
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`text-[10px] font-extrabold uppercase px-3 py-1 rounded-full ${
+                                isTeacherRole ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}
+                            >
+                              {isTeacherRole ? 'Teacher Account' : 'Student Account'}
+                            </span>
+                            <span className="text-xs text-slate-400 font-medium">{req.timestamp}</span>
+                          </div>
+
+                          <div>
+                            <p className="text-base font-extrabold text-slate-900">{req.studentName}</p>
+                            <p className="text-xs text-slate-500 font-mono mt-0.5">{userEmail}</p>
+                          </div>
+
+                          {requestedNewPass && (
+                            <div className="p-3 bg-slate-100/80 rounded-2xl border border-slate-200 flex items-center justify-between">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Requested New Password:</p>
+                                <p className="font-mono text-sm font-bold text-slate-900 mt-0.5">
+                                  {isPassVisible ? requestedNewPass : '••••••••••••'}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setVisiblePasswords((prev) => ({
+                                    ...prev,
+                                    [req.id]: !prev[req.id],
+                                  }))
+                                }
+                                className="p-2 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
+                                title={isPassVisible ? 'Hide Password' : 'Show Password'}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-slate-200/80 flex items-center gap-2">
+                          {req.status === 'pending' ? (
+                            <>
+                              <button
+                                onClick={() => {
+                                  // Update target user password in database
+                                  const targetUser = allUsers.find(
+                                    (u) =>
+                                      u.email.toLowerCase() === userEmail.toLowerCase() ||
+                                      u.username?.toLowerCase() === userEmail.toLowerCase() ||
+                                      u.name.toLowerCase() === req.studentName.toLowerCase() ||
+                                      u.rollNo?.toLowerCase() === userEmail.toLowerCase() ||
+                                      u.employeeId?.toLowerCase() === userEmail.toLowerCase()
+                                  );
+
+                                  if (targetUser && requestedNewPass) {
+                                    updateUser({
+                                      ...targetUser,
+                                      password: requestedNewPass,
+                                    });
+                                    showToast('Password Updated in Database', `Successfully updated password for ${targetUser.name} to '${requestedNewPass}'.`, 'success');
+                                  } else {
+                                    showToast('Request Approved', `Approved password change request for ${req.studentName}.`, 'success');
+                                  }
+
+                                  resolveChangeRequest(req.id);
+                                }}
+                                className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <CheckCircle2 className="w-4 h-4" /> Approve & Update Password
+                              </button>
+                              <button
+                                onClick={() => deleteChangeRequest(req.id)}
+                                className="px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+                              >
+                                Dismiss
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                              <CheckCircle2 className="w-4 h-4" /> Resolved & Password Updated
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
