@@ -121,21 +121,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    if (cleanQuery === 'ram.c23@bitsathy.ac.in' || cleanQuery === 'ram.c23' || cleanQuery === 'ram') {
+    if (
+      cleanQuery === 'ram.cs23@bitathy.ac.in' ||
+      cleanQuery === 'ram.c23@bitsathy.ac.in' ||
+      cleanQuery === 'ram.c23' ||
+      cleanQuery === 'ram.cs23' ||
+      cleanQuery === '2023-123' ||
+      cleanQuery === 'ram'
+    ) {
       if (cleanPass === '12345678' || cleanPass === 'password123') {
         const ramUser: User = {
           id: 'student-ram',
-          username: 'ram.c23',
-          email: 'ram.c23@bitsathy.ac.in',
-          password: '12345678',
-          name: 'Ram C',
+          username: 'ram.cs23',
+          email: 'ram.cs23@bitathy.ac.in',
+          password: 'password123',
+          name: 'Ram',
           role: 'student',
           avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-          joinedDate: 'Sep 2024',
+          joinedDate: 'Sep 2023',
           department: 'Computer Science & Engineering',
-          studentId: 'STU-2024-C23',
-          rollNo: '2024-C23',
-          semester: '5th Semester',
+          studentId: 'STU-2023-123',
+          rollNo: '2023-123',
+          semester: 'Semester 5',
           gpa: 3.88,
           attendanceRate: 95.5,
         };

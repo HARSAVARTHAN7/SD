@@ -85,6 +85,93 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const INITIAL_DEFAULT_USERS: User[] = [
+  {
+    id: 'admin-root',
+    username: 'admin',
+    email: 'admin@bitsathy.ac.in',
+    password: 'admin@1234',
+    name: 'Institutional Administrator',
+    role: 'admin',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 (04295) 226000',
+    joinedDate: 'Jan 2018',
+    department: 'Central Academic Administration',
+    title: 'Chief Institutional Administrator',
+    employeeId: 'ADM-BIT-01',
+    isBlocked: false,
+    status: 'active',
+  },
+  {
+    id: 'student-ram',
+    username: 'ram.cs23',
+    email: 'ram.cs23@bitathy.ac.in',
+    password: 'password123',
+    name: 'Ram',
+    role: 'student',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 (04295) 226010',
+    joinedDate: 'Sep 2023',
+    studentId: 'STU-2023-123',
+    rollNo: '2023-123',
+    semester: 'Semester 5',
+    department: 'Computer Science & Engineering',
+    gpa: 3.88,
+    attendanceRate: 95.5,
+    isBlocked: false,
+    status: 'active',
+  },
+  {
+    id: 'student-demo',
+    username: 'student',
+    email: 'student@bitsathy.ac.in',
+    password: 'password123',
+    name: 'BIT Sathy Student',
+    role: 'student',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 (04295) 226001',
+    joinedDate: 'Sep 2024',
+    studentId: 'STU-2024-001',
+    rollNo: '2024-001',
+    semester: 'Semester 5',
+    department: 'Computer Science & Engineering',
+    gpa: 3.90,
+    attendanceRate: 96.0,
+    isBlocked: false,
+    status: 'active',
+  },
+  {
+    id: 'teacher-priya',
+    username: 'priya.sharma',
+    email: 'faculty@school.edu',
+    password: 'password123',
+    name: 'Teacher Dr Priya Sharma',
+    role: 'teacher',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    joinedDate: 'Aug 2020',
+    department: 'Department of Computer Science',
+    title: 'Professor & Department Chair',
+    employeeId: 'FAC-8989',
+    isBlocked: false,
+    status: 'active',
+  },
+  {
+    id: 'teacher-sarah',
+    username: 'teacher',
+    email: 'teacher@bitsathy.ac.in',
+    password: 'password123',
+    name: 'Dr. Sarah Jenkins',
+    role: 'teacher',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    joinedDate: 'Aug 2019',
+    department: 'Department of Computer Science & Mathematics',
+    title: 'Senior Professor',
+    employeeId: 'FAC-7742',
+    isBlocked: false,
+    status: 'active',
+  },
+];
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, role } = useAuth();
 
@@ -95,10 +182,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [allUsers, setAllUsers] = useState<User[]>(() => {
     try {
       const saved = localStorage.getItem('eduportal_all_users');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved users:', e);
     }
+    return INITIAL_DEFAULT_USERS;
   });
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>([]);
@@ -214,12 +307,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (user) {
       refreshData();
     } else {
-      // Reset state on logout
+      // Reset non-persistent data on logout, keep allUsers persisted in localStorage!
       setCourses([]);
       setAttendance([]);
       setAnnouncements([]);
       setNotifications([]);
-      setAllUsers([]);
       setChangeRequests([]);
       setStudentResults([]);
       setTimetable([]);
