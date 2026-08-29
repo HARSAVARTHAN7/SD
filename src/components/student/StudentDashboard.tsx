@@ -24,7 +24,8 @@ import {
   Megaphone,
   Bell,
   Search,
-  Tag
+  Tag,
+  Ticket
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
@@ -44,6 +45,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
   const [noticeSearch, setNoticeSearch] = useState<string>('');
   const [broadcastFilter, setBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
+  const [studentSelectedSemester, setStudentSelectedSemester] = useState<string>('Semester 5');
 
   // Attendance stats
   const myAttendanceRecords = attendance.filter((a) => a.studentId === user?.id);
@@ -55,8 +57,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   const myResultReport = studentResults.find(
     (r) => r.studentId === user?.id || (r.rollNo && r.rollNo === user?.rollNo) || (r.studentName && r.studentName.toLowerCase() === user?.name?.toLowerCase())
   );
-  const myGrades = myResultReport ? myResultReport.grades : DEFAULT_STUDENT_GRADES;
-  const displayGpa = myResultReport ? myResultReport.gpa : (user?.gpa || 3.85);
+  const mySemesters = myResultReport?.semesters || {};
+  const currentSemData = mySemesters[studentSelectedSemester];
+  const myGrades = currentSemData ? currentSemData.grades : DEFAULT_STUDENT_GRADES;
+  const displaySgpa = currentSemData ? currentSemData.sgpa : 3.85;
+  const displayCgpa = myResultReport ? myResultReport.cgpa : (user?.gpa || 3.85);
 
   // Chart data for grades
   const gradeChartData = myGrades.map((g) => ({
@@ -445,8 +450,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
         <div className="space-y-8 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Academic Transcript & Grades</h2>
-              <p className="text-xs text-slate-500 mt-1">Official performance breakdown and cumulative GPA record.</p>
+              <h2 className="text-2xl font-bold text-slate-800">Academic Transcript & Examination Portal</h2>
+              <p className="text-xs text-slate-500 mt-1">Official semester grade cards, SGPA/CGPA records, and issued hall tickets.</p>
             </div>
             <button
               onClick={() => window.print()}
@@ -456,45 +461,84 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
             </button>
           </div>
 
+          {/* Semester Selector Buttons (Semester 1 - 8) */}
+          <div className="flex items-center gap-2 p-1.5 bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-x-auto">
+            {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+              <button
+                key={sem}
+                onClick={() => setStudentSelectedSemester(sem)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  studentSelectedSemester === sem
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-emerald-700 hover:bg-emerald-50'
+                }`}
+              >
+                {sem}
+              </button>
+            ))}
+          </div>
+
+          {/* Hall Ticket Card (If Issued) */}
+          {myResultReport?.hallTicket && (
+            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-lg border border-purple-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black">
+                  <Ticket className="w-7 h-7" />
+                </div>
+                <div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-extrabold text-[10px] uppercase tracking-wider border border-emerald-400/30">
+                    Official Hall Ticket Issued
+                  </span>
+                  <h3 className="text-lg font-extrabold text-white mt-1">Exam Hall Ticket: {myResultReport.hallTicket.hallTicketNo}</h3>
+                  <p className="text-xs text-purple-200 mt-0.5">{myResultReport.hallTicket.examCenter} • {myResultReport.hallTicket.seatNo}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] text-slate-400 block font-semibold">Scheduled Examination Window</span>
+                <span className="text-xs font-extrabold text-amber-300">{myResultReport.hallTicket.examDates}</span>
+              </div>
+            </div>
+          )}
+
           {/* GPA Card Banner */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xl">
-                {displayGpa.toFixed(2)}
+                {displaySgpa.toFixed(2)}
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumulative GPA</p>
-                <p className="text-base font-extrabold text-slate-800">{myResultReport ? myResultReport.semester : 'Semester 5 Standing'}</p>
-                <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Scale: 4.0 Max</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl">
-                21
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Credits</p>
-                <p className="text-base font-extrabold text-slate-800">All Passed</p>
-                <p className="text-[11px] text-blue-600 font-semibold mt-0.5">100% Course Completion</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Semester SGPA</p>
+                <p className="text-base font-extrabold text-slate-800">{studentSelectedSemester}</p>
+                <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Auto-Calculated Scale: 4.0</p>
               </div>
             </div>
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-xl">
-                A
+                {displayCgpa.toFixed(2)}
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Average Grade</p>
-                <p className="text-base font-extrabold text-slate-800">Published Result Card</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumulative CGPA</p>
+                <p className="text-base font-extrabold text-slate-800">Across Published Semesters</p>
                 <p className="text-[11px] text-purple-600 font-semibold mt-0.5">Verified Academic Record</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl">
+                {currentSemData?.status === 'Pass' ? 'PASS' : 'FAIL'}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Result Status</p>
+                <p className="text-base font-extrabold text-slate-800">{currentSemData ? currentSemData.status : 'Cleared'}</p>
+                <p className="text-[11px] text-blue-600 font-semibold mt-0.5">Institutional Evaluation</p>
               </div>
             </div>
           </div>
 
           {/* Performance Bar Chart */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
-            <h3 className="text-base font-bold text-slate-800 mb-6">Subject Performance Analysis (%)</h3>
+            <h3 className="text-base font-bold text-slate-800 mb-6">Subject Performance Analysis (%) ({studentSelectedSemester})</h3>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={gradeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -513,7 +557,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
           {/* Official Grade Table */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-sm">Subject Marks & Faculty Remarks</h3>
+              <h3 className="font-bold text-slate-800 text-sm">Subject Marks & Faculty Remarks ({studentSelectedSemester})</h3>
               {myResultReport && (
                 <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
                   Published: {myResultReport.publishedDate}

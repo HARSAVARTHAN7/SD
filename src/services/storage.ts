@@ -701,7 +701,7 @@ export const StorageService = {
     const users = this.getUsers();
     const st = users.find((u) => u.id === report.studentId || u.studentId === report.studentId || u.rollNo === report.rollNo);
     if (st) {
-      st.gpa = report.gpa;
+      st.gpa = report.cgpa;
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     }
 
@@ -721,40 +721,98 @@ export const DEFAULT_RESULTS: StudentResultReport[] = [
     studentId: 'student-murat',
     studentName: 'Murat Gürsoy',
     rollNo: '2024-418',
-    semester: '5th Semester',
-    gpa: 3.85,
+    department: 'Computer Science & Engineering',
+    currentSemester: 'Semester 5',
+    cgpa: 3.85,
     publishedDate: 'August 28, 2026',
     academicYear: '2024 - 2028',
-    grades: DEFAULT_STUDENT_GRADES,
+    hallTicket: {
+      hallTicketNo: 'HT-2026-4189',
+      examCenter: 'Central Engineering Hall (Block A)',
+      seatNo: 'Seat A-14',
+      examDates: 'Sept 15 - Sept 25, 2026',
+      status: 'Issued',
+    },
+    semesters: {
+      'Semester 1': {
+        semester: 'Semester 1',
+        sgpa: 3.80,
+        status: 'Pass',
+        grades: [
+          { courseId: 'c101', courseName: 'Engineering Mathematics I', courseCode: 'MATH-101', credits: 4, gradeLetter: 'A', percentage: 94, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Excellent foundation.' },
+          { courseId: 'c102', courseName: 'Basic Programming', courseCode: 'CS-101', credits: 3, gradeLetter: 'A+', percentage: 97, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Top performer.' },
+        ],
+      },
+      'Semester 5': {
+        semester: 'Semester 5',
+        sgpa: 3.85,
+        status: 'Pass',
+        grades: [
+          { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A', percentage: 96, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'High proficiency demonstrated.' },
+          { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A-', percentage: 92, gpaPoint: 3.7, teacherName: 'Dr. Sarah Jenkins', remarks: 'Good analytical skills.' },
+          { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Excellent project work.' },
+        ],
+      },
+    },
   },
   {
     id: 'res-student-emma',
     studentId: 'student-emma',
     studentName: 'Emma Watson',
     rollNo: '2024-419',
-    semester: '5th Semester',
-    gpa: 3.92,
+    department: 'Computer Science & Engineering',
+    currentSemester: 'Semester 5',
+    cgpa: 3.92,
     publishedDate: 'August 28, 2026',
     academicYear: '2024 - 2028',
-    grades: [
-      { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Outstanding performance.' },
-      { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A', percentage: 95, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Excellent lab execution.' },
-      { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A', percentage: 94, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Great algorithm design.' },
-    ],
+    hallTicket: {
+      hallTicketNo: 'HT-2026-4190',
+      examCenter: 'Central Engineering Hall (Block B)',
+      seatNo: 'Seat B-08',
+      examDates: 'Sept 15 - Sept 25, 2026',
+      status: 'Issued',
+    },
+    semesters: {
+      'Semester 5': {
+        semester: 'Semester 5',
+        sgpa: 3.92,
+        status: 'Pass',
+        grades: [
+          { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Outstanding performance.' },
+          { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A', percentage: 95, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Excellent lab execution.' },
+          { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A', percentage: 94, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Great algorithm design.' },
+        ],
+      },
+    },
   },
   {
     id: 'res-student-lucas',
     studentId: 'student-lucas',
     studentName: 'Lucas Vance',
     rollNo: '2024-420',
-    semester: '5th Semester',
-    gpa: 3.65,
+    department: 'Computer Science & Engineering',
+    currentSemester: 'Semester 5',
+    cgpa: 3.45,
     publishedDate: 'August 28, 2026',
     academicYear: '2024 - 2028',
-    grades: [
-      { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'B+', percentage: 87, gpaPoint: 3.3, teacherName: 'Dr. Sarah Jenkins', remarks: 'Good progress in calculus.' },
-      { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A-', percentage: 91, gpaPoint: 3.7, teacherName: 'Prof. Alan Cooper', remarks: 'Strong programming skills.' },
-    ],
+    hallTicket: {
+      hallTicketNo: 'HT-2026-4201',
+      examCenter: 'Central Hall (Block C)',
+      seatNo: 'Seat C-22',
+      examDates: 'Sept 15 - Sept 25, 2026',
+      status: 'Issued',
+    },
+    semesters: {
+      'Semester 5': {
+        semester: 'Semester 5',
+        sgpa: 3.45,
+        status: 'Fail',
+        grades: [
+          { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'F', percentage: 42, gpaPoint: 0.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Needs re-examination.' },
+          { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A-', percentage: 91, gpaPoint: 3.7, teacherName: 'Prof. Alan Cooper', remarks: 'Strong programming skills.' },
+        ],
+      },
+    },
   },
 ];
 

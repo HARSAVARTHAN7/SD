@@ -25,6 +25,7 @@ import {
   Save,
   MessageSquarePlus,
   Send,
+  Ticket,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -53,6 +54,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
   const [postAnnModalOpen, setPostAnnModalOpen] = useState(false);
   const [rosterSearch, setRosterSearch] = useState('');
   const [resultSearch, setResultSearch] = useState('');
+  const [teacherSelectedSemester, setTeacherSelectedSemester] = useState<string>('Semester 5');
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
 
   // Editing student accommodation state
@@ -630,7 +632,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Academic Results & Performance</h2>
-              <p className="text-xs text-slate-500 mt-1">Review official published result cards and grade breakdowns for your mentored students (View-Only).</p>
+              <p className="text-xs text-slate-500 mt-1">Review official published result cards, hall tickets, and grade breakdowns for your mentored students (View-Only).</p>
             </div>
 
             <div className="relative max-w-xs w-full">
@@ -645,51 +647,94 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
             </div>
           </div>
 
+          {/* Semester Selector Buttons (Semester 1 - 8) */}
+          <div className="flex items-center gap-2 p-1.5 bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-x-auto">
+            {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+              <button
+                key={sem}
+                onClick={() => setTeacherSelectedSemester(sem)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  teacherSelectedSemester === sem
+                    ? 'bg-purple-700 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-purple-700 hover:bg-purple-50'
+                }`}
+              >
+                {sem}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {studentResults
               .filter(
                 (r) =>
-                  r.studentName.toLowerCase().includes(resultSearch.toLowerCase()) ||
-                  r.rollNo.toLowerCase().includes(resultSearch.toLowerCase())
+                  r.semesters &&
+                  r.semesters[teacherSelectedSemester] &&
+                  (r.studentName.toLowerCase().includes(resultSearch.toLowerCase()) ||
+                    r.rollNo.toLowerCase().includes(resultSearch.toLowerCase()))
               )
-              .map((res) => (
-                <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
-                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center font-extrabold text-sm">
-                        <Award className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
-                        <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {res.semester}</p>
-                        <p className="text-[10px] text-slate-400">Published: {res.publishedDate}</p>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-xs text-slate-400 uppercase font-bold tracking-wider block">GPA</span>
-                      <span className="text-2xl font-black text-purple-900">{res.gpa?.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Grade Breakdown</p>
-                    <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
-                      {res.grades.map((g) => (
-                        <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
-                          <div>
-                            <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
-                            <p className="text-[10px] text-slate-500">{g.remarks}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className="px-2.5 py-0.5 rounded-md font-extrabold bg-purple-100 text-purple-800 text-xs">{g.gradeLetter} ({g.percentage}%)</span>
-                          </div>
+              .map((res) => {
+                const semData = res.semesters[teacherSelectedSemester];
+                return (
+                  <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
+                    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center font-extrabold text-sm">
+                          <Award className="w-6 h-6" />
                         </div>
-                      ))}
+                        <div>
+                          <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
+                          <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {teacherSelectedSemester}</p>
+                          <p className="text-[10px] text-slate-400">Published: {res.publishedDate}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="flex items-center justify-end mb-1">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase ${
+                            semData?.status === 'Pass' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {semData?.status || 'Pass'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">SGPA: <span className="text-slate-900 font-extrabold">{semData?.sgpa?.toFixed(2)}</span></p>
+                        <p className="text-xs text-purple-700 uppercase font-bold tracking-wider">CGPA: <span className="font-black text-purple-900">{res.cgpa?.toFixed(2)}</span></p>
+                      </div>
+                    </div>
+
+                    {/* Hall Ticket Info */}
+                    {res.hallTicket && (
+                      <div className="p-2.5 bg-purple-50/80 border border-purple-200/80 rounded-xl flex items-center justify-between text-xs">
+                        <span className="font-bold text-purple-900 flex items-center gap-1.5">
+                          <Ticket className="w-3.5 h-3.5 text-purple-600" /> Hall Ticket Issued:
+                        </span>
+                        <span className="font-mono text-purple-800 font-bold">{res.hallTicket.hallTicketNo} ({res.hallTicket.seatNo})</span>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Grade Breakdown ({teacherSelectedSemester})</p>
+                      <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
+                        {semData?.grades.map((g) => (
+                          <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
+                            <div>
+                              <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
+                              <p className="text-[10px] text-slate-500">{g.remarks}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className={`px-2.5 py-0.5 rounded-md font-extrabold text-xs ${
+                                g.gradeLetter === 'F' || g.percentage < 50 ? 'bg-rose-100 text-rose-800' : 'bg-purple-100 text-purple-800'
+                              }`}>
+                                {g.gradeLetter} ({g.percentage}%)
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
       )}

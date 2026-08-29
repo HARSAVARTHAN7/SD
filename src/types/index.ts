@@ -127,14 +127,31 @@ export interface ChangeRequest {
   timestamp: string;
 }
 
+export interface SemesterResult {
+  semester: string;
+  sgpa: number;
+  status: 'Pass' | 'Fail';
+  grades: GradeItem[];
+}
+
+export interface HallTicketInfo {
+  hallTicketNo: string;
+  examCenter: string;
+  seatNo: string;
+  examDates: string;
+  status: 'Issued' | 'Pending';
+}
+
 export interface StudentResultReport {
   id: string;
   studentId: string;
   studentName: string;
   rollNo: string;
-  semester: string;
-  gpa: number;
+  department?: string;
+  currentSemester: string;
+  cgpa: number;
   publishedDate: string;
   academicYear: string;
-  grades: GradeItem[];
+  semesters: Record<string, SemesterResult>;
+  hallTicket?: HallTicketInfo;
 }

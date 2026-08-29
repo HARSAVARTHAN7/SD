@@ -31,6 +31,7 @@ import {
   ImageOff,
   Download,
   Award,
+  Ticket,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -39,7 +40,7 @@ import { User, TimetableSlot, ChangeRequest, StudentResultReport, GradeItem } fr
 import { StudentDashboard } from '../student/StudentDashboard';
 import { TeacherDashboard } from '../teacher/TeacherDashboard';
 import { PostAnnouncementModal } from '../teacher/PostAnnouncementModal';
-import { parsePdfText, extractStudentFromText, extractTeacherFromText, downloadTemplatePdf, downloadOverallResultsPdfTemplate } from '../../utils/pdfParser';
+import { parsePdfText, extractStudentFromText, extractTeacherFromText, calculateSgpa, calculateCgpa, downloadTemplatePdf } from '../../utils/pdfParser';
 
 interface AdminDashboardProps {
   currentTab: string;
@@ -146,9 +147,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
   const [roomNumber, setRoomNumber] = useState('');
 
   // Results & Publication State
+  const [selectedSemesterTab, setSelectedSemesterTab] = useState<string>('Semester 5');
   const [resultSearchQuery, setResultSearchQuery] = useState('');
   const [editingResultReport, setEditingResultReport] = useState<StudentResultReport | null>(null);
   const pdfResultsInputRef = useRef<HTMLInputElement>(null);
+  const pdfHallTicketInputRef = useRef<HTMLInputElement>(null);
 
   // ── Directory State ────────────────────────────────────────────────────────
   const [studentSearch, setStudentSearch] = useState('');
@@ -173,6 +176,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
   const pdfStudentInputRef = useRef<HTMLInputElement>(null);
   const pdfTeacherInputRef = useRef<HTMLInputElement>(null);
 
+  const handleHallTicketPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    showToast('Parsing Hall Tickets PDF...', `Issuing examination hall tickets from ${file.name}`, 'info');
+    const studentList = allUsers.filter((u) => u.role === 'student');
+
+    studentList.forEach((st, idx) => {
+      const existing = studentResults.find((r) => r.studentId === st.id || r.rollNo === st.rollNo) || {
+        id: `res-${st.id}`,
+        studentId: st.id,
+        studentName: st.name,
+        rollNo: st.rollNo || '2024-418',
+        department: st.department || 'Computer Science & Engineering',
+        currentSemester: st.semester || 'Semester 5',
+        cgpa: st.gpa || 3.85,
+        publishedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        academicYear: '2024 - 2028',
+        semesters: {},
+      };
+
+      const updatedReport: StudentResultReport = {
+        ...existing,
+        hallTicket: {
+          hallTicketNo: `HT-2026-${st.rollNo || (4180 + idx)}`,
+          examCenter: `Main Academic Examination Complex (Block ${String.fromCharCode(65 + (idx % 3))})`,
+          seatNo: `Seat ${String.fromCharCode(65 + (idx % 3))}-${10 + idx}`,
+          examDates: 'Sept 15 - Sept 25, 2026',
+          status: 'Issued',
+        },
+      };
+
+      saveStudentResult(updatedReport);
+    });
+
+    showToast('Hall Tickets Published!', `Issued official examination hall tickets to all enrolled students.`, 'success');
+    e.target.value = '';
+  };
+
   const handleOverallPdfResultsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -180,37 +222,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
     showToast('Parsing Master Results PDF...', `Reading grade cards from ${file.name}`, 'info');
     const rawText = await parsePdfText(file);
 
-    // Extract student matching entries from PDF text
     const studentList = allUsers.filter((u) => u.role === 'student');
     let publishedCount = 0;
 
     studentList.forEach((st) => {
-      // If PDF text mentions student's name or roll number, or auto-assign result report
       const matchesName = st.name.toLowerCase().split(' ').some((part) => part.length > 2 && rawText.toLowerCase().includes(part.toLowerCase()));
       const matchesRoll = st.rollNo && rawText.includes(st.rollNo);
 
       if (matchesName || matchesRoll || studentList.length <= 5) {
+        const sampleGrades: GradeItem[] = [
+          { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A', percentage: 96, gpaPoint: 4.0, teacherName: st.mentorName || 'Dr. Sarah Jenkins', remarks: 'High proficiency demonstrated.' },
+          { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A-', percentage: 92, gpaPoint: 3.7, teacherName: 'Dr. Sarah Jenkins', remarks: 'Good analytical skills.' },
+          { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Excellent project work.' },
+        ];
+
+        const { sgpa, status } = calculateSgpa(sampleGrades);
+
+        const existingReport = studentResults.find((r) => r.studentId === st.id || r.rollNo === st.rollNo);
+        const updatedSemesters = {
+          ...(existingReport?.semesters || {}),
+          [selectedSemesterTab]: {
+            semester: selectedSemesterTab,
+            sgpa,
+            status,
+            grades: sampleGrades,
+          },
+        };
+
+        const cgpa = calculateCgpa(updatedSemesters);
+
         const report: StudentResultReport = {
-          id: `res-${st.id}`,
+          id: existingReport?.id || `res-${st.id}`,
           studentId: st.id,
           studentName: st.name,
           rollNo: st.rollNo || st.studentId || '2024-418',
-          semester: st.semester || '5th Semester',
-          gpa: st.gpa || 3.85,
+          department: st.department || 'Computer Science & Engineering',
+          currentSemester: selectedSemesterTab,
+          cgpa,
           publishedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           academicYear: st.academicYear || '2024 - 2028',
-          grades: [
-            { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A', percentage: 96, gpaPoint: 4.0, teacherName: st.mentorName || 'Dr. Sarah Jenkins', remarks: 'High proficiency demonstrated.' },
-            { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A-', percentage: 92, gpaPoint: 3.7, teacherName: 'Dr. Sarah Jenkins', remarks: 'Good analytical skills.' },
-            { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Excellent project work.' },
-          ],
+          semesters: updatedSemesters,
+          hallTicket: existingReport?.hallTicket,
         };
         saveStudentResult(report);
         publishedCount++;
       }
     });
 
-    showToast('Results Published!', `Published academic results to ${publishedCount} student portal(s).`, 'success');
+    showToast('Results Published!', `Published ${selectedSemesterTab} academic results to ${publishedCount} student portal(s).`, 'success');
     e.target.value = '';
   };
 
@@ -612,21 +671,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
       {/* ===== TAB: RESULT PUBLICATION CENTER ===== */}
       {currentTab === 'results' && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Result Publication Center</h2>
-              <p className="text-xs text-slate-500 mt-1">Upload overall PDF result cards and publish individual report cards to student & mentor portals.</p>
+              <h2 className="text-2xl font-bold text-slate-800">Result & Hall Ticket Publication Center</h2>
+              <p className="text-xs text-slate-500 mt-1">Publish semester result grade cards, issue exam hall tickets, and review pass/fail analytics.</p>
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={() => downloadOverallResultsPdfTemplate()}
-                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Download printable master results PDF template"
-              >
-                <Download className="w-4 h-4 text-amber-600" /> Download PDF Template
-              </button>
-
+            <div className="flex flex-wrap items-center gap-2.5">
               <input
                 type="file"
                 ref={pdfResultsInputRef}
@@ -634,16 +685,90 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                 onChange={handleOverallPdfResultsUpload}
                 className="hidden"
               />
+              <input
+                type="file"
+                ref={pdfHallTicketInputRef}
+                accept=".pdf"
+                onChange={handleHallTicketPdfUpload}
+                className="hidden"
+              />
 
               <button
                 onClick={() => pdfResultsInputRef.current?.click()}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <FileUp className="w-4 h-4 text-amber-400" /> Publish Overall Results PDF
+              </button>
+
+              <button
+                onClick={() => pdfHallTicketInputRef.current?.click()}
+                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Ticket className="w-4 h-4 text-amber-300" /> Publish Overall Hall Tickets PDF
               </button>
             </div>
           </div>
 
+          {/* Semester Selector Buttons (Semester 1 - 8) */}
+          <div className="flex items-center gap-2 p-1.5 bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-x-auto">
+            {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+              <button
+                key={sem}
+                onClick={() => setSelectedSemesterTab(sem)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  selectedSemesterTab === sem
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                {sem}
+              </button>
+            ))}
+          </div>
+
+          {/* Pass / Fail & Semester Summary Metrics */}
+          {(() => {
+            const semesterStudents = studentResults.filter(
+              (r) => r.semesters && r.semesters[selectedSemesterTab]
+            );
+            const passedCount = semesterStudents.filter(
+              (r) => r.semesters[selectedSemesterTab]?.status === 'Pass'
+            ).length;
+            const failedCount = semesterStudents.filter(
+              (r) => r.semesters[selectedSemesterTab]?.status === 'Fail'
+            ).length;
+            const passRate = semesterStudents.length > 0 ? Math.round((passedCount / semesterStudents.length) * 100) : 0;
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Target Semester</span>
+                  <span className="text-xl font-extrabold text-slate-800 mt-1 block">{selectedSemesterTab}</span>
+                  <span className="text-[11px] text-slate-500 font-semibold">{semesterStudents.length} Students Evaluated</span>
+                </div>
+
+                <div className="bg-emerald-50/70 p-5 rounded-2xl border border-emerald-200/80 shadow-xs">
+                  <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">Passed Students</span>
+                  <span className="text-2xl font-black text-emerald-700 mt-1 block">{passedCount}</span>
+                  <span className="text-[11px] text-emerald-800 font-semibold">Cleared All Subjects</span>
+                </div>
+
+                <div className="bg-rose-50/70 p-5 rounded-2xl border border-rose-200/80 shadow-xs">
+                  <span className="text-xs font-bold text-rose-800 uppercase tracking-wider block">Failed Students</span>
+                  <span className="text-2xl font-black text-rose-700 mt-1 block">{failedCount}</span>
+                  <span className="text-[11px] text-rose-800 font-semibold">Needs Re-examination</span>
+                </div>
+
+                <div className="bg-purple-50/70 p-5 rounded-2xl border border-purple-200/80 shadow-xs">
+                  <span className="text-xs font-bold text-purple-800 uppercase tracking-wider block">Semester Pass Rate</span>
+                  <span className="text-2xl font-black text-purple-800 mt-1 block">{passRate}%</span>
+                  <span className="text-[11px] text-purple-700 font-semibold">Institutional Average</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Search and Count */}
           <div className="flex items-center justify-between gap-4">
             <div className="relative max-w-sm w-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -655,73 +780,100 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-800 text-slate-800 shadow-xs"
               />
             </div>
-            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl">
-              {studentResults.length} Published Reports
+            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3.5 py-2 rounded-xl">
+              Showing {selectedSemesterTab} Reports
             </span>
           </div>
 
+          {/* Student Result Cards for Selected Semester */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {studentResults
               .filter(
                 (r) =>
-                  r.studentName.toLowerCase().includes(resultSearchQuery.toLowerCase()) ||
-                  r.rollNo.toLowerCase().includes(resultSearchQuery.toLowerCase())
+                  r.semesters &&
+                  r.semesters[selectedSemesterTab] &&
+                  (r.studentName.toLowerCase().includes(resultSearchQuery.toLowerCase()) ||
+                    r.rollNo.toLowerCase().includes(resultSearchQuery.toLowerCase()))
               )
-              .map((res) => (
-                <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
-                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-extrabold text-sm">
-                        <Award className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
-                        <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {res.semester}</p>
-                        <p className="text-[10px] text-slate-400">Published: {res.publishedDate}</p>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-xs text-slate-400 uppercase font-bold tracking-wider block">Cumulative GPA</span>
-                      <span className="text-2xl font-black text-slate-900">{res.gpa?.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Subject Grades Breakdown */}
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Breakdown</p>
-                    <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
-                      {res.grades.map((g) => (
-                        <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
-                          <div>
-                            <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
-                            <p className="text-[10px] text-slate-500">{g.remarks}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className="px-2 py-0.5 rounded-md font-extrabold bg-emerald-100 text-emerald-800 text-xs">{g.gradeLetter} ({g.percentage}%)</span>
-                          </div>
+              .map((res) => {
+                const semData = res.semesters[selectedSemesterTab];
+                return (
+                  <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
+                    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-extrabold text-sm">
+                          <Award className="w-6 h-6" />
                         </div>
-                      ))}
+                        <div>
+                          <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
+                          <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {selectedSemesterTab}</p>
+                          <p className="text-[10px] text-slate-400">{res.department || 'CS Department'}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 justify-end mb-1">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase ${
+                            semData?.status === 'Pass' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {semData?.status || 'Pass'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">SGPA: <span className="text-slate-900 font-extrabold">{semData?.sgpa?.toFixed(2)}</span></p>
+                        <p className="text-xs text-purple-700 uppercase font-bold tracking-wider">CGPA: <span className="font-black text-purple-900">{res.cgpa?.toFixed(2)}</span></p>
+                      </div>
+                    </div>
+
+                    {/* Hall Ticket Badge */}
+                    {res.hallTicket && (
+                      <div className="p-2.5 bg-purple-50/80 border border-purple-200/80 rounded-xl flex items-center justify-between text-xs">
+                        <span className="font-bold text-purple-900 flex items-center gap-1.5">
+                          <Ticket className="w-3.5 h-3.5 text-purple-600" /> Hall Ticket Issued:
+                        </span>
+                        <span className="font-mono text-purple-800 font-bold">{res.hallTicket.hallTicketNo} ({res.hallTicket.seatNo})</span>
+                      </div>
+                    )}
+
+                    {/* Subject Grades Breakdown */}
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Breakdown ({selectedSemesterTab})</p>
+                      <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
+                        {semData?.grades.map((g) => (
+                          <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
+                            <div>
+                              <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
+                              <p className="text-[10px] text-slate-500">{g.remarks}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className={`px-2 py-0.5 rounded-md font-extrabold text-xs ${
+                                g.gradeLetter === 'F' || g.percentage < 50 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                {g.gradeLetter} ({g.percentage}%)
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
+                      <button
+                        onClick={() => setEditingResultReport(res)}
+                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Edit className="w-3.5 h-3.5" /> Admin Edit Access (Grades)
+                      </button>
+                      <button
+                        onClick={() => deleteStudentResult(res.id)}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                        title="Delete Published Result Card"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
-                    <button
-                      onClick={() => setEditingResultReport(res)}
-                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <Edit className="w-3.5 h-3.5" /> Admin Edit Access (Grades)
-                    </button>
-                    <button
-                      onClick={() => deleteStudentResult(res.id)}
-                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                      title="Delete Published Result Card"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
       )}
@@ -1648,119 +1800,178 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
               <button onClick={() => setEditingResultReport(null)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"><X className="w-5 h-5" /></button>
               <span className="text-xs uppercase font-bold text-amber-400">Admin Master Grade Access</span>
               <h3 className="text-xl font-bold mt-1">Edit Results: {editingResultReport.studentName}</h3>
-              <p className="text-xs text-slate-300 mt-0.5">Roll No: {editingResultReport.rollNo} • {editingResultReport.semester}</p>
+              <p className="text-xs text-slate-300 mt-0.5">Roll No: {editingResultReport.rollNo} • {selectedSemesterTab}</p>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                saveStudentResult(editingResultReport);
-                setEditingResultReport(null);
-              }}
-              className="p-6 space-y-5 text-xs"
-            >
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-1">Cumulative GPA</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="4.0"
-                  required
-                  value={editingResultReport.gpa}
-                  onChange={(e) => setEditingResultReport({ ...editingResultReport, gpa: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900"
-                />
-              </div>
+            {(() => {
+              const currentSemData = editingResultReport.semesters[selectedSemesterTab] || {
+                semester: selectedSemesterTab,
+                sgpa: 3.85,
+                status: 'Pass',
+                grades: [
+                  { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A', percentage: 96, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'High proficiency' },
+                  { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A-', percentage: 92, gpaPoint: 3.7, teacherName: 'Dr. Sarah Jenkins', remarks: 'Good analytical skills' },
+                ],
+              };
 
-              <div>
-                <h4 className="font-bold text-slate-700 uppercase tracking-wider mb-2">Subject Grade Entries</h4>
-                <div className="space-y-3">
-                  {editingResultReport.grades.map((g, idx) => (
-                    <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Subject Name</label>
-                          <input
-                            type="text"
-                            value={g.courseName}
-                            onChange={(e) => {
-                              const updatedGrades = [...editingResultReport.grades];
-                              updatedGrades[idx].courseName = e.target.value;
-                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
-                            }}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Course Code</label>
-                          <input
-                            type="text"
-                            value={g.courseCode}
-                            onChange={(e) => {
-                              const updatedGrades = [...editingResultReport.grades];
-                              updatedGrades[idx].courseCode = e.target.value;
-                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
-                            }}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-semibold"
-                          />
-                        </div>
-                      </div>
+              return (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // Recalculate SGPA and CGPA
+                    const { sgpa, status } = calculateSgpa(currentSemData.grades);
+                    const updatedSemesters = {
+                      ...editingResultReport.semesters,
+                      [selectedSemesterTab]: {
+                        ...currentSemData,
+                        sgpa,
+                        status,
+                      },
+                    };
+                    const updatedCgpa = calculateCgpa(updatedSemesters);
 
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Grade Letter</label>
-                          <input
-                            type="text"
-                            value={g.gradeLetter}
-                            onChange={(e) => {
-                              const updatedGrades = [...editingResultReport.grades];
-                              updatedGrades[idx].gradeLetter = e.target.value;
-                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
-                            }}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Percentage (%)</label>
-                          <input
-                            type="number"
-                            value={g.percentage}
-                            onChange={(e) => {
-                              const updatedGrades = [...editingResultReport.grades];
-                              updatedGrades[idx].percentage = parseInt(e.target.value) || 0;
-                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
-                            }}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase">GPA Point</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            value={g.gpaPoint}
-                            onChange={(e) => {
-                              const updatedGrades = [...editingResultReport.grades];
-                              updatedGrades[idx].gpaPoint = parseFloat(e.target.value) || 0;
-                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
-                            }}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
-                          />
-                        </div>
-                      </div>
+                    const finalReport: StudentResultReport = {
+                      ...editingResultReport,
+                      cgpa: updatedCgpa,
+                      semesters: updatedSemesters,
+                    };
+
+                    saveStudentResult(finalReport);
+                    setEditingResultReport(null);
+                  }}
+                  className="p-6 space-y-5 text-xs"
+                >
+                  <div className="flex items-center justify-between p-3.5 bg-purple-50 border border-purple-200 rounded-2xl">
+                    <div>
+                      <span className="text-[11px] font-bold text-purple-700 uppercase block">Auto-Calculated CGPA</span>
+                      <span className="text-xl font-black text-purple-900">{calculateCgpa(editingResultReport.semesters).toFixed(2)}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="text-right">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase block">{selectedSemesterTab} SGPA</span>
+                      <span className="text-xl font-black text-slate-900">{calculateSgpa(currentSemData.grades).sgpa.toFixed(2)}</span>
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button type="button" onClick={() => setEditingResultReport(null)} className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5">
-                  <Save className="w-3.5 h-3.5" /> Save Changes & Publish
-                </button>
-              </div>
-            </form>
+                  <div>
+                    <h4 className="font-bold text-slate-700 uppercase tracking-wider mb-2">Subject Grade Entries ({selectedSemesterTab})</h4>
+                    <div className="space-y-3">
+                      {currentSemData.grades.map((g, idx) => (
+                        <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Subject Name</label>
+                              <input
+                                type="text"
+                                value={g.courseName}
+                                onChange={(e) => {
+                                  const updatedGrades = [...currentSemData.grades];
+                                  updatedGrades[idx].courseName = e.target.value;
+                                  setEditingResultReport({
+                                    ...editingResultReport,
+                                    semesters: {
+                                      ...editingResultReport.semesters,
+                                      [selectedSemesterTab]: { ...currentSemData, grades: updatedGrades },
+                                    },
+                                  });
+                                }}
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Course Code</label>
+                              <input
+                                type="text"
+                                value={g.courseCode}
+                                onChange={(e) => {
+                                  const updatedGrades = [...currentSemData.grades];
+                                  updatedGrades[idx].courseCode = e.target.value;
+                                  setEditingResultReport({
+                                    ...editingResultReport,
+                                    semesters: {
+                                      ...editingResultReport.semesters,
+                                      [selectedSemesterTab]: { ...currentSemData, grades: updatedGrades },
+                                    },
+                                  });
+                                }}
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-semibold"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Grade Letter</label>
+                              <input
+                                type="text"
+                                value={g.gradeLetter}
+                                onChange={(e) => {
+                                  const updatedGrades = [...currentSemData.grades];
+                                  updatedGrades[idx].gradeLetter = e.target.value;
+                                  setEditingResultReport({
+                                    ...editingResultReport,
+                                    semesters: {
+                                      ...editingResultReport.semesters,
+                                      [selectedSemesterTab]: { ...currentSemData, grades: updatedGrades },
+                                    },
+                                  });
+                                }}
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase">Percentage (%)</label>
+                              <input
+                                type="number"
+                                value={g.percentage}
+                                onChange={(e) => {
+                                  const updatedGrades = [...currentSemData.grades];
+                                  updatedGrades[idx].percentage = parseInt(e.target.value) || 0;
+                                  setEditingResultReport({
+                                    ...editingResultReport,
+                                    semesters: {
+                                      ...editingResultReport.semesters,
+                                      [selectedSemesterTab]: { ...currentSemData, grades: updatedGrades },
+                                    },
+                                  });
+                                }}
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase">GPA Point</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={g.gpaPoint}
+                                onChange={(e) => {
+                                  const updatedGrades = [...currentSemData.grades];
+                                  updatedGrades[idx].gpaPoint = parseFloat(e.target.value) || 0;
+                                  setEditingResultReport({
+                                    ...editingResultReport,
+                                    semesters: {
+                                      ...editingResultReport.semesters,
+                                      [selectedSemesterTab]: { ...currentSemData, grades: updatedGrades },
+                                    },
+                                  });
+                                }}
+                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" onClick={() => setEditingResultReport(null)} className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">Cancel</button>
+                    <button type="submit" className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5">
+                      <Save className="w-3.5 h-3.5" /> Auto-Calculate SGPA/CGPA & Save
+                    </button>
+                  </div>
+                </form>
+              );
+            })()}
           </div>
         </div>
       )}
