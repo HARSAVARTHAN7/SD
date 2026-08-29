@@ -151,7 +151,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const [slotEndTime, setSlotEndTime] = useState('');
 
   // Account Management State
-  const [accountSubTab, setAccountSubTab] = useState<'pending' | 'approved' | 'credentials' | 'blocked'>('pending');
+  const [accountSubTab, setAccountSubTab] = useState<'pending' | 'approved' | 'credentials' | 'blocked'>('credentials');
   const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'student' | 'teacher'>('all');
   // Recycle Bin State
   const [recycleCategory, setRecycleCategory] = useState<'students' | 'teachers' | 'courses' | 'announcements' | 'results'>('students');
@@ -2032,6 +2032,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                                 className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer" title="Edit">
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
+                              {st.isBlocked || st.status === 'blocked' ? (
+                                <button
+                                  onClick={() => {
+                                    updateUser({ ...st, isBlocked: false, status: 'active' });
+                                    showToast('Block Revoked', `Full access restored for ${st.name}.`, 'success');
+                                  }}
+                                  className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Revoke Block / Restore Access"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    updateUser({ ...st, isBlocked: true, status: 'blocked' });
+                                    showToast('Student Blocked', `Access suspended for ${st.name}. Moved to Blocked tab.`, 'warning');
+                                  }}
+                                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                  title="Block Student Account"
+                                >
+                                  <ShieldAlert className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button onClick={() => setDeleteConfirmId(st.id)}
                                 className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Delete">
                                 <Trash2 className="w-3.5 h-3.5" />
