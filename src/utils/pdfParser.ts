@@ -181,3 +181,84 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
     subjectsTaught: ['Computer Science Fundamentals'],
   };
 }
+
+/**
+ * Generate and trigger download for sample PDF registration templates
+ */
+export function downloadTemplatePdf(type: 'student' | 'teacher') {
+  let filename = '';
+  let lines: string[] = [];
+
+  if (type === 'student') {
+    filename = 'Student_Registration_Template.pdf';
+    lines = [
+      'STUDENT REGISTRATION FORM TEMPLATE',
+      '--------------------------------------------------',
+      'Name: Jane Doe',
+      'Email: jane.doe@school.edu',
+      'Phone: +1 (555) 234-5678',
+      'Student ID: STU-2026-401',
+      'Roll No: 2026-401',
+      'Department: Computer Science & Engineering',
+      'Semester: 5th Semester',
+      'GPA: 3.85',
+      'Guardian Name: Robert Doe',
+      'Guardian Contact: +1 (555) 987-6543',
+      'Blood Group: O+ Positive',
+      'Residence Type: Day Scholar',
+      'Bus Route: Route #14 - North City Express',
+    ];
+  } else {
+    filename = 'Teacher_Registration_Template.pdf';
+    lines = [
+      'FACULTY REGISTRATION FORM TEMPLATE',
+      '--------------------------------------------------',
+      'Name: Dr. Sarah Jenkins',
+      'Email: sarah.jenkins@school.edu',
+      'Phone: +1 (555) 782-9912',
+      'Employee ID: FAC-7742',
+      'Title: Senior Professor & Department Lead',
+      'Department: Department of Computer Science',
+      'Office Hours: Mon & Thu 2:00 PM - 4:30 PM',
+      'Subjects Taught: AP Calculus BC, Advanced Algorithms',
+    ];
+  }
+
+  const streamLines = lines.map((l) => `(${l.replace(/[()]/g, '')}) Tj T*`).join('\n');
+
+  const pdfRaw = `%PDF-1.4
+1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
+2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
+3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 4 0 R>>>> /Contents 5 0 R>> endobj
+4 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj
+5 0 obj <</Length ${streamLines.length + 100}>> stream
+BT
+/F1 12 Tf
+50 750 Td
+16 TL
+${streamLines}
+ET
+endstream endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000242 00000 n 
+0000000311 00000 n 
+trailer <</Size 6 /Root 1 0 R>>
+startxref
+450
+%%EOF`;
+
+  const blob = new Blob([pdfRaw], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
