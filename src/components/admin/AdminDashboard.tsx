@@ -176,6 +176,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
   const pdfStudentInputRef = useRef<HTMLInputElement>(null);
   const pdfTeacherInputRef = useRef<HTMLInputElement>(null);
 
+  // Template Modal & Publication Year Prompts
+  const [activeTemplateModal, setActiveTemplateModal] = useState<'results' | 'hallTicket' | null>(null);
+  const [publishYearModal, setPublishYearModal] = useState<'results' | 'hallTicket' | null>(null);
+  const [targetPublishYear, setTargetPublishYear] = useState<string>('2026 - 2027');
+
   const handleHallTicketPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -679,17 +684,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
 
             <div className="flex flex-wrap items-center gap-2.5">
               <button
-                onClick={() => downloadOverallResultsPdfTemplate()}
-                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Download printable master results PDF template"
+                onClick={() => setActiveTemplateModal('results')}
+                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Preview and download master results PDF template"
               >
                 <Download className="w-4 h-4 text-amber-600" /> Results Template
               </button>
 
               <button
-                onClick={() => downloadHallTicketsPdfTemplate()}
-                className="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Download printable hall tickets PDF template"
+                onClick={() => setActiveTemplateModal('hallTicket')}
+                className="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Preview and download master hall tickets PDF template"
               >
                 <Download className="w-4 h-4 text-purple-600" /> Hall Ticket Template
               </button>
@@ -710,14 +715,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
               />
 
               <button
-                onClick={() => pdfResultsInputRef.current?.click()}
+                onClick={() => setPublishYearModal('results')}
                 className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <FileUp className="w-4 h-4 text-amber-400" /> Publish Overall Results PDF
               </button>
 
               <button
-                onClick={() => pdfHallTicketInputRef.current?.click()}
+                onClick={() => setPublishYearModal('hallTicket')}
                 className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Ticket className="w-4 h-4 text-amber-300" /> Publish Overall Hall Tickets PDF
@@ -2006,6 +2011,216 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                 </form>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Template Preview & Download Modal */}
+      {activeTemplateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setActiveTemplateModal(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white relative">
+              <button
+                onClick={() => setActiveTemplateModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <span className="text-xs uppercase font-bold text-amber-400">Master Template Preview & Download</span>
+              <h3 className="text-xl font-bold mt-1">
+                {activeTemplateModal === 'results' ? '📄 Overall Academic Results PDF Template' : '🎫 Master Hall Tickets PDF Template'}
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Review, copy, or download the official template format to prepare PDF documents for upload.
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="p-4 bg-slate-900 text-slate-100 rounded-2xl font-mono text-[11px] leading-relaxed max-h-72 overflow-y-auto border border-slate-700 whitespace-pre-wrap">
+                {activeTemplateModal === 'results'
+                  ? `=====================================================================
+INSTITUTIONAL MASTER ACADEMIC RESULT PUBLICATION MASTER PDF TEMPLATE
+=====================================================================
+Academic Year: 2024 - 2028 | Semester: Semester 5
+
+STUDENT ENTRY #1:
+---------------------------------------------------------------------
+Student Name: Murat Gürsoy
+Roll Number: 2024-418
+Department: Computer Science & Engineering
+Semester: Semester 5
+
+SUBJECT MARKS BREAKDOWN:
+1. AP Calculus BC (MATH-401) - 4 Credits - Grade: A (96%) - GPA: 4.0 - Remarks: High proficiency
+2. Classical Physics (PHYS-302) - 4 Credits - Grade: A- (92%) - GPA: 3.7 - Remarks: Good analytical skills
+3. Advanced CS (CS-205) - 3 Credits - Grade: A+ (98%) - GPA: 4.0 - Remarks: Excellent project work
+
+---------------------------------------------------------------------
+STUDENT ENTRY #2:
+---------------------------------------------------------------------
+Student Name: Emma Watson
+Roll Number: 2024-419
+Department: Computer Science & Engineering
+Semester: Semester 5
+
+SUBJECT MARKS BREAKDOWN:
+1. AP Calculus BC (MATH-401) - 4 Credits - Grade: A+ (98%) - GPA: 4.0 - Remarks: Outstanding performance
+2. Classical Physics (PHYS-302) - 4 Credits - Grade: A (95%) - GPA: 4.0 - Remarks: Excellent lab execution
+3. Advanced CS (CS-205) - 3 Credits - Grade: A (94%) - GPA: 4.0 - Remarks: Great algorithm design
+=====================================================================`
+                  : `=================================================================================
+OFFICIAL AUTONOMOUS ACADEMIC INSTITUTION
+CENTRAL EXAMINATION WING — MAIN ACADEMIC CAMPUS
+Affiliated to State Technological University | Reaccredited with 'A++' Grade
+FIFTH SEMESTER DEGREE EXTERNAL EXAMINATION (CBCSS-UG)
+=================================================================================
+
+HALL TICKET MASTER REGISTRATION ENTRY #1:
+---------------------------------------------------------------------------------
+Register Number / Roll No: REG-2024-141
+Programme: B.Com (Self Financing)
+Semester: V (Fifth Semester)
+Name of Candidate: AMRITHA HARIDASAN
+Date of Birth: 11/05/2004
+Exam Center: Main Examination Complex (Block A)
+Seat Number: Seat A-14
+Scheduled Window: Nov 15 - Nov 28, 2024
+
+SUBJECT SCHEDULE:
+1. CC19UPSY5D01 | Psychology and Personal Growth
+2. CC19UBCM5B07 | Accounting for Management
+3. CC19UBCM5B08 | Business Research Methods
+4. CC19UBCM5B09 | Income Tax Law and Accounts
+5. CC19UBCM5B10 | Financial Markets and Services
+6. CC19UBCM5B11 | Financial Management
+=================================================================================`}
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = activeTemplateModal === 'results'
+                      ? `=====================================================================\nINSTITUTIONAL MASTER ACADEMIC RESULT PUBLICATION MASTER PDF TEMPLATE\n=====================================================================\nAcademic Year: 2024 - 2028 | Semester: Semester 5\n\nSTUDENT ENTRY #1:\n---------------------------------------------------------------------\nStudent Name: Murat Gürsoy\nRoll Number: 2024-418\nDepartment: Computer Science & Engineering\nSemester: Semester 5\n\nSUBJECT MARKS BREAKDOWN:\n1. AP Calculus BC (MATH-401) - 4 Credits - Grade: A (96%) - GPA: 4.0\n2. Classical Physics (PHYS-302) - 4 Credits - Grade: A- (92%) - GPA: 3.7\n3. Advanced CS (CS-205) - 3 Credits - Grade: A+ (98%) - GPA: 4.0\n=====================================================================`
+                      : `=================================================================================\nOFFICIAL AUTONOMOUS ACADEMIC INSTITUTION\n=================================================================================\nRegister Number / Roll No: REG-2024-141\nProgramme: B.Com (Self Financing)\nSemester: V (Fifth Semester)\nName of Candidate: AMRITHA HARIDASAN\nDate of Birth: 11/05/2004\nExam Center: Main Examination Complex (Block A)\nSeat Number: Seat A-14\nScheduled Window: Nov 15 - Nov 28, 2024\n=================================================================================`;
+                    navigator.clipboard.writeText(text);
+                    showToast('Template Copied', 'Template content copied to clipboard!', 'success');
+                  }}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all cursor-pointer"
+                >
+                  📋 Copy Text
+                </button>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTemplateModal(null)}
+                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold cursor-pointer"
+                  >
+                    Close Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeTemplateModal === 'results') {
+                        downloadOverallResultsPdfTemplate();
+                      } else {
+                        downloadHallTicketsPdfTemplate();
+                      }
+                      setActiveTemplateModal(null);
+                      showToast('Downloading File', 'Master template file generated.', 'success');
+                    }}
+                    className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-amber-300" /> Download Template File
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Publication Academic Year Prompt Modal */}
+      {publishYearModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setPublishYearModal(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-5 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white relative">
+              <button
+                onClick={() => setPublishYearModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <span className="text-xs uppercase font-bold text-amber-100">Publication Session Control</span>
+              <h3 className="text-xl font-bold mt-1">Select Academic Year to Publish</h3>
+              <p className="text-xs text-amber-100 mt-0.5">
+                Target: {publishYearModal === 'results' ? 'Overall Semester Results' : 'Master Hall Tickets'}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-2">Academic Session / Publication Year *</label>
+                <select
+                  value={targetPublishYear}
+                  onChange={(e) => setTargetPublishYear(e.target.value)}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 mb-2"
+                >
+                  <option value="2024 - 2025">2024 - 2025 Academic Year (Session 1)</option>
+                  <option value="2025 - 2026">2025 - 2026 Academic Year (Session 2)</option>
+                  <option value="2026 - 2027">2026 - 2027 Academic Year (Session 3)</option>
+                  <option value="2027 - 2028">2027 - 2028 Academic Year (Session 4)</option>
+                </select>
+
+                <label className="block font-bold text-slate-500 uppercase text-[10px] mb-1">Or Write-in Custom Year</label>
+                <input
+                  type="text"
+                  value={targetPublishYear}
+                  onChange={(e) => setTargetPublishYear(e.target.value)}
+                  placeholder="e.g. 2026 - 2027 Fall Examination"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setPublishYearModal(null)}
+                  className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const mode = publishYearModal;
+                    setPublishYearModal(null);
+                    showToast('Year Confirmed', `Publishing ${mode} for Academic Session ${targetPublishYear}. Select file...`, 'info');
+                    if (mode === 'results') {
+                      pdfResultsInputRef.current?.click();
+                    } else {
+                      pdfHallTicketInputRef.current?.click();
+                    }
+                  }}
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileUp className="w-4 h-4" /> Confirm Year & Upload PDF
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

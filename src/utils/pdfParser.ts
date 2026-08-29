@@ -266,24 +266,24 @@ SUBJECT MARKS BREAKDOWN:
 }
 
 /**
- * Download Printable Master Hall Tickets PDF Template (Christ College Autonomous Format)
+ * Download Printable Master Hall Tickets PDF Template
  */
 export function downloadHallTicketsPdfTemplate(): void {
   const content = `=================================================================================
-CHRIST COLLEGE (AUTONOMOUS)
-IRINJALAKUDA — 680 125, KERALA, INDIA
-Affiliated to University of Calicut | Reaccredited by NAAC 'A++' Grade
-FIFTH SEMESTER DEGREE EXTERNAL EXAMINATION NOVEMBER - 2024 (CBCSS-UG)
+OFFICIAL AUTONOMOUS ACADEMIC INSTITUTION
+CENTRAL EXAMINATION WING — MAIN ACADEMIC CAMPUS
+Affiliated to State Technological University | Reaccredited with 'A++' Grade
+FIFTH SEMESTER DEGREE EXTERNAL EXAMINATION (CBCSS-UG)
 =================================================================================
 
 HALL TICKET MASTER REGISTRATION ENTRY #1:
 ---------------------------------------------------------------------------------
-Register Number / Roll No: CCAWBCM141
+Register Number / Roll No: REG-2024-141
 Programme: B.Com (Self Financing)
 Semester: V (Fifth Semester)
 Name of Candidate: AMRITHA HARIDASAN
 Date of Birth: 11/05/2004
-Exam Center: Christ College Main Examination Hall (Block A)
+Exam Center: Main Examination Complex (Block A)
 Seat Number: Seat A-14
 Scheduled Window: Nov 15 - Nov 28, 2024
 

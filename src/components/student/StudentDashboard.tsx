@@ -840,23 +840,23 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
               <div className="text-center space-y-1 pb-4 border-b-2 border-slate-900">
                 <div className="flex items-center justify-center gap-3 mb-2">
                   <div className="w-14 h-14 rounded-full border-2 border-blue-900 bg-blue-50 text-blue-950 font-black flex items-center justify-center text-center text-[9px] p-1 uppercase shadow-xs">
-                    CHRIST COLLEGE
+                    OFFICIAL CAMPUS
                   </div>
                   <div>
                     <h1 className="text-xl sm:text-2xl font-black tracking-tight text-blue-950 uppercase">
-                      CHRIST COLLEGE (AUTONOMOUS)
+                      OFFICIAL AUTONOMOUS ACADEMIC INSTITUTION
                     </h1>
                     <p className="text-[11px] font-bold text-slate-700 uppercase">
-                      IRINJALAKUDA — 680 125, KERALA, INDIA
+                      CENTRAL EXAMINATION WING — MAIN ACADEMIC CAMPUS
                     </p>
                     <p className="text-[10px] text-rose-800 font-extrabold">
-                      Affiliated to University of Calicut | Reaccredited by NAAC 'A++' Grade
+                      Affiliated to State Technological University | Reaccredited with 'A++' Grade
                     </p>
                   </div>
                 </div>
                 <div className="pt-2">
                   <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 block font-sans">
-                    FIFTH SEMESTER DEGREE EXTERNAL EXAMINATION NOVEMBER - 2024 (CBCSS-UG)
+                    FIFTH SEMESTER DEGREE EXTERNAL EXAMINATION (CBCSS-UG)
                   </span>
                 </div>
               </div>
