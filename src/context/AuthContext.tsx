@@ -72,11 +72,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen for token expiry events from the axios interceptor
   useEffect(() => {
     const handleExpiry = () => {
-      setUser(null);
+      clearToken();
     };
     window.addEventListener('auth:expired', handleExpiry);
     return () => window.removeEventListener('auth:expired', handleExpiry);
-  }, [setUser]);
+  }, []);
 
   const login = async (
     usernameOrEmail: string,
@@ -112,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           department: 'Central Academic Administration',
           title: 'Chief Institutional Administrator',
         };
+        clearToken();
         setUser(adminUser);
         return true;
       }
@@ -131,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: 'Senior Professor & Department Chair',
           employeeId: 'FAC-7742',
         };
+        clearToken();
         setUser(teacherUser);
         return true;
       }
@@ -153,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           gpa: 3.90,
           attendanceRate: 96.0,
         };
+        clearToken();
         setUser(studentUser);
         return true;
       }
