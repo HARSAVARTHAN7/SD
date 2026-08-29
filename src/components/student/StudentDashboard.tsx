@@ -25,7 +25,8 @@ import {
   Bell,
   Search,
   Tag,
-  Ticket
+  Ticket,
+  AlertCircle
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
@@ -60,44 +61,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
       (r.rollNo && user?.rollNo && r.rollNo.trim() === user?.rollNo.trim()) ||
       (r.studentName && user?.name && r.studentName.toLowerCase().trim() === user?.name.toLowerCase().trim()) ||
       (r.studentId && user?.studentId && r.studentId.trim() === user?.studentId.trim())
-  ) || {
-    id: `res-${user?.id || 'demo'}`,
-    studentId: user?.id || 'student-murat',
-    studentName: user?.name || 'Murat Gürsoy',
-    rollNo: user?.rollNo || '2024-418',
-    department: user?.department || 'Computer Science & Engineering',
-    currentSemester: user?.semester || 'Semester 5',
-    cgpa: user?.gpa || 3.85,
-    publishedDate: 'August 28, 2026',
-    academicYear: '2024 - 2028',
-    semesters: {
-      'Semester 5': {
-        semester: 'Semester 5',
-        sgpa: user?.gpa || 3.85,
-        status: 'Pass',
-        grades: DEFAULT_STUDENT_GRADES,
-      },
-    },
-    hallTicket: {
-      hallTicketNo: `HT-2026-${user?.rollNo || '4189'}`,
-      examCenter: 'Main Academic Examination Complex (Block A)',
-      seatNo: 'Seat A-14',
-      examDates: 'Sept 15 - Sept 25, 2026',
-      status: 'Issued',
-    },
-  };
+  );
 
-  const mySemesters = myResultReport.semesters || {};
-  const currentSemData = mySemesters[studentSelectedSemester] || {
-    semester: studentSelectedSemester,
-    sgpa: user?.gpa || 3.85,
-    status: 'Pass',
-    grades: DEFAULT_STUDENT_GRADES,
-  };
+  const mySemesters = myResultReport?.semesters || {};
+  const hasSemData = Boolean(mySemesters[studentSelectedSemester]);
+  const currentSemData = mySemesters[studentSelectedSemester];
 
-  const myGrades = currentSemData.grades;
-  const displaySgpa = currentSemData.sgpa;
-  const displayCgpa = myResultReport.cgpa || (user?.gpa || 3.85);
+  const myGrades = currentSemData ? currentSemData.grades : [];
+  const displaySgpa = currentSemData ? currentSemData.sgpa : 0;
+  const displayCgpa = myResultReport?.cgpa || (user?.gpa || 3.85);
 
   // Chart data for grades
   const gradeChartData = myGrades.map((g) => ({
@@ -536,101 +508,115 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
             </div>
           )}
 
-          {/* GPA Card Banner */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xl">
-                {displaySgpa.toFixed(2)}
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Semester SGPA</p>
-                <p className="text-base font-extrabold text-slate-800">{studentSelectedSemester}</p>
-                <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Auto-Calculated Scale: 4.0</p>
-              </div>
-            </div>
+          {hasSemData ? (
+            <>
+              {/* GPA Card Banner */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xl">
+                    {displaySgpa.toFixed(2)}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Semester SGPA</p>
+                    <p className="text-base font-extrabold text-slate-800">{studentSelectedSemester}</p>
+                    <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Auto-Calculated Scale: 4.0</p>
+                  </div>
+                </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-xl">
-                {displayCgpa.toFixed(2)}
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumulative CGPA</p>
-                <p className="text-base font-extrabold text-slate-800">Across Published Semesters</p>
-                <p className="text-[11px] text-purple-600 font-semibold mt-0.5">Verified Academic Record</p>
-              </div>
-            </div>
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-xl">
+                    {displayCgpa.toFixed(2)}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumulative CGPA</p>
+                    <p className="text-base font-extrabold text-slate-800">Across Published Semesters</p>
+                    <p className="text-[11px] text-purple-600 font-semibold mt-0.5">Verified Academic Record</p>
+                  </div>
+                </div>
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl">
-                {currentSemData?.status === 'Pass' ? 'PASS' : 'FAIL'}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xl">
+                    {currentSemData?.status === 'Pass' ? 'PASS' : 'FAIL'}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Result Status</p>
+                    <p className="text-base font-extrabold text-slate-800">{currentSemData ? currentSemData.status : 'Cleared'}</p>
+                    <p className="text-[11px] text-blue-600 font-semibold mt-0.5">Institutional Evaluation</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Result Status</p>
-                <p className="text-base font-extrabold text-slate-800">{currentSemData ? currentSemData.status : 'Cleared'}</p>
-                <p className="text-[11px] text-blue-600 font-semibold mt-0.5">Institutional Evaluation</p>
+
+              {/* Performance Bar Chart */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                <h3 className="text-base font-bold text-slate-800 mb-6">Subject Performance Analysis (%) ({studentSelectedSemester})</h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={gradeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                      <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} domain={[50, 100]} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      />
+                      <Bar dataKey="score" fill="#10B981" radius={[8, 8, 0, 0]} barSize={36} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Performance Bar Chart */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
-            <h3 className="text-base font-bold text-slate-800 mb-6">Subject Performance Analysis (%) ({studentSelectedSemester})</h3>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={gradeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} domain={[50, 100]} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                  />
-                  <Bar dataKey="score" fill="#10B981" radius={[8, 8, 0, 0]} barSize={36} />
-                </BarChart>
-              </ResponsiveContainer>
+              {/* Official Grade Table */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="font-bold text-slate-800 text-sm">Subject Marks & Faculty Remarks ({studentSelectedSemester})</h3>
+                  {myResultReport && (
+                    <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
+                      Published: {myResultReport.publishedDate}
+                    </span>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
+                      <tr>
+                        <th className="py-3 px-6">Course Name</th>
+                        <th className="py-3 px-4">Code</th>
+                        <th className="py-3 px-4">Credits</th>
+                        <th className="py-3 px-4">Score</th>
+                        <th className="py-3 px-4">Grade</th>
+                        <th className="py-3 px-6">Faculty Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {myGrades.map((item) => (
+                        <tr key={item.courseCode} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-4 px-6 font-bold text-slate-800">{item.courseName}</td>
+                          <td className="py-4 px-4 font-mono text-slate-500">{item.courseCode}</td>
+                          <td className="py-4 px-4 text-slate-600">{item.credits}</td>
+                          <td className="py-4 px-4 font-bold text-slate-800">{item.percentage}%</td>
+                          <td className="py-4 px-4">
+                            <span className="font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              {item.gradeLetter}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-slate-500 italic">{item.remarks}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-xs space-y-3">
+              <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-8 h-8 text-amber-500" />
+              </div>
+              <h3 className="text-base font-extrabold text-slate-800">No Result Data Available for {studentSelectedSemester}</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                Academic results for {studentSelectedSemester} have not been published by the examination authority yet. Please check back later or contact your faculty mentor.
+              </p>
             </div>
-          </div>
-
-          {/* Official Grade Table */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-sm">Subject Marks & Faculty Remarks ({studentSelectedSemester})</h3>
-              {myResultReport && (
-                <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
-                  Published: {myResultReport.publishedDate}
-                </span>
-              )}
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                  <tr>
-                    <th className="py-3 px-6">Course Name</th>
-                    <th className="py-3 px-4">Code</th>
-                    <th className="py-3 px-4">Credits</th>
-                    <th className="py-3 px-4">Score</th>
-                    <th className="py-3 px-4">Grade</th>
-                    <th className="py-3 px-6">Faculty Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {myGrades.map((item) => (
-                    <tr key={item.courseCode} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-4 px-6 font-bold text-slate-800">{item.courseName}</td>
-                      <td className="py-4 px-4 font-mono text-slate-500">{item.courseCode}</td>
-                      <td className="py-4 px-4 text-slate-600">{item.credits}</td>
-                      <td className="py-4 px-4 font-bold text-slate-800">{item.percentage}%</td>
-                      <td className="py-4 px-4">
-                        <span className="font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                          {item.gradeLetter}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-slate-500 italic">{item.remarks}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          )}
         </div>
       )}
 

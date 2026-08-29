@@ -802,18 +802,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
           </div>
 
           {/* Student Result Cards for Selected Semester */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {studentResults
-              .filter(
-                (r) =>
-                  r.semesters &&
-                  r.semesters[selectedSemesterTab] &&
-                  (r.studentName.toLowerCase().includes(resultSearchQuery.toLowerCase()) ||
-                    r.rollNo.toLowerCase().includes(resultSearchQuery.toLowerCase()))
-              )
-              .map((res) => {
-                const semData = res.semesters[selectedSemesterTab];
-                return (
+          {(() => {
+            const semResults = studentResults.filter(
+              (r) =>
+                r.semesters &&
+                r.semesters[selectedSemesterTab] &&
+                (r.studentName.toLowerCase().includes(resultSearchQuery.toLowerCase()) ||
+                  r.rollNo.toLowerCase().includes(resultSearchQuery.toLowerCase()))
+            );
+
+            if (semResults.length === 0) {
+              return (
+                <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-xs space-y-3 col-span-full">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+                    <AlertCircle className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-base font-extrabold text-slate-800">No Result Data Available for {selectedSemesterTab}</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    No published student result reports found for {selectedSemesterTab}. Use "Publish Overall Results PDF" above to upload and publish grade reports for this semester.
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {semResults.map((res) => {
+                  const semData = res.semesters[selectedSemesterTab];
+                  return (
                   <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
                     <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
                       <div className="flex items-center gap-3">
@@ -888,9 +904,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                       </button>
                     </div>
                   </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1768,8 +1786,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
 
       {/* ===== MODAL: ADD TIMETABLE SLOT ===== */}
       {newSlotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setNewSlotModalOpen(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 bg-slate-900 text-white relative">
               <button onClick={() => setNewSlotModalOpen(false)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"><X className="w-5 h-5" /></button>
               <span className="text-xs uppercase font-bold text-amber-400">Timetable Scheduler</span>
@@ -1810,8 +1828,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
 
       {/* ===== MODAL: ADMIN EDIT GRADES ===== */}
       {editingResultReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn" onClick={() => setEditingResultReport(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 bg-gradient-to-r from-slate-950 to-indigo-950 text-white relative">
               <button onClick={() => setEditingResultReport(null)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"><X className="w-5 h-5" /></button>
               <span className="text-xs uppercase font-bold text-amber-400">Admin Master Grade Access</span>

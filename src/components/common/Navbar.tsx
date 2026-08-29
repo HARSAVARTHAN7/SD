@@ -270,8 +270,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs })
 
         {/* Self-service Profile Photo Update Modal */}
         {photoModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setPhotoModalOpen(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="px-6 py-5 bg-gradient-to-r from-slate-900 to-indigo-900 text-white relative">
                 <button
                   onClick={() => setPhotoModalOpen(false)}

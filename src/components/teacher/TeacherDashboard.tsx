@@ -27,6 +27,7 @@ import {
   Send,
   Ticket,
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { PostAnnouncementModal } from './PostAnnouncementModal';
@@ -673,85 +674,117 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {studentResults
-              .filter(
-                (r) =>
-                  r.studentName.toLowerCase().includes(resultSearch.toLowerCase()) ||
-                  r.rollNo.toLowerCase().includes(resultSearch.toLowerCase())
-              )
-              .map((res) => {
-                const semData = (res.semesters && res.semesters[teacherSelectedSemester]) || {
-                  semester: teacherSelectedSemester,
-                  sgpa: res.cgpa || 3.85,
-                  status: 'Pass' as const,
-                  grades: [
-                    { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A', percentage: 96, gpaPoint: 4.0, teacherName: user?.name || 'Dr. Sarah Jenkins', remarks: 'High proficiency demonstrated.' },
-                    { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A-', percentage: 92, gpaPoint: 3.7, teacherName: user?.name || 'Dr. Sarah Jenkins', remarks: 'Good analytical skills.' },
-                    { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Excellent project work.' },
-                  ],
-                };
-                return (
-                  <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
-                    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center font-extrabold text-sm">
-                          <Award className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
-                          <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {teacherSelectedSemester}</p>
-                          <p className="text-[10px] text-slate-400">Published: {res.publishedDate}</p>
-                        </div>
-                      </div>
+          {(() => {
+            const semResults = studentResults.filter(
+              (r) =>
+                r.semesters &&
+                r.semesters[teacherSelectedSemester] &&
+                (r.studentName.toLowerCase().includes(resultSearch.toLowerCase()) ||
+                  r.rollNo.toLowerCase().includes(resultSearch.toLowerCase()))
+            );
 
-                      <div className="text-right">
-                        <div className="flex items-center justify-end mb-1">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase ${
-                            semData?.status === 'Pass' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                          }`}>
-                            {semData?.status || 'Pass'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">SGPA: <span className="text-slate-900 font-extrabold">{semData?.sgpa?.toFixed(2)}</span></p>
-                        <p className="text-xs text-purple-700 uppercase font-bold tracking-wider">CGPA: <span className="font-black text-purple-900">{res.cgpa?.toFixed(2)}</span></p>
-                      </div>
-                    </div>
-
-                    {/* Hall Ticket Info */}
-                    {res.hallTicket && (
-                      <div className="p-2.5 bg-purple-50/80 border border-purple-200/80 rounded-xl flex items-center justify-between text-xs">
-                        <span className="font-bold text-purple-900 flex items-center gap-1.5">
-                          <Ticket className="w-3.5 h-3.5 text-purple-600" /> Hall Ticket Issued:
-                        </span>
-                        <span className="font-mono text-purple-800 font-bold">{res.hallTicket.hallTicketNo} ({res.hallTicket.seatNo})</span>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Grade Breakdown ({teacherSelectedSemester})</p>
-                      <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
-                        {semData?.grades.map((g) => (
-                          <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
-                            <div>
-                              <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
-                              <p className="text-[10px] text-slate-500">{g.remarks}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className={`px-2.5 py-0.5 rounded-md font-extrabold text-xs ${
-                                g.gradeLetter === 'F' || g.percentage < 50 ? 'bg-rose-100 text-rose-800' : 'bg-purple-100 text-purple-800'
-                              }`}>
-                                {g.gradeLetter} ({g.percentage}%)
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+            if (semResults.length === 0) {
+              return (
+                <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-xs space-y-3">
+                  <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mx-auto">
+                    <AlertCircle className="w-8 h-8 text-purple-500" />
                   </div>
-                );
-              })}
-          </div>
+                  <h3 className="text-base font-extrabold text-slate-800">No Result Data Available for {teacherSelectedSemester}</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    No published student result reports found for {teacherSelectedSemester}. The examination administration has not published grade reports for this semester yet.
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {semResults.map((res) => {
+                  const semData = res.semesters[teacherSelectedSemester];
+                  const semChartData = semData?.grades.map((g) => ({
+                    name: g.courseCode,
+                    score: g.percentage,
+                  })) || [];
+
+                  return (
+                    <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
+                      <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center font-extrabold text-sm">
+                            <Award className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
+                            <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {teacherSelectedSemester}</p>
+                            <p className="text-[10px] text-slate-400">Published: {res.publishedDate}</p>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="flex items-center justify-end mb-1">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase ${
+                              semData?.status === 'Pass' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {semData?.status || 'Pass'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">SGPA: <span className="text-slate-900 font-extrabold">{semData?.sgpa?.toFixed(2)}</span></p>
+                          <p className="text-xs text-purple-700 uppercase font-bold tracking-wider">CGPA: <span className="font-black text-purple-900">{res.cgpa?.toFixed(2)}</span></p>
+                        </div>
+                      </div>
+
+                      {/* Hall Ticket Info */}
+                      {res.hallTicket && (
+                        <div className="p-2.5 bg-purple-50/80 border border-purple-200/80 rounded-xl flex items-center justify-between text-xs">
+                          <span className="font-bold text-purple-900 flex items-center gap-1.5">
+                            <Ticket className="w-3.5 h-3.5 text-purple-600" /> Hall Ticket Issued:
+                          </span>
+                          <span className="font-mono text-purple-800 font-bold">{res.hallTicket.hallTicketNo} ({res.hallTicket.seatNo})</span>
+                        </div>
+                      )}
+
+                      {/* Performance Bar Graph for Semester */}
+                      <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Subject Scores Bar Graph ({teacherSelectedSemester})</p>
+                        <div className="h-36 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={semChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                              <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                              <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} domain={[50, 100]} />
+                              <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '11px' }} />
+                              <Bar dataKey="score" fill="#9333EA" radius={[6, 6, 0, 0]} barSize={24} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Grade Breakdown ({teacherSelectedSemester})</p>
+                        <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
+                          {semData?.grades.map((g) => (
+                            <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
+                              <div>
+                                <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
+                                <p className="text-[10px] text-slate-500">{g.remarks}</p>
+                              </div>
+                              <div className="text-right">
+                                <span className={`px-2.5 py-0.5 rounded-md font-extrabold text-xs ${
+                                  g.gradeLetter === 'F' || g.percentage < 50 ? 'bg-rose-100 text-rose-800' : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {g.gradeLetter} ({g.percentage}%)
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -848,8 +881,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
 
       {/* Edit Accommodation Modal */}
       {editingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setEditingStudent(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white relative">
               <button
                 onClick={() => setEditingStudent(null)}
@@ -979,8 +1012,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
 
       {/* Change Request Modal */}
       {changeReqStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setChangeReqStudent(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 bg-gradient-to-r from-amber-500 to-amber-600 text-white relative">
               <button
                 onClick={() => setChangeReqStudent(null)}
@@ -1030,8 +1063,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
 
       {/* Inspect Student Full Details Modal */}
       {inspectStudentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn" onClick={() => setInspectStudentModal(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 bg-gradient-to-r from-purple-950 via-purple-900 to-slate-900 text-white relative">
               <button
                 onClick={() => setInspectStudentModal(null)}
