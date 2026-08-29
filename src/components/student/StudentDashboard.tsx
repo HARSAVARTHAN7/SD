@@ -26,7 +26,8 @@ import {
   Search,
   Tag,
   Ticket,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +48,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   const [noticeSearch, setNoticeSearch] = useState<string>('');
   const [broadcastFilter, setBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
   const [studentSelectedSemester, setStudentSelectedSemester] = useState<string>('Semester 5');
+  const [showOfficialHallTicketModal, setShowOfficialHallTicketModal] = useState<boolean>(false);
 
   // Attendance stats
   const myAttendanceRecords = attendance.filter((a) => a.studentId === user?.id);
@@ -486,9 +488,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
             ))}
           </div>
 
-          {/* Hall Ticket Card (If Issued) */}
-          {myResultReport?.hallTicket && (
-            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-lg border border-purple-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          {/* Hall Ticket Card (ONLY AFTER details are uploaded/published by admin) */}
+          {myResultReport?.hallTicket && myResultReport.hallTicket.status === 'Issued' ? (
+            <div className="bg-gradient-to-r from-purple-950 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-xl border border-purple-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black">
                   <Ticket className="w-7 h-7" />
@@ -497,14 +499,33 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-extrabold text-[10px] uppercase tracking-wider border border-emerald-400/30">
                     Official Hall Ticket Issued
                   </span>
-                  <h3 className="text-lg font-extrabold text-white mt-1">Exam Hall Ticket: {myResultReport.hallTicket.hallTicketNo}</h3>
-                  <p className="text-xs text-purple-200 mt-0.5">{myResultReport.hallTicket.examCenter} • {myResultReport.hallTicket.seatNo}</p>
+                  <h3 className="text-lg font-extrabold text-white mt-1">
+                    Exam Register No: {myResultReport.hallTicket.registerNumber || myResultReport.hallTicket.hallTicketNo}
+                  </h3>
+                  <p className="text-xs text-purple-200 mt-0.5">
+                    {myResultReport.hallTicket.candidateName || user?.name} • {myResultReport.hallTicket.programme || 'B.Com (Self Financing)'} (Sem {myResultReport.hallTicket.semester || 'V'})
+                  </p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-[11px] text-slate-400 block font-semibold">Scheduled Examination Window</span>
-                <span className="text-xs font-extrabold text-amber-300">{myResultReport.hallTicket.examDates}</span>
+
+              <div className="flex items-center gap-3">
+                <div className="text-right hidden sm:block">
+                  <span className="text-[11px] text-slate-400 block font-semibold">Scheduled Examination</span>
+                  <span className="text-xs font-extrabold text-amber-300">{myResultReport.hallTicket.examDates || 'NOVEMBER - 2024'}</span>
+                </div>
+
+                <button
+                  onClick={() => setShowOfficialHallTicketModal(true)}
+                  className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Ticket className="w-4 h-4" /> View / Print Official Hall Ticket
+                </button>
               </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center gap-3 text-slate-500 text-xs font-medium">
+              <AlertCircle className="w-4 h-4 text-slate-400 shrink-0" />
+              <span>Hall Ticket Status: <strong>Pending / Not Published Yet</strong>. The official hall ticket will be available here once published by the examination authority.</span>
             </div>
           )}
 
@@ -777,6 +798,162 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
               >
                 Close Course
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Christ College (Autonomous) Printable Hall Ticket Modal */}
+      {showOfficialHallTicketModal && myResultReport?.hallTicket && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fadeIn overflow-y-auto"
+          onClick={() => setShowOfficialHallTicketModal(false)}
+        >
+          <div
+            className="bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-300 max-w-2xl w-full my-8 overflow-hidden print:m-0 print:shadow-none print:w-full print:max-w-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Top Action Header (Hidden in Print) */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between print:hidden">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                Official Examination Hall Ticket (Christ College Autonomous Format)
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all"
+                >
+                  <Printer className="w-4 h-4" /> Print Hall Ticket
+                </button>
+                <button
+                  onClick={() => setShowOfficialHallTicketModal(false)}
+                  className="p-1.5 text-white/70 hover:text-white rounded-full cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Official Document Body */}
+            <div className="p-6 sm:p-8 space-y-6 font-serif text-slate-900 leading-normal">
+              {/* Header Crest & College Title */}
+              <div className="text-center space-y-1 pb-4 border-b-2 border-slate-900">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="w-14 h-14 rounded-full border-2 border-blue-900 bg-blue-50 text-blue-950 font-black flex items-center justify-center text-center text-[9px] p-1 uppercase shadow-xs">
+                    CHRIST COLLEGE
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black tracking-tight text-blue-950 uppercase">
+                      CHRIST COLLEGE (AUTONOMOUS)
+                    </h1>
+                    <p className="text-[11px] font-bold text-slate-700 uppercase">
+                      IRINJALAKUDA — 680 125, KERALA, INDIA
+                    </p>
+                    <p className="text-[10px] text-rose-800 font-extrabold">
+                      Affiliated to University of Calicut | Reaccredited by NAAC 'A++' Grade
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 block font-sans">
+                    FIFTH SEMESTER DEGREE EXTERNAL EXAMINATION NOVEMBER - 2024 (CBCSS-UG)
+                  </span>
+                </div>
+              </div>
+
+              {/* Student Register & Profile Block */}
+              <div className="relative border-2 border-slate-900 p-4 rounded-xl font-sans text-xs space-y-2">
+                <div className="text-center font-bold text-sm bg-slate-100 py-1 border-b border-slate-400 mb-2">
+                  Register Number : <span className="font-mono text-base font-black tracking-wider text-blue-950">{myResultReport.hallTicket.registerNumber || 'CCAWBCM141'}</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-2 space-y-1.5 font-medium">
+                    <p><strong className="w-40 inline-block font-bold">Programme :</strong> {myResultReport.hallTicket.programme || 'B.Com (Self Financing)'}</p>
+                    <p><strong className="w-40 inline-block font-bold">Semester :</strong> {myResultReport.hallTicket.semester || 'V'}</p>
+                    <p><strong className="w-40 inline-block font-bold">Name of the Candidate :</strong> <span className="font-bold text-blue-950 uppercase">{myResultReport.hallTicket.candidateName || user?.name || 'AMRITHA HARIDASAN'}</span></p>
+                    <p><strong className="w-40 inline-block font-bold">Date of Birth :</strong> {myResultReport.hallTicket.dob || '11/05/2004'}</p>
+                    <p><strong className="w-40 inline-block font-bold">Examination Center :</strong> {myResultReport.hallTicket.examCenter || 'Christ College Main Hall'}</p>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center p-2 border border-slate-400 rounded-lg bg-slate-50 text-center">
+                    <img
+                      src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'}
+                      alt="Candidate"
+                      className="w-24 h-28 object-cover rounded border border-slate-300 shadow-xs mb-1"
+                    />
+                    <span className="text-[9px] font-bold text-slate-500 uppercase">Candidate Photo</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subject Schedule Table */}
+              <div className="font-sans">
+                <table className="w-full text-left text-xs border-2 border-slate-900">
+                  <thead className="bg-slate-100 text-slate-900 font-bold uppercase tracking-wider border-b-2 border-slate-900">
+                    <tr>
+                      <th className="py-2.5 px-3 border-r border-slate-900 w-1/4">Subject Code</th>
+                      <th className="py-2.5 px-3 border-r border-slate-900 w-1/2">Subject Name</th>
+                      <th className="py-2.5 px-3 text-center">Dated signature of the invigilator</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y border-slate-900 font-medium">
+                    {(myResultReport.hallTicket.subjects && myResultReport.hallTicket.subjects.length > 0
+                      ? myResultReport.hallTicket.subjects
+                      : [
+                          { subjectCode: 'CC19UPSY5D01', subjectName: 'Psychology and Personal Growth' },
+                          { subjectCode: 'CC19UBCM5B07', subjectName: 'Accounting for Management' },
+                          { subjectCode: 'CC19UBCM5B08', subjectName: 'Business Research Methods' },
+                          { subjectCode: 'CC19UBCM5B09', subjectName: 'Income Tax Law and Accounts' },
+                          { subjectCode: 'CC19UBCM5B10', subjectName: 'Financial Markets and Services' },
+                          { subjectCode: 'CC19UBCM5B11', subjectName: 'Financial Management' },
+                        ]
+                    ).map((sub) => (
+                      <tr key={sub.subjectCode} className="border-b border-slate-400">
+                        <td className="py-2 px-3 font-mono font-bold border-r border-slate-400">{sub.subjectCode}</td>
+                        <td className="py-2 px-3 font-semibold border-r border-slate-400">{sub.subjectName}</td>
+                        <td className="py-2 px-3 text-center text-slate-300">_________________</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Candidate & Controller Signatures */}
+              <div className="pt-6 font-sans text-xs flex items-end justify-between">
+                <div>
+                  <p className="font-bold text-slate-800">Signature of the Candidate :</p>
+                  <div className="h-10 border-b border-dashed border-slate-400 w-48 mt-1"></div>
+                </div>
+
+                <div className="text-right space-y-1">
+                  <div className="inline-block text-emerald-700 font-serif italic text-base font-bold pr-4">
+                    ~ Controller of Exams ~
+                  </div>
+                  <p className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Controller of Examinations</p>
+                </div>
+              </div>
+
+              {/* Instructions to Candidates */}
+              <div className="pt-4 border-t border-slate-300 font-sans text-[10px] space-y-1.5 leading-tight text-slate-700">
+                <h4 className="font-extrabold text-slate-900 text-center uppercase tracking-widest text-xs mb-1">
+                  INSTRUCTIONS TO CANDIDATES
+                </h4>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>The candidates should also verify that the hall ticket pertains to the programme of study and that it bears the register number of Ten characters.</li>
+                  <li>The candidates should write the register number in the space provided for the same in the answer book.</li>
+                  <li>The candidates should write the subject code and the name of the paper in the answer book as it appears in the question paper on each day of examination.</li>
+                  <li>Candidates should take their seats in the examination hall at least fifteen (15) minutes before the commencement of the examination. Candidates will not be allowed to leave the examination hall during the first 30 minutes of the examination.</li>
+                  <li>Candidates are not permitted to write anything on their hall tickets or question papers other than that instructed above. They are also prohibited from writing their Name/Register Number or anything which may reveal their identity in any other part of the answer book.</li>
+                  <li>Candidates who do not behave properly to the Chief/Assistant Superintendents/Invigilators of the Examinations or are found to have recourse to malpractice of any kind are liable to be sent out of the examination hall forthwith.</li>
+                  <li>Candidates are prohibited from bringing in to the Examination Hall any type of electronic devices other than calculators permitted for certain specific subjects.</li>
+                  <li>Violation of these instructions may entail in cancellation of the examinations and getting debarred from further appearance.</li>
+                </ol>
+
+                <div className="mt-3 p-2 bg-slate-100 text-center font-bold border border-slate-400 rounded text-[10px] text-slate-900">
+                  For all correspondances with the office of the Controller of Examinations, Hall ticket has to be produced. Please keep the Hall ticket in safe custody.
+                </div>
+              </div>
             </div>
           </div>
         </div>

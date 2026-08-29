@@ -134,12 +134,25 @@ export interface SemesterResult {
   grades: GradeItem[];
 }
 
+export interface HallTicketSubject {
+  subjectCode: string;
+  subjectName: string;
+}
+
 export interface HallTicketInfo {
   hallTicketNo: string;
-  examCenter: string;
-  seatNo: string;
-  examDates: string;
+  registerNumber?: string;
+  programme?: string;
+  semester?: string;
+  candidateName?: string;
+  dob?: string;
+  examCenter?: string;
+  seatNo?: string;
+  examDates?: string;
+  candidatePhoto?: string;
+  subjects?: HallTicketSubject[];
   status: 'Issued' | 'Pending';
+  publishedDate?: string;
 }
 
 export interface StudentResultReport {

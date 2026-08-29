@@ -727,11 +727,24 @@ export const DEFAULT_RESULTS: StudentResultReport[] = [
     publishedDate: 'August 28, 2026',
     academicYear: '2024 - 2028',
     hallTicket: {
-      hallTicketNo: 'HT-2026-4189',
-      examCenter: 'Central Engineering Hall (Block A)',
+      hallTicketNo: 'CCAWBCM141',
+      registerNumber: 'CCAWBCM141',
+      programme: 'B.Com (Self Financing)',
+      semester: 'V',
+      candidateName: 'AMRITHA HARIDASAN',
+      dob: '11/05/2004',
+      examCenter: 'Christ College Main Examination Hall (Block A)',
       seatNo: 'Seat A-14',
-      examDates: 'Sept 15 - Sept 25, 2026',
+      examDates: 'NOVEMBER - 2024',
       status: 'Issued',
+      subjects: [
+        { subjectCode: 'CC19UPSY5D01', subjectName: 'Psychology and Personal Growth' },
+        { subjectCode: 'CC19UBCM5B07', subjectName: 'Accounting for Management' },
+        { subjectCode: 'CC19UBCM5B08', subjectName: 'Business Research Methods' },
+        { subjectCode: 'CC19UBCM5B09', subjectName: 'Income Tax Law and Accounts' },
+        { subjectCode: 'CC19UBCM5B10', subjectName: 'Financial Markets and Services' },
+        { subjectCode: 'CC19UBCM5B11', subjectName: 'Financial Management' },
+      ],
     },
     semesters: {
       'Semester 1': {

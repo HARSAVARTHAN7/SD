@@ -266,40 +266,67 @@ SUBJECT MARKS BREAKDOWN:
 }
 
 /**
- * Download Printable Master Hall Tickets PDF Template
+ * Download Printable Master Hall Tickets PDF Template (Christ College Autonomous Format)
  */
 export function downloadHallTicketsPdfTemplate(): void {
-  const content = `=====================================================================
-OFFICIAL EXAMINATION HALL TICKET MASTER TEMPLATE
-=====================================================================
-Semester Examination: Fall 2026
+  const content = `=================================================================================
+CHRIST COLLEGE (AUTONOMOUS)
+IRINJALAKUDA — 680 125, KERALA, INDIA
+Affiliated to University of Calicut | Reaccredited by NAAC 'A++' Grade
+FIFTH SEMESTER DEGREE EXTERNAL EXAMINATION NOVEMBER - 2024 (CBCSS-UG)
+=================================================================================
 
-ENTRY #1:
----------------------------------------------------------------------
-Student Name: Murat Gürsoy
-Roll Number: 2024-418
-Hall Ticket Number: HT-2026-4189
-Examination Center: Central Engineering Hall (Block A)
+HALL TICKET MASTER REGISTRATION ENTRY #1:
+---------------------------------------------------------------------------------
+Register Number / Roll No: CCAWBCM141
+Programme: B.Com (Self Financing)
+Semester: V (Fifth Semester)
+Name of Candidate: AMRITHA HARIDASAN
+Date of Birth: 11/05/2004
+Exam Center: Christ College Main Examination Hall (Block A)
 Seat Number: Seat A-14
-Examination Dates: Sept 15 - Sept 25, 2026
-Status: Issued
+Scheduled Window: Nov 15 - Nov 28, 2024
 
-ENTRY #2:
----------------------------------------------------------------------
-Student Name: Emma Watson
-Roll Number: 2024-419
-Hall Ticket Number: HT-2026-4190
-Examination Center: Central Engineering Hall (Block B)
+SUBJECT SCHEDULE:
+1. CC19UPSY5D01 | Psychology and Personal Growth
+2. CC19UBCM5B07 | Accounting for Management
+3. CC19UBCM5B08 | Business Research Methods
+4. CC19UBCM5B09 | Income Tax Law and Accounts
+5. CC19UBCM5B10 | Financial Markets and Services
+6. CC19UBCM5B11 | Financial Management
+
+INSTRUCTIONS TO CANDIDATES:
+1. Verify register number of 10 characters.
+2. Write register number and subject codes clearly on answer book.
+3. Take seats 15 minutes before examination commencement.
+4. Keep Hall Ticket in safe custody for all correspondences.
+=================================================================================
+
+HALL TICKET MASTER REGISTRATION ENTRY #2:
+---------------------------------------------------------------------------------
+Register Number / Roll No: CCAWBCM142
+Programme: B.Com (Self Financing)
+Semester: V (Fifth Semester)
+Name of Candidate: MURAT GÜRSOY
+Date of Birth: 14/08/2003
+Exam Center: Christ College Main Examination Hall (Block B)
 Seat Number: Seat B-08
-Examination Dates: Sept 15 - Sept 25, 2026
-Status: Issued
-=====================================================================`;
+Scheduled Window: Nov 15 - Nov 28, 2024
+
+SUBJECT SCHEDULE:
+1. CC19UPSY5D01 | Psychology and Personal Growth
+2. CC19UBCM5B07 | Accounting for Management
+3. CC19UBCM5B08 | Business Research Methods
+4. CC19UBCM5B09 | Income Tax Law and Accounts
+5. CC19UBCM5B10 | Financial Markets and Services
+6. CC19UBCM5B11 | Financial Management
+=================================================================================`;
 
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'hall_tickets_publication_template.pdf';
+  a.download = 'christ_college_hall_tickets_template.pdf';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
