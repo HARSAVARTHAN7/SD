@@ -41,7 +41,7 @@ interface StudentDashboardProps {
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }) => {
   const { user } = useAuth();
-  const { courses, announcements, attendance, studentResults } = useApp();
+  const { courses, announcements, attendance, studentResults, showToast } = useApp();
 
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
@@ -472,10 +472,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                 <Award className="w-4 h-4 text-slate-950" /> Download Permanent Record
               </button>
               <button
-                onClick={() => window.print()}
-                className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                onClick={() => {
+                  if (myResultReport?.hallTicket && myResultReport.hallTicket.status === 'Issued') {
+                    setShowOfficialHallTicketModal(true);
+                  } else {
+                    showToast('Hall Ticket Pending', 'The official hall ticket has not been published by the admin yet.', 'warning');
+                  }
+                }}
+                className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-full font-bold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+                title="Print official examination hall ticket"
               >
-                <Printer className="w-4 h-4 text-slate-500" /> Print Official Report
+                <Printer className="w-4 h-4 text-slate-600" /> Print Official Report
               </button>
             </div>
           </div>
