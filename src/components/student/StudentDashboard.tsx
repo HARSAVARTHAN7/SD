@@ -38,7 +38,7 @@ interface StudentDashboardProps {
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }) => {
   const { user } = useAuth();
-  const { courses, announcements, attendance } = useApp();
+  const { courses, announcements, attendance, studentResults } = useApp();
 
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
@@ -51,8 +51,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   const totalAttRecorded = myAttendanceRecords.length || 1;
   const calculatedAttendanceRate = Math.round((presentCount / totalAttRecorded) * 100) || 94.8;
 
+  // Published result card for current student
+  const myResultReport = studentResults.find(
+    (r) => r.studentId === user?.id || (r.rollNo && r.rollNo === user?.rollNo) || (r.studentName && r.studentName.toLowerCase() === user?.name?.toLowerCase())
+  );
+  const myGrades = myResultReport ? myResultReport.grades : DEFAULT_STUDENT_GRADES;
+  const displayGpa = myResultReport ? myResultReport.gpa : (user?.gpa || 3.85);
+
   // Chart data for grades
-  const gradeChartData = DEFAULT_STUDENT_GRADES.map((g) => ({
+  const gradeChartData = myGrades.map((g) => ({
     name: g.courseCode,
     subject: g.courseName,
     score: g.percentage,
@@ -453,11 +460,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xl">
-                3.85
+                {displayGpa.toFixed(2)}
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumulative GPA</p>
-                <p className="text-base font-extrabold text-slate-800">Semester 5 Standing</p>
+                <p className="text-base font-extrabold text-slate-800">{myResultReport ? myResultReport.semester : 'Semester 5 Standing'}</p>
                 <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Scale: 4.0 Max</p>
               </div>
             </div>
@@ -479,8 +486,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Average Grade</p>
-                <p className="text-base font-extrabold text-slate-800">94.8% Percentile</p>
-                <p className="text-[11px] text-purple-600 font-semibold mt-0.5">Dean's Honor List</p>
+                <p className="text-base font-extrabold text-slate-800">Published Result Card</p>
+                <p className="text-[11px] text-purple-600 font-semibold mt-0.5">Verified Academic Record</p>
               </div>
             </div>
           </div>
@@ -505,8 +512,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
 
           {/* Official Grade Table */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-sm">Subject Marks & Faculty Remarks</h3>
+              {myResultReport && (
+                <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
+                  Published: {myResultReport.publishedDate}
+                </span>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -521,7 +533,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {DEFAULT_STUDENT_GRADES.map((item) => (
+                  {myGrades.map((item) => (
                     <tr key={item.courseCode} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-4 px-6 font-bold text-slate-800">{item.courseName}</td>
                       <td className="py-4 px-4 font-mono text-slate-500">{item.courseCode}</td>

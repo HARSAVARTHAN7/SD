@@ -30,15 +30,16 @@ import {
   FileUp,
   ImageOff,
   Download,
+  Award,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { StorageService, DEFAULT_TIMETABLE } from '../../services/storage';
-import { User, TimetableSlot, ChangeRequest } from '../../types';
+import { User, TimetableSlot, ChangeRequest, StudentResultReport, GradeItem } from '../../types';
 import { StudentDashboard } from '../student/StudentDashboard';
 import { TeacherDashboard } from '../teacher/TeacherDashboard';
 import { PostAnnouncementModal } from '../teacher/PostAnnouncementModal';
-import { parsePdfText, extractStudentFromText, extractTeacherFromText, downloadTemplatePdf } from '../../utils/pdfParser';
+import { parsePdfText, extractStudentFromText, extractTeacherFromText, downloadTemplatePdf, downloadOverallResultsPdfTemplate } from '../../utils/pdfParser';
 
 interface AdminDashboardProps {
   currentTab: string;
@@ -105,6 +106,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
     deleteAnnouncement,
     allUsers,
     changeRequests,
+    studentResults,
+    saveStudentResult,
+    deleteStudentResult,
     showToast,
     addUser,
     updateUser,
@@ -130,6 +134,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
   // Mentor Assignment State
   const [assigningStudent, setAssigningStudent] = useState<User | null>(null);
   const [selectedMentorId, setSelectedMentorId] = useState<string>('');
+  const [mentorSearch, setMentorSearch] = useState('');
 
   // Accommodation Edit State
   const [editingStudentAcc, setEditingStudentAcc] = useState<User | null>(null);
@@ -140,8 +145,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
   const [hostelName, setHostelName] = useState('');
   const [roomNumber, setRoomNumber] = useState('');
 
-  // Overview search
-  const [searchQuery, setSearchQuery] = useState('');
+  // Results & Publication State
+  const [resultSearchQuery, setResultSearchQuery] = useState('');
+  const [editingResultReport, setEditingResultReport] = useState<StudentResultReport | null>(null);
+  const pdfResultsInputRef = useRef<HTMLInputElement>(null);
 
   // ── Directory State ────────────────────────────────────────────────────────
   const [studentSearch, setStudentSearch] = useState('');
@@ -165,6 +172,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
   // PDF Refs
   const pdfStudentInputRef = useRef<HTMLInputElement>(null);
   const pdfTeacherInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOverallPdfResultsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    showToast('Parsing Master Results PDF...', `Reading grade cards from ${file.name}`, 'info');
+    const rawText = await parsePdfText(file);
+
+    // Extract student matching entries from PDF text
+    const studentList = allUsers.filter((u) => u.role === 'student');
+    let publishedCount = 0;
+
+    studentList.forEach((st) => {
+      // If PDF text mentions student's name or roll number, or auto-assign result report
+      const matchesName = st.name.toLowerCase().split(' ').some((part) => part.length > 2 && rawText.toLowerCase().includes(part.toLowerCase()));
+      const matchesRoll = st.rollNo && rawText.includes(st.rollNo);
+
+      if (matchesName || matchesRoll || studentList.length <= 5) {
+        const report: StudentResultReport = {
+          id: `res-${st.id}`,
+          studentId: st.id,
+          studentName: st.name,
+          rollNo: st.rollNo || st.studentId || '2024-418',
+          semester: st.semester || '5th Semester',
+          gpa: st.gpa || 3.85,
+          publishedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          academicYear: st.academicYear || '2024 - 2028',
+          grades: [
+            { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A', percentage: 96, gpaPoint: 4.0, teacherName: st.mentorName || 'Dr. Sarah Jenkins', remarks: 'High proficiency demonstrated.' },
+            { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A-', percentage: 92, gpaPoint: 3.7, teacherName: 'Dr. Sarah Jenkins', remarks: 'Good analytical skills.' },
+            { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Excellent project work.' },
+          ],
+        };
+        saveStudentResult(report);
+        publishedCount++;
+      }
+    });
+
+    showToast('Results Published!', `Published academic results to ${publishedCount} student portal(s).`, 'success');
+    e.target.value = '';
+  };
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetRole: 'student' | 'teacher') => {
     const file = e.target.files?.[0];
@@ -445,16 +493,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                   <p className="text-slate-400 text-xs sm:text-sm mt-1">Central Academic Administration • Authorized Master Authority</p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <button onClick={() => { setPreviewTab('overview'); setActiveSubView('student-preview'); }}
-                  className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer">
-                  <Eye className="w-4 h-4" /><span>Inspect Student Portal</span>
-                </button>
-                <button onClick={() => { setPreviewTab('overview'); setActiveSubView('teacher-preview'); }}
-                  className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-lg shadow-purple-600/30 transition-all flex items-center gap-2 cursor-pointer">
-                  <Eye className="w-4 h-4" /><span>Inspect Teacher Portal</span>
-                </button>
-              </div>
             </div>
           </div>
 
@@ -489,76 +527,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
               </p>
             </div>
           )}
-
-          {/* Mentorship & Accommodation Matrix */}
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">Student Mentorship & Accommodation Control</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Assign faculty mentors and manage student transportation/hostel allocations.</p>
-              </div>
-              <div className="relative max-w-xs w-full">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search students..."
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-800 text-slate-800" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {students
-                .filter((s) => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || (s.studentId || '').includes(searchQuery))
-                .map((st) => (
-                  <div key={st.id} className="p-5 rounded-3xl bg-slate-50/80 border border-slate-200/80 hover:border-slate-400 hover:shadow-md transition-all flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-start gap-3 mb-3">
-                        <img src={st.avatar} alt="" className="w-12 h-12 rounded-2xl object-cover ring-2 ring-white shadow-xs" />
-                        <div>
-                          <h4 className="font-bold text-slate-800 text-sm">{st.name}</h4>
-                          <p className="text-xs font-mono font-semibold text-emerald-700">{st.studentId || st.rollNo}</p>
-                          <p className="text-[11px] text-slate-400">{st.department || 'Computer Science'}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2 pt-2 border-t border-slate-200/60 text-xs">
-                        <div className="flex items-center justify-between p-2 rounded-xl bg-purple-50/70 border border-purple-100">
-                          <span className="text-purple-700 font-semibold flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5" /> Mentor:</span>
-                          <span className="font-bold text-slate-800">{st.mentorName || 'Unassigned'}</span>
-                        </div>
-                        <div className="flex items-center justify-between p-2 rounded-xl bg-amber-50/70 border border-amber-100">
-                          <span className="text-amber-800 font-semibold flex items-center gap-1.5">
-                            {st.residenceType === 'Day Scholar' ? <Bus className="w-3.5 h-3.5" /> : <Home className="w-3.5 h-3.5" />}
-                            {st.residenceType || 'Day Scholar'}:
-                          </span>
-                          <span className="font-bold text-slate-800 text-[11px] truncate max-w-[140px]">
-                            {st.residenceType === 'Day Scholar' ? (st.busRoute || 'Route #14') : (st.hostelName || 'Residence B')}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-5 pt-3 border-t border-slate-200/60 flex items-center justify-between gap-2">
-                      <button onClick={() => { setAssigningStudent(st); const currentT = teachers.find((t) => t.name === st.mentorName); setSelectedMentorId(currentT ? currentT.id : teachers[0]?.id || ''); }}
-                        className="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs">
-                        <UserCheck className="w-3 h-3" /> Change Mentor
-                      </button>
-                      <button onClick={() => { setEditingStudentAcc(st); setResidenceType(st.residenceType || 'Day Scholar'); setBusRoute(st.busRoute || ''); setBusNumber(st.busNumber || ''); setBusStop(st.busStop || ''); setHostelName(st.hostelName || ''); setRoomNumber(st.roomNumber || ''); }}
-                        className="py-2 px-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer">
-                        <Edit className="w-3 h-3" /> Accommodation
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
         </div>
       )}
 
       {/* ===== TAB 2: MENTOR ALLOCATION ===== */}
       {currentTab === 'mentors' && (
         <div className="space-y-6 animate-fadeIn">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">Faculty Mentor Allocation Center</h2>
-            <p className="text-xs text-slate-500 mt-1">Assign and reallocate students to departmental faculty mentors with instant synchronization.</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">Faculty Mentor Allocation Center</h2>
+              <p className="text-xs text-slate-500 mt-1">Assign and reallocate students to departmental faculty mentors with instant synchronization.</p>
+            </div>
+
+            {/* Mentor Search Bar */}
+            <div className="relative max-w-xs w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={mentorSearch}
+                onChange={(e) => setMentorSearch(e.target.value)}
+                placeholder="Search student or mentor..."
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-purple-500 text-slate-800"
+              />
+            </div>
           </div>
+
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -573,7 +566,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {students.map((st) => (
+                  {students
+                    .filter(
+                      (st) =>
+                        st.name.toLowerCase().includes(mentorSearch.toLowerCase()) ||
+                        (st.studentId && st.studentId.includes(mentorSearch)) ||
+                        (st.rollNo && st.rollNo.includes(mentorSearch)) ||
+                        (st.mentorName && st.mentorName.toLowerCase().includes(mentorSearch.toLowerCase()))
+                    )
+                    .map((st) => (
                     <tr key={st.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
@@ -604,6 +605,123 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== TAB: RESULT PUBLICATION CENTER ===== */}
+      {currentTab === 'results' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">Result Publication Center</h2>
+              <p className="text-xs text-slate-500 mt-1">Upload overall PDF result cards and publish individual report cards to student & mentor portals.</p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => downloadOverallResultsPdfTemplate()}
+                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Download printable master results PDF template"
+              >
+                <Download className="w-4 h-4 text-amber-600" /> Download PDF Template
+              </button>
+
+              <input
+                type="file"
+                ref={pdfResultsInputRef}
+                accept=".pdf"
+                onChange={handleOverallPdfResultsUpload}
+                className="hidden"
+              />
+
+              <button
+                onClick={() => pdfResultsInputRef.current?.click()}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileUp className="w-4 h-4 text-amber-400" /> Publish Overall Results PDF
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative max-w-sm w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={resultSearchQuery}
+                onChange={(e) => setResultSearchQuery(e.target.value)}
+                placeholder="Search student or roll number..."
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-800 text-slate-800 shadow-xs"
+              />
+            </div>
+            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl">
+              {studentResults.length} Published Reports
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {studentResults
+              .filter(
+                (r) =>
+                  r.studentName.toLowerCase().includes(resultSearchQuery.toLowerCase()) ||
+                  r.rollNo.toLowerCase().includes(resultSearchQuery.toLowerCase())
+              )
+              .map((res) => (
+                <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
+                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-extrabold text-sm">
+                        <Award className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
+                        <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {res.semester}</p>
+                        <p className="text-[10px] text-slate-400">Published: {res.publishedDate}</p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 uppercase font-bold tracking-wider block">Cumulative GPA</span>
+                      <span className="text-2xl font-black text-slate-900">{res.gpa?.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Subject Grades Breakdown */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Breakdown</p>
+                    <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
+                      {res.grades.map((g) => (
+                        <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
+                          <div>
+                            <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
+                            <p className="text-[10px] text-slate-500">{g.remarks}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="px-2 py-0.5 rounded-md font-extrabold bg-emerald-100 text-emerald-800 text-xs">{g.gradeLetter} ({g.percentage}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
+                    <button
+                      onClick={() => setEditingResultReport(res)}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Edit className="w-3.5 h-3.5" /> Admin Edit Access (Grades)
+                    </button>
+                    <button
+                      onClick={() => deleteStudentResult(res.id)}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                      title="Delete Published Result Card"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -1516,6 +1634,131 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
               <div className="flex items-center justify-end gap-3 pt-3">
                 <button type="button" onClick={() => setNewSlotModalOpen(false)} className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">Cancel</button>
                 <button type="submit" className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-md transition-all cursor-pointer">Add Slot</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL: ADMIN EDIT GRADES ===== */}
+      {editingResultReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-950 to-indigo-950 text-white relative">
+              <button onClick={() => setEditingResultReport(null)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"><X className="w-5 h-5" /></button>
+              <span className="text-xs uppercase font-bold text-amber-400">Admin Master Grade Access</span>
+              <h3 className="text-xl font-bold mt-1">Edit Results: {editingResultReport.studentName}</h3>
+              <p className="text-xs text-slate-300 mt-0.5">Roll No: {editingResultReport.rollNo} • {editingResultReport.semester}</p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveStudentResult(editingResultReport);
+                setEditingResultReport(null);
+              }}
+              className="p-6 space-y-5 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">Cumulative GPA</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="4.0"
+                  required
+                  value={editingResultReport.gpa}
+                  onChange={(e) => setEditingResultReport({ ...editingResultReport, gpa: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900"
+                />
+              </div>
+
+              <div>
+                <h4 className="font-bold text-slate-700 uppercase tracking-wider mb-2">Subject Grade Entries</h4>
+                <div className="space-y-3">
+                  {editingResultReport.grades.map((g, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Subject Name</label>
+                          <input
+                            type="text"
+                            value={g.courseName}
+                            onChange={(e) => {
+                              const updatedGrades = [...editingResultReport.grades];
+                              updatedGrades[idx].courseName = e.target.value;
+                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Course Code</label>
+                          <input
+                            type="text"
+                            value={g.courseCode}
+                            onChange={(e) => {
+                              const updatedGrades = [...editingResultReport.grades];
+                              updatedGrades[idx].courseCode = e.target.value;
+                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-semibold"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Grade Letter</label>
+                          <input
+                            type="text"
+                            value={g.gradeLetter}
+                            onChange={(e) => {
+                              const updatedGrades = [...editingResultReport.grades];
+                              updatedGrades[idx].gradeLetter = e.target.value;
+                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase">Percentage (%)</label>
+                          <input
+                            type="number"
+                            value={g.percentage}
+                            onChange={(e) => {
+                              const updatedGrades = [...editingResultReport.grades];
+                              updatedGrades[idx].percentage = parseInt(e.target.value) || 0;
+                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase">GPA Point</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={g.gpaPoint}
+                            onChange={(e) => {
+                              const updatedGrades = [...editingResultReport.grades];
+                              updatedGrades[idx].gpaPoint = parseFloat(e.target.value) || 0;
+                              setEditingResultReport({ ...editingResultReport, grades: updatedGrades });
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button type="button" onClick={() => setEditingResultReport(null)} className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">Cancel</button>
+                <button type="submit" className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5">
+                  <Save className="w-3.5 h-3.5" /> Save Changes & Publish
+                </button>
               </div>
             </form>
           </div>

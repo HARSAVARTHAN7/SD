@@ -7,6 +7,7 @@ import {
   GradeItem,
   AppNotification,
   ChangeRequest,
+  StudentResultReport,
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -18,6 +19,7 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'eduportal_notifications_v5',
   CURRENT_USER: 'eduportal_current_user_v5',
   CHANGE_REQUESTS: 'eduportal_change_requests_v5',
+  RESULTS: 'eduportal_results_v5',
 };
 
 // Seed default users including Admin and Faculty staff
@@ -413,6 +415,9 @@ export const StorageService = {
     if (!localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)) {
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(DEFAULT_NOTIFICATIONS));
     }
+    if (!localStorage.getItem(STORAGE_KEYS.RESULTS)) {
+      localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(DEFAULT_RESULTS));
+    }
   },
 
   resetDefaults() {
@@ -422,6 +427,7 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(DEFAULT_ATTENDANCE));
     localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(DEFAULT_ANNOUNCEMENTS));
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(DEFAULT_NOTIFICATIONS));
+    localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(DEFAULT_RESULTS));
     notifyStoreUpdate();
   },
 
@@ -674,6 +680,82 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.CHANGE_REQUESTS, JSON.stringify(list));
     notifyStoreUpdate();
   },
+
+  // Published Academic Results (Admin → Students/Teachers)
+  getStudentResults(): StudentResultReport[] {
+    const data = localStorage.getItem(STORAGE_KEYS.RESULTS);
+    return data ? JSON.parse(data) : DEFAULT_RESULTS;
+  },
+
+  saveStudentResult(report: StudentResultReport): void {
+    const list = this.getStudentResults();
+    const idx = list.findIndex((r) => r.id === report.id || (r.rollNo && r.rollNo === report.rollNo) || (r.studentId && r.studentId === report.studentId));
+    if (idx !== -1) {
+      list[idx] = report;
+    } else {
+      list.unshift(report);
+    }
+    localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(list));
+
+    // Also update student's GPA in User profile
+    const users = this.getUsers();
+    const st = users.find((u) => u.id === report.studentId || u.studentId === report.studentId || u.rollNo === report.rollNo);
+    if (st) {
+      st.gpa = report.gpa;
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    }
+
+    notifyStoreUpdate();
+  },
+
+  deleteStudentResult(id: string): void {
+    const list = this.getStudentResults().filter((r) => r.id !== id);
+    localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(list));
+    notifyStoreUpdate();
+  },
 };
+
+export const DEFAULT_RESULTS: StudentResultReport[] = [
+  {
+    id: 'res-student-murat',
+    studentId: 'student-murat',
+    studentName: 'Murat Gürsoy',
+    rollNo: '2024-418',
+    semester: '5th Semester',
+    gpa: 3.85,
+    publishedDate: 'August 28, 2026',
+    academicYear: '2024 - 2028',
+    grades: DEFAULT_STUDENT_GRADES,
+  },
+  {
+    id: 'res-student-emma',
+    studentId: 'student-emma',
+    studentName: 'Emma Watson',
+    rollNo: '2024-419',
+    semester: '5th Semester',
+    gpa: 3.92,
+    publishedDate: 'August 28, 2026',
+    academicYear: '2024 - 2028',
+    grades: [
+      { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Outstanding performance.' },
+      { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A', percentage: 95, gpaPoint: 4.0, teacherName: 'Dr. Sarah Jenkins', remarks: 'Excellent lab execution.' },
+      { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A', percentage: 94, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Great algorithm design.' },
+    ],
+  },
+  {
+    id: 'res-student-lucas',
+    studentId: 'student-lucas',
+    studentName: 'Lucas Vance',
+    rollNo: '2024-420',
+    semester: '5th Semester',
+    gpa: 3.65,
+    publishedDate: 'August 28, 2026',
+    academicYear: '2024 - 2028',
+    grades: [
+      { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'B+', percentage: 87, gpaPoint: 3.3, teacherName: 'Dr. Sarah Jenkins', remarks: 'Good progress in calculus.' },
+      { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A-', percentage: 91, gpaPoint: 3.7, teacherName: 'Prof. Alan Cooper', remarks: 'Strong programming skills.' },
+    ],
+  },
+];
 
 StorageService.init();

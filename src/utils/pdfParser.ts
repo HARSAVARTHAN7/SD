@@ -262,3 +262,75 @@ startxref
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Generate and trigger download for sample Overall Results PDF template
+ */
+export function downloadOverallResultsPdfTemplate() {
+  const filename = 'Overall_Academic_Results_Master_Template.pdf';
+  const lines = [
+    'OVERALL ACADEMIC RESULTS MASTER PUBLICATION',
+    '==================================================',
+    'Student Name: Murat Gursoy',
+    'Roll No: 2024-418',
+    'Semester: 5th Semester',
+    'GPA: 3.85',
+    'AP Calculus BC [MATH-401]: 96% (Grade A)',
+    'Classical Physics [PHYS-302]: 92% (Grade A-)',
+    'Advanced CS [CS-205]: 98% (Grade A+)',
+    '--------------------------------------------------',
+    'Student Name: Emma Watson',
+    'Roll No: 2024-419',
+    'Semester: 5th Semester',
+    'GPA: 3.92',
+    'AP Calculus BC [MATH-401]: 98% (Grade A+)',
+    'Classical Physics [PHYS-302]: 95% (Grade A)',
+    'Advanced CS [CS-205]: 94% (Grade A)',
+    '--------------------------------------------------',
+    'Student Name: Lucas Vance',
+    'Roll No: 2024-420',
+    'Semester: 5th Semester',
+    'GPA: 3.65',
+    'AP Calculus BC [MATH-401]: 87% (Grade B+)',
+    'Advanced CS [CS-205]: 91% (Grade A-)',
+    '==================================================',
+  ];
+
+  const streamLines = lines.map((l) => `(${l.replace(/[()]/g, '')}) Tj T*`).join('\n');
+
+  const pdfRaw = `%PDF-1.4
+1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
+2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
+3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 4 0 R>>>> /Contents 5 0 R>> endobj
+4 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj
+5 0 obj <</Length ${streamLines.length + 100}>> stream
+BT
+/F1 12 Tf
+50 750 Td
+16 TL
+${streamLines}
+ET
+endstream endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000242 00000 n 
+0000000311 00000 n 
+trailer <</Size 6 /Root 1 0 R>>
+startxref
+450
+%%EOF`;
+
+  const blob = new Blob([pdfRaw], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

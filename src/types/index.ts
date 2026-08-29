@@ -126,3 +126,15 @@ export interface ChangeRequest {
   status: 'pending' | 'resolved';
   timestamp: string;
 }
+
+export interface StudentResultReport {
+  id: string;
+  studentId: string;
+  studentName: string;
+  rollNo: string;
+  semester: string;
+  gpa: number;
+  publishedDate: string;
+  academicYear: string;
+  grades: GradeItem[];
+}

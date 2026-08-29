@@ -36,6 +36,7 @@ const TEACHER_TABS = [
   { id: 'attendance', label: 'Attendance Register', icon: CalendarCheck },
   { id: 'courses', label: 'Courses & Classes', icon: BookOpen },
   { id: 'roster', label: 'Student Directory', icon: Users },
+  { id: 'results', label: 'Academic Results', icon: Award },
   { id: 'announcements', label: 'Notice Board', icon: Megaphone },
 ];
 
@@ -43,6 +44,7 @@ const TEACHER_TABS = [
 const ADMIN_TABS = [
   { id: 'overview', label: 'Master Overview', icon: LayoutDashboard },
   { id: 'mentors', label: 'Mentor Allocation', icon: UserCheck },
+  { id: 'results', label: 'Result Publication', icon: Award },
   { id: 'timetable', label: 'Master Timetable', icon: Calendar },
   { id: 'directory', label: 'Faculty & Students', icon: Users },
   { id: 'notices', label: 'Campus Broadcaster', icon: Megaphone },

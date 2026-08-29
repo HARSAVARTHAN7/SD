@@ -45,12 +45,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
     attendance,
     takeAttendance,
     allUsers,
+    studentResults,
     showToast,
     submitChangeRequest,
   } = useApp();
 
   const [postAnnModalOpen, setPostAnnModalOpen] = useState(false);
   const [rosterSearch, setRosterSearch] = useState('');
+  const [resultSearch, setResultSearch] = useState('');
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
 
   // Editing student accommodation state
@@ -621,6 +623,76 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
         </div>
       )}
 
+
+      {/* ================= TAB: ACADEMIC RESULTS (VIEW ONLY) ================= */}
+      {currentTab === 'results' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">Academic Results & Performance</h2>
+              <p className="text-xs text-slate-500 mt-1">Review official published result cards and grade breakdowns for your mentored students (View-Only).</p>
+            </div>
+
+            <div className="relative max-w-xs w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={resultSearch}
+                onChange={(e) => setResultSearch(e.target.value)}
+                placeholder="Search student or roll number..."
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-purple-500 text-slate-800"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {studentResults
+              .filter(
+                (r) =>
+                  r.studentName.toLowerCase().includes(resultSearch.toLowerCase()) ||
+                  r.rollNo.toLowerCase().includes(resultSearch.toLowerCase())
+              )
+              .map((res) => (
+                <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
+                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center font-extrabold text-sm">
+                        <Award className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-slate-800 text-base">{res.studentName}</h4>
+                        <p className="text-xs font-mono font-semibold text-purple-700">Roll No: {res.rollNo} • {res.semester}</p>
+                        <p className="text-[10px] text-slate-400">Published: {res.publishedDate}</p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 uppercase font-bold tracking-wider block">GPA</span>
+                      <span className="text-2xl font-black text-purple-900">{res.gpa?.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Subject Grade Breakdown</p>
+                    <div className="divide-y divide-slate-100 bg-slate-50 rounded-2xl border border-slate-100 p-3">
+                      {res.grades.map((g) => (
+                        <div key={g.courseCode} className="py-2 flex items-center justify-between text-xs">
+                          <div>
+                            <p className="font-bold text-slate-800">{g.courseName} <span className="font-mono text-slate-400">({g.courseCode})</span></p>
+                            <p className="text-[10px] text-slate-500">{g.remarks}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="px-2.5 py-0.5 rounded-md font-extrabold bg-purple-100 text-purple-800 text-xs">{g.gradeLetter} ({g.percentage}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* ================= TAB 6: NOTICE BOARD ================= */}
       {currentTab === 'announcements' && (
