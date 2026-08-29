@@ -136,6 +136,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const [slotEndTime, setSlotEndTime] = useState('');
 
   // Account Management State
+  const [accountSubTab, setAccountSubTab] = useState<'pending' | 'approved'>('pending');
   const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'student' | 'teacher'>('all');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
@@ -649,67 +650,86 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
       {currentTab === 'accounts' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                 <KeyRound className="w-7 h-7 text-indigo-600" /> Account Management Center
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Review and approve password change requests for Students & Faculty. Approving updates the password directly in the database.
+                Review and approve password change requests for Students & Faculty. View approved account records and dismiss/delete messages.
               </p>
             </div>
 
-            {/* Role Filter Buttons */}
-            <div className="flex items-center gap-1.5 bg-slate-200/80 p-1.5 rounded-2xl">
+            {/* Sub-Tab Navigation Switcher */}
+            <div className="flex items-center gap-2 bg-slate-200/80 p-1.5 rounded-2xl shrink-0">
               <button
-                onClick={() => setAccountRoleFilter('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  accountRoleFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setAccountSubTab('pending')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  accountSubTab === 'pending' ? 'bg-white text-indigo-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                All Requests ({changeRequests.filter((r) => r.description.includes('PASSWORD_RESET')).length})
+                <span>Pending Requests</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">
+                  {changeRequests.filter((r) => r.description.includes('PASSWORD_RESET') && r.status === 'pending').length}
+                </span>
               </button>
+
               <button
-                onClick={() => setAccountRoleFilter('student')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  accountRoleFilter === 'student' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setAccountSubTab('approved')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  accountSubTab === 'approved' ? 'bg-white text-emerald-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Student Requests (
-                {
-                  changeRequests.filter(
-                    (r) => r.description.includes('PASSWORD_RESET') && (r.description.includes('Role=STUDENT') || r.teacherName === 'Student Account')
-                  ).length
-                }
-                )
-              </button>
-              <button
-                onClick={() => setAccountRoleFilter('teacher')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  accountRoleFilter === 'teacher' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Teacher Requests (
-                {
-                  changeRequests.filter(
-                    (r) => r.description.includes('PASSWORD_RESET') && (r.description.includes('Role=TEACHER') || r.teacherName === 'Teacher Account')
-                  ).length
-                }
-                )
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Approved Accounts</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                  {changeRequests.filter((r) => r.description.includes('PASSWORD_RESET') && r.status === 'resolved').length}
+                </span>
               </button>
             </div>
           </div>
 
-          {/* Requests List */}
+          {/* Role Filter Pills */}
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Filter Role:</span>
+              {(['all', 'student', 'teacher'] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setAccountRoleFilter(r)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                    accountRoleFilter === r
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {r === 'all' ? 'All Roles' : `${r}s`}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs font-medium text-slate-400">
+              Showing {accountSubTab === 'pending' ? 'Pending Requests' : 'Approved Accounts Database Records'}
+            </p>
+          </div>
+
+          {/* Requests List Grid */}
           <div className="space-y-4">
             {(() => {
               const resetRequests = changeRequests.filter((r) => {
                 const isReset = r.description.includes('PASSWORD_RESET');
                 if (!isReset) return false;
+
+                // Filter by Sub-tab status
+                if (accountSubTab === 'pending' && r.status !== 'pending') return false;
+                if (accountSubTab === 'approved' && r.status !== 'resolved') return false;
+
+                // Filter by Role
                 const isStudentReq = r.description.includes('Role=STUDENT') || r.teacherName === 'Student Account';
                 const isTeacherReq = r.description.includes('Role=TEACHER') || r.teacherName === 'Teacher Account';
                 if (accountRoleFilter === 'student') return isStudentReq;
                 if (accountRoleFilter === 'teacher') return isTeacherReq;
+
                 return true;
               });
 
@@ -717,9 +737,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                 return (
                   <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
                     <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                    <h3 className="text-base font-bold text-slate-800">No Pending Password Requests</h3>
+                    <h3 className="text-base font-bold text-slate-800">
+                      {accountSubTab === 'pending' ? 'No Pending Password Requests' : 'No Approved Account Records'}
+                    </h3>
                     <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                      All student and teacher password reset requests have been reviewed and updated in the database.
+                      {accountSubTab === 'pending'
+                        ? 'All student and teacher password reset requests have been reviewed and approved.'
+                        : 'Approved account password change messages will appear here once approved by the Admin.'}
                     </p>
                   </div>
                 );
@@ -752,19 +776,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                             ? isTeacherRole
                               ? 'border-purple-200 bg-purple-50/20'
                               : 'border-emerald-200 bg-emerald-50/20'
-                            : 'border-slate-200 opacity-60'
+                            : 'border-emerald-300 bg-emerald-50/10'
                         }`}
                       >
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <span
                               className={`text-[10px] font-extrabold uppercase px-3 py-1 rounded-full ${
-                                isTeacherRole ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                isTeacherRole
+                                  ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                               }`}
                             >
                               {isTeacherRole ? 'Teacher Account' : 'Student Account'}
                             </span>
-                            <span className="text-xs text-slate-400 font-medium">{req.timestamp}</span>
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400 font-medium">{req.timestamp}</span>
+                              <button
+                                onClick={() => {
+                                  deleteChangeRequest(req.id);
+                                  showToast('Message Deleted', 'Account request message entry dismissed.', 'info');
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                                title="Delete Message Entry"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
 
                           <div>
@@ -775,7 +814,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                           {requestedNewPass && (
                             <div className="p-3 bg-slate-100/80 rounded-2xl border border-slate-200 flex items-center justify-between">
                               <div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Requested New Password:</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                  {req.status === 'pending' ? 'Requested New Password:' : 'Approved Updated Password:'}
+                                </p>
                                 <p className="font-mono text-sm font-bold text-slate-900 mt-0.5">
                                   {isPassVisible ? requestedNewPass : '••••••••••••'}
                                 </p>
@@ -797,7 +838,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                           )}
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-slate-200/80 flex items-center gap-2">
+                        <div className="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-between gap-2">
                           {req.status === 'pending' ? (
                             <>
                               <button
@@ -817,7 +858,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                                       ...targetUser,
                                       password: requestedNewPass,
                                     });
-                                    showToast('Password Updated in Database', `Successfully updated password for ${targetUser.name} to '${requestedNewPass}'.`, 'success');
+                                    showToast(
+                                      'Password Updated in Database',
+                                      `Successfully updated password for ${targetUser.name} to '${requestedNewPass}'.`,
+                                      'success'
+                                    );
                                   } else {
                                     showToast('Request Approved', `Approved password change request for ${req.studentName}.`, 'success');
                                   }
@@ -829,16 +874,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                                 <CheckCircle2 className="w-4 h-4" /> Approve & Update Password
                               </button>
                               <button
-                                onClick={() => deleteChangeRequest(req.id)}
-                                className="px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+                                onClick={() => {
+                                  deleteChangeRequest(req.id);
+                                  showToast('Dismissed', 'Request message entry deleted.', 'info');
+                                }}
+                                className="px-3.5 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 rounded-2xl font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
                               >
-                                Dismiss
+                                <Trash2 className="w-3.5 h-3.5" /> Dismiss / Delete
                               </button>
                             </>
                           ) : (
-                            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                              <CheckCircle2 className="w-4 h-4" /> Resolved & Password Updated
-                            </span>
+                            <div className="w-full flex items-center justify-between">
+                              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 bg-emerald-100/80 px-3 py-1.5 rounded-xl border border-emerald-200">
+                                <CheckCircle2 className="w-4 h-4" /> Approved & Updated in Database
+                              </span>
+                              <button
+                                onClick={() => {
+                                  deleteChangeRequest(req.id);
+                                  showToast('Entry Deleted', 'Approved account message entry deleted.', 'info');
+                                }}
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer border border-rose-200"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete Message
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
