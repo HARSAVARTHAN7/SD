@@ -49,6 +49,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   const [broadcastFilter, setBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
   const [studentSelectedSemester, setStudentSelectedSemester] = useState<string>('Semester 5');
   const [showOfficialHallTicketModal, setShowOfficialHallTicketModal] = useState<boolean>(false);
+  const [showPermanentRecordModal, setShowPermanentRecordModal] = useState<boolean>(false);
 
   // Attendance stats
   const myAttendanceRecords = attendance.filter((a) => a.studentId === user?.id);
@@ -463,12 +464,20 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
               <h2 className="text-2xl font-bold text-slate-800">Academic Transcript & Examination Portal</h2>
               <p className="text-xs text-slate-500 mt-1">Official semester grade cards, SGPA/CGPA records, and issued hall tickets.</p>
             </div>
-            <button
-              onClick={() => window.print()}
-              className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
-            >
-              <Printer className="w-4 h-4 text-slate-500" /> Print Official Report
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setShowPermanentRecordModal(true)}
+                className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl font-extrabold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
+              >
+                <Award className="w-4 h-4 text-slate-950" /> Download Permanent Record
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-slate-500" /> Print Official Report
+              </button>
+            </div>
           </div>
 
           {/* Semester Selector Buttons (Semester 1 - 8) */}
@@ -952,6 +961,180 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
 
                 <div className="mt-3 p-2 bg-slate-100 text-center font-bold border border-slate-400 rounded text-[10px] text-slate-900">
                   For all correspondances with the office of the Controller of Examinations, Hall ticket has to be produced. Please keep the Hall ticket in safe custody.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Permanent Record Official Grade Modal (Matching uploaded media format) */}
+      {showPermanentRecordModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fadeIn overflow-y-auto"
+          onClick={() => setShowPermanentRecordModal(false)}
+        >
+          <div
+            className="bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-300 max-w-2xl w-full my-8 overflow-hidden print:m-0 print:shadow-none print:w-full print:max-w-none font-sans"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Control Header (Hidden in Print) */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between print:hidden">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                Official Permanent Academic Grade Record
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all"
+                >
+                  <Printer className="w-4 h-4" /> Print / Save as PDF
+                </button>
+                <button
+                  onClick={() => setShowPermanentRecordModal(false)}
+                  className="p-1.5 text-white/70 hover:text-white rounded-full cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Permanent Record Document Body */}
+            <div className="bg-white text-slate-900 pb-8 space-y-6">
+              {/* Header Yellow Banner */}
+              <div className="bg-amber-400 text-slate-950 py-6 px-4 text-center space-y-1">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 uppercase">
+                  Permanent Record
+                </h1>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                  INTERMEDIATE GRADE & ACADEMIC TRANSCRIPT
+                </p>
+              </div>
+
+              <div className="px-6 sm:px-10 space-y-6">
+                {/* Student Profile Row */}
+                <div className="flex flex-col sm:flex-row items-center gap-6 pt-2">
+                  <div className="shrink-0">
+                    <img
+                      src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'}
+                      alt={user?.name || 'Student'}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-slate-200 shadow-md"
+                    />
+                  </div>
+
+                  <div className="flex-1 w-full space-y-2 text-xs">
+                    <div className="bg-slate-100/90 p-2.5 rounded-lg font-bold text-slate-900 border border-slate-200 flex items-center justify-between">
+                      <span>Student Name: <strong className="text-slate-950 font-black text-sm">{user?.name || 'Guzman Bryan'}</strong></span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="bg-slate-100/90 p-2 rounded-lg font-medium text-slate-800 border border-slate-200 sm:col-span-2">
+                        <strong>Roll No / DOB:</strong> {user?.rollNo || '2024-418'} (04/10/2004)
+                      </div>
+                      <div className="bg-slate-100/90 p-2 rounded-lg font-medium text-slate-800 border border-slate-200">
+                        <strong>Gender:</strong> Male: X  Female:
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Program Header Category Bar */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-bold border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-900 uppercase">
+                        <th className="py-2.5 px-4 w-2/5 border-b border-slate-200">Funding Year / Program</th>
+                        <th className="py-2.5 px-3 text-center border-b border-slate-200">Grade 4</th>
+                        <th className="py-2.5 px-3 text-center border-b border-slate-200">Grade 5</th>
+                        <th className="py-2.5 px-3 text-center border-b border-slate-200">Grade 6</th>
+                        <th className="py-2.5 px-3 text-center border-b border-slate-200">Grade 7</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100 text-[11px] font-medium text-slate-700">
+                      <tr>
+                        <td className="py-2 px-4">English as First Language</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-4">Specialized Engineering / Science</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 px-4">Institutional Core Curriculum</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                        <td className="py-2 px-3 text-center">✓</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Academic Record Main Grade Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-900 font-extrabold uppercase border-b-2 border-slate-300">
+                        <th className="py-3 px-4 w-2/5">Academic Record</th>
+                        <th className="py-3 px-3 text-center">Grade 4 (Sem 1)</th>
+                        <th className="py-3 px-3 text-center">Grade 5 (Sem 2)</th>
+                        <th className="py-3 px-3 text-center">Grade 6 (Sem 3)</th>
+                        <th className="py-3 px-3 text-center">Grade 7 (Sem 4)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-200 text-xs font-semibold text-slate-900">
+                      {(myGrades && myGrades.length > 0 ? myGrades : [
+                        { courseName: 'English', gradeLetter: 'A' },
+                        { courseName: 'Mathematics', gradeLetter: 'A+' },
+                        { courseName: 'Social Science', gradeLetter: 'B+' },
+                        { courseName: 'Computer Science', gradeLetter: 'A+' },
+                        { courseName: 'Chemistry', gradeLetter: 'A' },
+                        { courseName: 'History', gradeLetter: 'B+' },
+                        { courseName: 'Life Science', gradeLetter: 'A+' },
+                        { courseName: 'Physical Science', gradeLetter: 'A+' },
+                      ]).map((item, idx) => (
+                        <tr key={idx} className="hover:bg-amber-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900">{item.courseName}</td>
+                          <td className="py-2.5 px-3 text-center font-black text-slate-800">{item.gradeLetter || 'A'}</td>
+                          <td className="py-2.5 px-3 text-center font-black text-slate-800">{item.gradeLetter || 'A+'}</td>
+                          <td className="py-2.5 px-3 text-center font-black text-slate-800">{item.gradeLetter || 'B+'}</td>
+                          <td className="py-2.5 px-3 text-center font-black text-emerald-700">{item.gradeLetter || 'A+'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Intermediate Achievement Legend Footer */}
+                <div className="space-y-3 pt-2">
+                  <div className="bg-slate-100 p-2 text-center font-extrabold text-xs text-slate-900 uppercase tracking-wider rounded">
+                    Intermediate Achievement
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-around gap-2 text-[10px] font-bold text-slate-700 border-b border-amber-200 pb-3">
+                    <span><strong>A</strong> = Excellent</span>
+                    <span><strong>B</strong> = Above Average</span>
+                    <span><strong>C</strong> = Average</span>
+                    <span><strong>D</strong> = Below Average</span>
+                    <span><strong>U</strong> = Unsatisfactory</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 text-xs">
+                    <div>
+                      <p className="text-slate-500 font-medium">Verified Evaluation Seal</p>
+                      <p className="font-mono font-bold text-slate-900">SGPA: {displaySgpa.toFixed(2)} | CGPA: {displayCgpa.toFixed(2)}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="font-extrabold text-slate-900 uppercase">Controller of Examinations</p>
+                      <p className="text-[10px] text-slate-500">Official Institutional Academic Seal</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
