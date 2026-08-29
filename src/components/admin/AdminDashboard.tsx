@@ -2191,7 +2191,7 @@ SUBJECT SCHEDULE:
                 <X className="w-5 h-5" />
               </button>
               <span className="text-xs uppercase font-bold text-amber-100">Publication Session Control</span>
-              <h3 className="text-xl font-bold mt-1">Select Academic Year to Publish</h3>
+              <h3 className="text-xl font-bold mt-1">Select Target Semester to Publish</h3>
               <p className="text-xs text-amber-100 mt-0.5">
                 Target: {publishYearModal === 'results' ? 'Overall Semester Results' : 'Master Hall Tickets'}
               </p>
@@ -2199,19 +2199,7 @@ SUBJECT SCHEDULE:
 
             <div className="p-6 space-y-5 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 uppercase mb-2">1. Select Academic Year / Session *</label>
-                <select
-                  value={targetPublishYear}
-                  onChange={(e) => setTargetPublishYear(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="2024 - 2025">2024 - 2025 Academic Year</option>
-                  <option value="2025 - 2026">2025 - 2026 Academic Year</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-2">2. Select Target Semester (1 – 8) *</label>
+                <label className="block font-bold text-slate-700 uppercase mb-2">Select Target Semester (1 – 8) *</label>
                 <div className="grid grid-cols-4 gap-2">
                   {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
                     <button
