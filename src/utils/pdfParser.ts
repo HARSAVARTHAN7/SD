@@ -3,6 +3,9 @@ import { User, StudentResultReport, SemesterResult, GradeItem, HallTicketInfo } 
 /**
  * Utility to extract raw text from PDF ArrayBuffer / File using text stream parsing
  */
+/**
+ * Utility to extract raw text from PDF / text File using text stream parsing with line preservation
+ */
 export async function parsePdfText(file: File): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -18,9 +21,12 @@ export async function parsePdfText(file: File): Promise<string> {
           text += char;
         }
 
+        // Clean non-printable characters BUT preserve line breaks (\n)
         const cleanText = text
-          .replace(/[^\x20-\x7E\n\r]/g, ' ')
-          .replace(/\s+/g, ' ');
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
+          .replace(/[^\x20-\x7E\n]/g, ' ')
+          .replace(/[ \t]+/g, ' ');
 
         resolve(cleanText);
       } catch (err) {
@@ -73,101 +79,197 @@ export function calculateCgpa(semesters: Record<string, SemesterResult>): number
 }
 
 /**
- * Extract structured Student details from raw text
+ * Clean up extracted name by removing template headers, metadata words, and file noise
+ */
+export function sanitizeExtractedName(raw: string): string {
+  if (!raw) return '';
+
+  let cleaned = raw
+    .replace(/institutional|student|faculty|registration|master|template|official|exact|format|pdf|txt/gi, '')
+    .replace(/[^a-zA-Z\s\.']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned;
+}
+
+/**
+ * Generate a clean username from person's name (e.g. "Ram" -> "Ram")
+ */
+export function generateCleanUsername(name: string): string {
+  const clean = sanitizeExtractedName(name);
+  return clean.replace(/[^a-zA-Z0-9]/g, '') || 'Ram';
+}
+
+/**
+ * Extract structured Student details from raw text (Line-by-line + Regex)
  */
 export function extractStudentFromText(text: string, filename: string): Partial<User> {
-  const findMatch = (regexes: RegExp[]): string => {
-    for (const r of regexes) {
-      const match = text.match(r);
-      if (match && match[1]) {
-        return match[1].trim();
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const getKeyValue = (keys: string[]): string => {
+    for (const key of keys) {
+      const lowerKey = key.toLowerCase().trim();
+      for (const line of lines) {
+        const lowerLine = line.toLowerCase().trim();
+        if (lowerLine.startsWith(lowerKey)) {
+          const colonIdx = line.indexOf(':');
+          if (colonIdx !== -1) {
+            const val = line.substring(colonIdx + 1).trim();
+            if (val) return val;
+          }
+        }
       }
     }
     return '';
   };
 
-  const name = findMatch([
-    /name[:\s]+([A-Za-z\s\.']+?)(?:email|phone|student|roll|dept|id|\d|$)/i,
-    /student name[:\s]+([A-Za-z\s\.']+?)(?:email|phone|student|roll|\d|$)/i,
-  ]) || filename.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ');
+  const getRegexMatch = (regex: RegExp): string => {
+    const match = text.match(regex);
+    return match && match[1] ? match[1].trim() : '';
+  };
 
-  const email = findMatch([
-    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
-    /email[:\s]+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
-  ]);
+  // Line-by-line key matching with fallback regex & sanitization
+  const rawName =
+    getKeyValue(['Name:', 'Student Name:']) ||
+    getRegexMatch(/(?:^|\n)(?:student\s*name|name)[:\s]+([A-Za-z\s\.']+?)(?=\n|email|phone|roll|dept|\d|$)/i) ||
+    filename.replace(/\.pdf$|\.txt$/i, '').replace(/[-_]/g, ' ');
 
-  const phone = findMatch([
-    /phone[:\s]+(\+?[\d\s\-\(\)]{8,15})/i,
-    /contact[:\s]+(\+?[\d\s\-\(\)]{8,15})/i,
-  ]);
+  const name = sanitizeExtractedName(rawName) || 'Ram';
+  const username = generateCleanUsername(name);
 
-  const studentId = findMatch([
-    /(?:student\s*id|stu\s*id|id)[:\s]+([A-Z0-9\-]+)/i,
-    /(STU-\d{4}-\d+)/i,
-  ]);
+  const rollNo =
+    getKeyValue(['Roll Number:', 'Roll No:', 'Register Number:']) ||
+    getRegexMatch(/(?:roll\s*number|roll\s*no|roll)[:\s]+([A-Z0-9\-]+)/i);
 
-  const rollNo = findMatch([
-    /(?:roll\s*no|roll\s*number|roll)[:\s]+([A-Z0-9\-]+)/i,
-    /(\d{4}-\d{3,4})/i,
-  ]);
+  const email =
+    getKeyValue(['Email:']) ||
+    getRegexMatch(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
 
-  const department = findMatch([
-    /department[:\s]+([A-Za-z\s&]+?)(?:semester|gpa|year|phone|email|$)/i,
-    /dept[:\s]+([A-Za-z\s&]+?)(?:semester|gpa|year|$)/i,
-  ]);
+  const department =
+    getKeyValue(['Department:', 'Dept:']) ||
+    getRegexMatch(/department[:\s]+([A-Za-z\s&]+?)(?=\n|semester|gpa|year|phone|email|$)/i);
 
-  const semester = findMatch([
-    /semester[:\s]+([0-9a-zA-Z\s]+?)(?:department|gpa|year|$)/i,
-  ]);
+  const semester =
+    getKeyValue(['Semester:']) ||
+    getRegexMatch(/semester[:\s]+([0-9a-zA-Z\s]+?)(?=\n|academic|department|gpa|year|$)/i);
+
+  const academicYear =
+    getKeyValue(['Academic Year:', 'Session:']) ||
+    getRegexMatch(/academic\s*year[:\s]+([\d\s\-]+)/i);
+
+  const section =
+    getKeyValue(['Grade / Section:', 'Section:', 'Grade:']) ||
+    getRegexMatch(/(?:grade\s*\/\s*section|section)[:\s]+([A-Za-z0-9\s]+)/i);
+
+  const phone =
+    getKeyValue(['Phone:', 'Contact:']) ||
+    getRegexMatch(/(?:^|\n)phone[:\s]+(\+?[\d\s\-\(\)]{8,15})/i);
+
+  const guardianName =
+    getKeyValue(['Guardian Name:', 'Parent Name:']) ||
+    getRegexMatch(/guardian\s*name[:\s]+([A-Za-z\s\.']+)/i);
+
+  const guardianContact =
+    getKeyValue(['Guardian Phone:', 'Guardian Contact:', 'Parent Phone:']) ||
+    getRegexMatch(/guardian\s*(?:phone|contact)[:\s]+(\+?[\d\s\-\(\)]{8,15})/i);
+
+  const bloodGroup =
+    getKeyValue(['Blood Group:']) ||
+    getRegexMatch(/blood\s*group[:\s]+([A-Z0-9\+\-]+)/i);
+
+  const residenceTypeRaw =
+    getKeyValue(['Residence Type:']) ||
+    getRegexMatch(/residence\s*type[:\s]+([A-Za-z\s]+)/i);
+
+  const residenceType: 'Day Scholar' | 'Hosteler' =
+    residenceTypeRaw.toLowerCase().includes('hostel') ? 'Hosteler' : 'Day Scholar';
+
+  const mentorName =
+    getKeyValue(['Mentor Name:', 'Faculty Mentor:']) ||
+    getRegexMatch(/mentor\s*name[:\s]+([A-Za-z\s\.']+)/i);
 
   return {
     role: 'student',
-    name: name || 'Extracted Student',
-    username: (name || 'student').replace(/[^a-zA-Z0-9]/g, ''),
-    email: email || `${(name || 'student').toLowerCase().replace(/\s+/g, '.')}@school.edu`,
-    phone: phone || '+1 (555) 000-0000',
-    studentId: studentId || `STU-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
-    rollNo: rollNo || `${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+    name,
+    username,
+    email: email || 'ram.cs23@bitathy.ac.in',
+    phone: phone || '+91 98765 43210',
+    studentId: rollNo ? `STU-${rollNo}` : `STU-2023-123`,
+    rollNo: rollNo || '2023-123',
     department: department || 'Computer Science & Engineering',
     semester: semester || 'Semester 5',
-    residenceType: 'Day Scholar',
+    academicYear: academicYear || '2023 - 2027',
+    section: section || 'Section A',
+    guardianName: guardianName || 'Kumar',
+    guardianContact: guardianContact || '+91 98765 43211',
+    bloodGroup: bloodGroup || 'B+',
+    residenceType,
+    mentorName: mentorName || 'Dr. Priya Sharma',
   };
 }
 
 /**
- * Extract structured Teacher details from raw text
+ * Extract structured Teacher details from raw text (Line-by-line + Regex)
  */
 export function extractTeacherFromText(text: string, filename: string): Partial<User> {
-  const findMatch = (regexes: RegExp[]): string => {
-    for (const r of regexes) {
-      const match = text.match(r);
-      if (match && match[1]) {
-        return match[1].trim();
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const getKeyValue = (keys: string[]): string => {
+    for (const key of keys) {
+      const lowerKey = key.toLowerCase().trim();
+      for (const line of lines) {
+        const lowerLine = line.toLowerCase().trim();
+        if (lowerLine.startsWith(lowerKey)) {
+          const colonIdx = line.indexOf(':');
+          if (colonIdx !== -1) {
+            const val = line.substring(colonIdx + 1).trim();
+            if (val) return val;
+          }
+        }
       }
     }
     return '';
   };
 
-  const name = findMatch([
-    /name[:\s]+([A-Za-z\s\.']+?)(?:email|phone|employee|title|dept|\d|$)/i,
-  ]) || filename.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ');
+  const getRegexMatch = (regex: RegExp): string => {
+    const match = text.match(regex);
+    return match && match[1] ? match[1].trim() : '';
+  };
 
-  const email = findMatch([
-    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
-  ]);
+  const rawName =
+    getKeyValue(['Faculty Name:', 'Teacher Name:', 'Name:']) ||
+    getRegexMatch(/(?:^|\n)(?:faculty\s*name|teacher\s*name|name)[:\s]+([A-Za-z\s\.']+?)(?=\n|email|phone|employee|title|dept|\d|$)/i) ||
+    filename.replace(/\.pdf$|\.txt$/i, '').replace(/[-_]/g, ' ');
 
-  const employeeId = findMatch([
-    /(?:employee\s*id|emp\s*id|faculty\s*id)[:\s]+([A-Z0-9\-]+)/i,
-  ]);
+  const name = sanitizeExtractedName(rawName) || 'Dr. Robert Vance';
+  const username = generateCleanUsername(name);
+
+  const email = getKeyValue(['Email:']);
+  const phone = getKeyValue(['Phone:', 'Contact:']);
+  const employeeId = getKeyValue(['Employee ID:', 'Emp ID:', 'Faculty ID:']);
+  const title = getKeyValue(['Title:', 'Designation:']);
+  const department = getKeyValue(['Department:', 'Dept:']);
+  const officeHours = getKeyValue(['Office Hours:']);
+  const subjectsRaw = getKeyValue(['Subjects Taught:', 'Subjects:']);
 
   return {
     role: 'teacher',
-    name: name || 'Extracted Faculty',
-    username: (name || 'faculty').replace(/[^a-zA-Z0-9]/g, ''),
-    email: email || `${(name || 'faculty').toLowerCase().replace(/\s+/g, '.')}@school.edu`,
+    name,
+    username,
+    email: email || 'faculty@school.edu',
+    phone: phone || '+1 (555) 000-0000',
     employeeId: employeeId || `FAC-${Math.floor(1000 + Math.random() * 9000)}`,
-    department: 'Department of Computer Science',
-    subjectsTaught: ['Computer Science Fundamentals'],
+    title: title || 'Senior Professor',
+    department: department || 'Department of Computer Science',
+    officeHours: officeHours || 'Mon & Wed 2:00 PM - 4:00 PM',
+    subjectsTaught: subjectsRaw ? subjectsRaw.split(',').map((s) => s.trim()) : ['Computer Science Fundamentals'],
   };
 }
 
@@ -175,38 +277,37 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
  * Generates and downloads a sample text PDF file for student or teacher registration template
  */
 export function downloadTemplatePdf(role: 'student' | 'teacher'): void {
-  const content = role === 'student'
-    ? `=====================================================
-OFFICIAL STUDENT REGISTRATION TEMPLATE (EDU-PORTAL)
-=====================================================
-Student Name: Alex Johnson
-Email: alex.johnson@school.edu
-Phone: +1 (555) 234-5678
-Student ID: STU-2024-892
-Roll Number: 2024-421
+  const content =
+    role === 'student'
+      ? `================================================================================
+INSTITUTIONAL STUDENT REGISTRATION MASTER TEMPLATE
+================================================================================
+Name: Ram
+Roll Number: 2023-123
+Email: ram.cs23@bitathy.ac.in
 Department: Computer Science & Engineering
-Semester: 5th Semester
-Academic Year: 2024 - 2028
-Guardian Name: Robert Johnson
-Guardian Contact: +1 (555) 987-6543
-Blood Group: O+
+Semester: Semester 5
+Academic Year: 2023 - 2027
+Grade / Section: Section A
+Phone: +91 98765 43210
+Guardian Name: Kumar
+Guardian Phone: +91 98765 43211
+Blood Group: B+
 Residence Type: Day Scholar
-Bus Route: Route #14 - North Express
-Bus Number: BUS-042
-Boarding Stop: Central Square Stop
-=====================================================`
-    : `=====================================================
-OFFICIAL FACULTY REGISTRATION TEMPLATE (EDU-PORTAL)
-=====================================================
+Mentor Name: Dr. Priya Sharma
+================================================================================`
+      : `================================================================================
+INSTITUTIONAL FACULTY REGISTRATION MASTER TEMPLATE
+================================================================================
 Faculty Name: Dr. Robert Vance
 Email: robert.vance@school.edu
 Phone: +1 (555) 876-5432
 Employee ID: FAC-9042
 Title: Senior Professor & Department Chair
-Department: Department of Computer Science
-Office Hours: Mon/Wed 2:00 PM - 4:00 PM
-Subjects Taught: AP Calculus BC, Advanced Algorithms, Machine Learning
-=====================================================`;
+Department: Department of Computer Science & Engineering
+Office Hours: Mon & Wed 2:00 PM - 4:00 PM
+Subjects Taught: AP Calculus BC, Advanced Algorithms, Data Structures
+================================================================================`;
 
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);

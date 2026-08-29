@@ -57,6 +57,17 @@ interface AppContextType {
   updateUser: (user: User) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   assignMentor: (studentId: string, mentorData: { mentorId: string; mentorName: string; mentorPhone: string }) => Promise<void>;
+  
+  deletedUsers: Array<User & { deletedAt?: string }>;
+  restoreUser: (id: string) => void;
+  permanentlyDeleteUser: (id: string) => void;
+  // Recycle Bin Data & Restorations
+  deletedCourses: Array<Course & { deletedAt?: string }>;
+  restoreCourse: (id: string) => void;
+  deletedAnnouncements: Array<Announcement & { deletedAt?: string }>;
+  restoreAnnouncement: (id: string) => void;
+  deletedResults: Array<StudentResultReport & { deletedAt?: string }>;
+  restoreResult: (id: string) => void;
   // Change requests
   submitChangeRequest: (req: Omit<ChangeRequest, 'id'>) => Promise<void>;
   resolveChangeRequest: (id: string) => Promise<void>;
@@ -85,6 +96,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>([]);
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+
+  // Recycle bin states (mocked out as empty for now until backend supports it)
+  const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>([]);
+  const [deletedCourses, setDeletedCourses] = useState<Array<Course & { deletedAt?: string }>>([]);
+  const [deletedAnnouncements, setDeletedAnnouncements] = useState<Array<Announcement & { deletedAt?: string }>>([]);
+  const [deletedResults, setDeletedResults] = useState<Array<StudentResultReport & { deletedAt?: string }>>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(false);
 
@@ -278,6 +295,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const restoreUser = (id: string) => {
+    showToast('Not Supported', 'Restoring users requires backend recycle bin support.', 'info');
+  };
+
+  const permanentlyDeleteUser = (id: string) => {
+    showToast('Not Supported', 'Hard delete requires backend recycle bin support.', 'info');
+  };
+
+  const restoreCourse = (id: string) => {
+    showToast('Not Supported', 'Restoring courses requires backend recycle bin support.', 'info');
+  };
+
+  const restoreAnnouncement = (id: string) => {
+    showToast('Not Supported', 'Restoring announcements requires backend recycle bin support.', 'info');
+  };
+
+  const restoreResult = (id: string) => {
+    showToast('Not Supported', 'Restoring results requires backend recycle bin support.', 'info');
+  };
+
   // ─── Change Requests ───────────────────────────────
   const submitChangeRequest = async (req: Omit<ChangeRequest, 'id'>) => {
     try {
@@ -392,6 +429,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         announcements,
         notifications,
         allUsers,
+        deletedUsers,
+        deletedCourses,
+        restoreCourse,
+        deletedAnnouncements,
+        restoreAnnouncement,
+        deletedResults,
+        restoreResult,
         changeRequests,
         studentResults,
         timetable,
@@ -408,6 +452,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUser,
         deleteUser,
         assignMentor,
+        restoreUser,
+        permanentlyDeleteUser,
         submitChangeRequest,
         resolveChangeRequest,
         deleteChangeRequest,

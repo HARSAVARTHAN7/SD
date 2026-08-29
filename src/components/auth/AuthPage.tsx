@@ -31,11 +31,13 @@ export const AuthPage: React.FC = () => {
   const [studentUsername, setStudentUsername] = useState('');
   const [studentPassword, setStudentPassword] = useState('');
   const [studentRemember, setStudentRemember] = useState(false);
+  const [studentError, setStudentError] = useState('');
 
   // Teacher Form State
   const [teacherUsername, setTeacherUsername] = useState('');
   const [teacherPassword, setTeacherPassword] = useState('');
   const [teacherRemember, setTeacherRemember] = useState(false);
+  const [teacherError, setTeacherError] = useState('');
 
   // Admin Form State
   const [adminEmail, setAdminEmail] = useState('');
@@ -49,8 +51,9 @@ export const AuthPage: React.FC = () => {
 
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setStudentError('');
     if (!studentUsername) {
-      showToast('Enter Username', 'Please enter your username or email', 'warning');
+      showToast('Enter Email / Roll No', 'Please enter your email or roll number', 'warning');
       return;
     }
     setIsSubmitting(true);
@@ -59,14 +62,16 @@ export const AuthPage: React.FC = () => {
     if (success) {
       showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
     } else {
-      showToast('Login Failed', 'Invalid username or password.', 'error');
+      setStudentError('Invalid Credentials: The entered Email ID, Roll No, or Password does not match any registered student account in database.');
+      showToast('Authentication Failed', 'Student email ID or password mismatch. Please check your credentials.', 'error');
     }
   };
 
   const handleTeacherSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setTeacherError('');
     if (!teacherUsername) {
-      showToast('Enter Username', 'Please enter your username or email', 'warning');
+      showToast('Enter Email / Employee ID', 'Please enter your faculty email or employee ID', 'warning');
       return;
     }
     setIsSubmitting(true);
@@ -75,7 +80,8 @@ export const AuthPage: React.FC = () => {
     if (success) {
       showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
     } else {
-      showToast('Login Failed', 'Invalid username or password.', 'error');
+      setTeacherError('Invalid Credentials: The entered Email ID, Employee ID, or Password does not match any registered teacher account in database.');
+      showToast('Authentication Failed', 'Teacher email ID or password mismatch. Please check your credentials.', 'error');
     }
   };
 
@@ -175,13 +181,21 @@ export const AuthPage: React.FC = () => {
               <div>
                 <div className="pt-2 pb-6"><StudentIllustration className="w-full max-w-[200px] h-36 mx-auto" /></div>
                 <div className="text-center mb-8">
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2C3E50] tracking-tight">Student Login</h2>
-                  <p className="text-sm text-slate-400 mt-1.5 font-medium">
-                    Not a member yet?{' '}
-                    <button type="button" onClick={() => openSignUpFor('student')} className="text-[#2ECC71] hover:text-[#27AE60] font-semibold hover:underline transition-colors cursor-pointer">Sign up!</button>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2C3E50] tracking-tight">
+                    Student Login
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1.5 font-medium">
+                    Institutional Student Portal Authentication
                   </p>
                 </div>
                 <form onSubmit={handleStudentSubmit} className="space-y-6 max-w-sm mx-auto">
+                  {studentError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-700 text-xs font-semibold animate-fadeIn">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{studentError}</span>
+                    </div>
+                  )}
+                  {/* Username Input */}
                   <div className="space-y-1">
                     <div className="relative flex items-center border-b-2 border-[#2ECC71] pb-2 transition-colors">
                       <UserIcon className="w-4 h-4 text-slate-500 mr-3 shrink-0" />
@@ -222,13 +236,21 @@ export const AuthPage: React.FC = () => {
               <div>
                 <div className="pt-2 pb-6"><TeacherIllustration className="w-full max-w-[200px] h-36 mx-auto" /></div>
                 <div className="text-center mb-8">
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2C3E50] tracking-tight">Teacher Login</h2>
-                  <p className="text-sm text-slate-400 mt-1.5 font-medium">
-                    Not a member yet?{' '}
-                    <button type="button" onClick={() => openSignUpFor('teacher')} className="text-[#2ECC71] hover:text-[#27AE60] font-semibold hover:underline transition-colors cursor-pointer">Sign up!</button>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2C3E50] tracking-tight">
+                    Teacher Login
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1.5 font-medium">
+                    Institutional Faculty Portal Authentication
                   </p>
                 </div>
                 <form onSubmit={handleTeacherSubmit} className="space-y-6 max-w-sm mx-auto">
+                  {teacherError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-700 text-xs font-semibold animate-fadeIn">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{teacherError}</span>
+                    </div>
+                  )}
+                  {/* Username Input */}
                   <div className="space-y-1">
                     <div className="relative flex items-center border-b border-slate-200 focus-within:border-slate-600 pb-2 transition-colors">
                       <UserIcon className="w-4 h-4 text-slate-400 mr-3 shrink-0" />
