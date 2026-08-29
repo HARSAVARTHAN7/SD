@@ -179,8 +179,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
 
   // Template Modal & Publication Year Prompts
   const [activeTemplateModal, setActiveTemplateModal] = useState<'results' | 'hallTicket' | null>(null);
+  const [activeRegTemplateModal, setActiveRegTemplateModal] = useState<'student' | 'teacher' | null>(null);
   const [publishYearModal, setPublishYearModal] = useState<'results' | 'hallTicket' | null>(null);
-  const [targetPublishYear, setTargetPublishYear] = useState<string>('2026 - 2027');
+  const [targetPublishYear, setTargetPublishYear] = useState<string>('2024 - 2025');
   const [targetPublishSem, setTargetPublishSem] = useState<string>('Semester 5');
   const [activePdfViewer, setActivePdfViewer] = useState<{ title: string; content: string; fileName?: string } | null>(null);
 
@@ -1036,11 +1037,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                     className="hidden"
                   />
                   <button
-                    onClick={() => downloadTemplatePdf('student')}
-                    className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Download printable sample PDF template for student registration"
+                    onClick={() => setActiveRegTemplateModal('student')}
+                    className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Preview student registration template format"
                   >
-                    <Download className="w-4 h-4 text-emerald-600" /> Download Template
+                    <Eye className="w-4 h-4 text-emerald-600" /> Preview Template
                   </button>
                   <button
                     onClick={() => pdfStudentInputRef.current?.click()}
@@ -1145,11 +1146,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                     className="hidden"
                   />
                   <button
-                    onClick={() => downloadTemplatePdf('teacher')}
-                    className="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Download printable sample PDF template for teacher registration"
+                    onClick={() => setActiveRegTemplateModal('teacher')}
+                    className="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title="Preview faculty registration template format"
                   >
-                    <Download className="w-4 h-4 text-purple-600" /> Download Template
+                    <Eye className="w-4 h-4 text-purple-600" /> Preview Template
                   </button>
                   <button
                     onClick={() => pdfTeacherInputRef.current?.click()}
@@ -2202,21 +2203,11 @@ SUBJECT SCHEDULE:
                 <select
                   value={targetPublishYear}
                   onChange={(e) => setTargetPublishYear(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 mb-2"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
                 >
-                  <option value="2024 - 2025">2024 - 2025 Academic Year (1st / 2nd Year)</option>
-                  <option value="2025 - 2026">2025 - 2026 Academic Year (2nd / 3rd Year)</option>
-                  <option value="2026 - 2027">2026 - 2027 Academic Year (3rd / 4th Year)</option>
-                  <option value="2027 - 2028">2027 - 2028 Academic Year (4th Year)</option>
+                  <option value="2024 - 2025">2024 - 2025 Academic Year</option>
+                  <option value="2025 - 2026">2025 - 2026 Academic Year</option>
                 </select>
-
-                <input
-                  type="text"
-                  value={targetPublishYear}
-                  onChange={(e) => setTargetPublishYear(e.target.value)}
-                  placeholder="Or custom write-in year (e.g. 2026 - 2027 Session)"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none"
-                />
               </div>
 
               <div>
@@ -2262,6 +2253,99 @@ SUBJECT SCHEDULE:
                   className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <FileUp className="w-4 h-4" /> Confirm & Upload PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student & Teacher Registration Template Preview Modal (Preview Only) */}
+      {activeRegTemplateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setActiveRegTemplateModal(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-2xl w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white relative">
+              <button
+                onClick={() => setActiveRegTemplateModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <span className="text-xs uppercase font-bold text-emerald-400">Institutional Registration Format</span>
+              <h3 className="text-xl font-bold mt-1">
+                {activeRegTemplateModal === 'student' ? '🎓 Student Registration PDF Template Preview' : '👨‍🏫 Teacher Registration PDF Template Preview'}
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Preview the exact key-value details required in the PDF for automatic registration parsing.
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="p-4 bg-slate-900 text-slate-100 rounded-2xl font-mono text-[11px] leading-relaxed max-h-72 overflow-y-auto border border-slate-700 whitespace-pre-wrap">
+                {activeRegTemplateModal === 'student'
+                  ? `=====================================================================
+INSTITUTIONAL STUDENT REGISTRATION MASTER TEMPLATE
+=====================================================================
+Name: Alex Rivera
+Roll Number: 2024-425
+Email: alex.rivera@university.edu
+Department: Computer Science & Engineering
+Semester: Semester 5
+Academic Year: 2024 - 2028
+Grade / Section: Section A
+Phone: +1 555-019-2834
+Guardian Name: Maria Rivera
+Guardian Phone: +1 555-019-2835
+Blood Group: O+
+Residence Type: Day Scholar
+Hostel Name: N/A
+Room Number: N/A
+Bus Route: Route 4 - Central Campus
+Bus Number: BUS-12
+Bus Stop: North Gate Stop
+Mentor Name: Dr. Sarah Jenkins
+=====================================================================`
+                  : `=====================================================================
+INSTITUTIONAL FACULTY / TEACHER REGISTRATION MASTER TEMPLATE
+=====================================================================
+Name: Dr. Sarah Jenkins
+Employee ID: EMP-104
+Email: sarah.jenkins@university.edu
+Department: Computer Science & Engineering
+Title: Associate Professor
+Office Hours: Mon, Wed, Fri 10:00 AM - 12:00 PM
+Phone: +1 555-018-9922
+Subjects Taught: MATH-401, PHYS-302, CS-205
+=====================================================================`}
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = activeRegTemplateModal === 'student'
+                      ? `=====================================================================\nINSTITUTIONAL STUDENT REGISTRATION MASTER TEMPLATE\n=====================================================================\nName: Alex Rivera\nRoll Number: 2024-425\nEmail: alex.rivera@university.edu\nDepartment: Computer Science & Engineering\nSemester: Semester 5\nAcademic Year: 2024 - 2028\nGrade / Section: Section A\nPhone: +1 555-019-2834\nGuardian Name: Maria Rivera\nGuardian Phone: +1 555-019-2835\nBlood Group: O+\nResidence Type: Day Scholar\nMentor Name: Dr. Sarah Jenkins\n=====================================================================`
+                      : `=====================================================================\nINSTITUTIONAL FACULTY / TEACHER REGISTRATION MASTER TEMPLATE\n=====================================================================\nName: Dr. Sarah Jenkins\nEmployee ID: EMP-104\nEmail: sarah.jenkins@university.edu\nDepartment: Computer Science & Engineering\nTitle: Associate Professor\nOffice Hours: Mon, Wed, Fri 10:00 AM - 12:00 PM\nPhone: +1 555-018-9922\nSubjects Taught: MATH-401, PHYS-302, CS-205\n=====================================================================`;
+                    navigator.clipboard.writeText(text);
+                    showToast('Template Copied', 'Registration format copied to clipboard!', 'success');
+                  }}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all cursor-pointer"
+                >
+                  📋 Copy Template Text
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveRegTemplateModal(null)}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-md cursor-pointer transition-all"
+                >
+                  Close Preview
                 </button>
               </div>
             </div>
