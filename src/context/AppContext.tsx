@@ -92,10 +92,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>(() => {
+    try {
+      const saved = localStorage.getItem('eduportal_all_users');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>([]);
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+
+  useEffect(() => {
+    if (allUsers.length > 0) {
+      try {
+        localStorage.setItem('eduportal_all_users', JSON.stringify(allUsers));
+      } catch (e) {
+        console.warn('Failed to save allUsers to localStorage:', e);
+      }
+    }
+  }, [allUsers]);
 
   // Recycle bin states (mocked out as empty for now until backend supports it)
   const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>([]);
@@ -144,7 +161,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           UserAPI.getAll({ limit: 200 })
             .then(({ data }) => {
               if (data && data.data && data.data.length > 0) {
-                setAllUsers(data.data);
+                setAllUsers((prev) => {
+                  return data.data.map((serverUser) => {
+                    const localMatch = prev.find(
+                      (u) =>
+                        u.id === serverUser.id ||
+                        (u as unknown as { _id: string })._id === serverUser.id ||
+                        u.email === serverUser.email,
+                    );
+                    if (localMatch) {
+                      return {
+                        ...serverUser,
+                        isBlocked: localMatch.isBlocked !== undefined ? localMatch.isBlocked : serverUser.isBlocked,
+                        status: localMatch.status || serverUser.status,
+                        password: localMatch.password || serverUser.password,
+                      };
+                    }
+                    return serverUser;
+                  });
+                });
               }
             })
             .catch(() => {
@@ -296,8 +331,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data } = await UserAPI.update(userId, userData);
       if (data && data.data) {
         updated = {
+          ...userData,
           ...data.data,
           password: userData.password || data.data.password,
+          isBlocked: userData.isBlocked !== undefined ? userData.isBlocked : data.data.isBlocked,
+          status: userData.status || data.data.status,
         };
       }
     } catch (err) {
@@ -305,9 +343,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setAllUsers((prev) =>
-      prev.map((u) => (u.id === userId || (u as unknown as { _id: string })._id === userId ? { ...u, ...updated } : u)),
+      prev.map((u) =>
+        u.id === userId || (u as unknown as { _id: string })._id === userId || (u.email && u.email === userData.email)
+          ? { ...u, ...updated }
+          : u,
+      ),
     );
-    showToast('Profile & Password Updated', `${updated.name || 'User'}'s credentials have been updated in database.`, 'success');
+    const label = updated.isBlocked ? 'Account Blocked' : 'Account Updated';
+    showToast(label, `${updated.name || 'User'}'s account details have been updated.`, updated.isBlocked ? 'warning' : 'success');
   };
 
   const deleteUser = async (id: string) => {
