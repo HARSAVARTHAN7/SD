@@ -1299,7 +1299,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                                 resolveChangeRequest(req.id);
                                 if (req.description.includes('STUDENT_PASSWORD_RESET')) {
                                   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-                                  showToast('Password Reset Approved', `Approved reset for ${req.studentName}. Dispatched OTP [${otp}] to student email.`, 'success');
+                                  showToast('Password Reset Approved', `Approved password reset for ${req.studentName}. Dispatched verification OTP to student email.`, 'success');
                                 }
                               }}
                               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"

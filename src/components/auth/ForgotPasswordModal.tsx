@@ -52,7 +52,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedOtp(otp);
       setStep('teacher-otp');
-      showToast('OTP Sent Directly to Email', `Teacher password reset OTP [${otp}] dispatched to ${cleanEmail}`, 'success');
+      showToast('OTP Sent to Email', `Verification OTP code has been sent to ${cleanEmail}. Please check your inbox.`, 'success');
     }
   };
 
@@ -230,22 +230,12 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
               OTP dispatched to <strong className="text-slate-800 font-mono">{email}</strong>.
             </p>
 
-            {/* On-screen OTP Badge for Web Simulation */}
-            <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-purple-800">Dispatched OTP Code:</p>
-                <p className="font-mono text-xl font-black text-purple-900 tracking-widest">{generatedOtp}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setInputOtp(generatedOtp);
-                  showToast('OTP Auto-Filled', '6-digit OTP copied to verification box.', 'info');
-                }}
-                className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs transition-all"
-              >
-                Auto-Fill OTP
-              </button>
+            {/* Sent to Email Info Banner */}
+            <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl flex items-center gap-3">
+              <Mail className="w-5 h-5 text-purple-600 shrink-0" />
+              <p className="text-xs text-purple-900 font-medium leading-relaxed">
+                A 6-digit verification code has been sent to <strong className="font-mono font-bold text-purple-950">{email}</strong>. Please check your email inbox and enter the 6-digit code below.
+              </p>
             </div>
 
             <form onSubmit={handleVerifyTeacherOtp} className="space-y-4">
