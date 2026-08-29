@@ -11,6 +11,8 @@ export interface User {
   avatar: string;
   phone?: string;
   joinedDate: string;
+  isBlocked?: boolean;
+  status?: 'active' | 'blocked';
 
   // Student-specific fields
   studentId?: string;

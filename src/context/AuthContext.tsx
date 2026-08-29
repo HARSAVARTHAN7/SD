@@ -89,6 +89,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data } = await AuthAPI.login(usernameOrEmail, password, intendedRole);
       if (data.success && data.token) {
+        if (data.user?.isBlocked || data.user?.status === 'blocked') {
+          return false;
+        }
         setToken(data.token);
         setUser(data.user);
         return true;
