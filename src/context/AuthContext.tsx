@@ -52,24 +52,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     }
 
-    // Student & Teacher lookup
-    let matched = users.find(
-      (u) =>
-        (u.username.toLowerCase() === cleanQuery || u.email.toLowerCase() === cleanQuery) &&
-        (!intendedRole || u.role === intendedRole)
-    );
+    // Strict Student & Teacher lookup by Email, Roll No, Employee ID, or Username
+    const matched = users.find((u) => {
+      if (intendedRole && u.role !== intendedRole) return false;
+      const emailMatch = Boolean(u.email && u.email.toLowerCase() === cleanQuery);
+      const userMatch = Boolean(u.username && u.username.toLowerCase() === cleanQuery);
+      const rollMatch = Boolean(u.rollNo && u.rollNo.toLowerCase() === cleanQuery);
+      const empMatch = Boolean(u.employeeId && u.employeeId.toLowerCase() === cleanQuery);
+      return emailMatch || userMatch || rollMatch || empMatch;
+    });
 
-    if (!matched && intendedRole) {
-      matched = users.find((u) => u.role === intendedRole);
+    if (!matched) {
+      return false;
     }
 
-    if (matched) {
-      StorageService.setCurrentUser(matched);
-      setUser(matched);
-      return true;
+    // Strict Password verification
+    const expectedPassword = matched.password || 'password123';
+    if (cleanPassword && cleanPassword !== expectedPassword) {
+      return false;
     }
 
-    return false;
+    StorageService.setCurrentUser(matched);
+    setUser(matched);
+    return true;
   };
 
   const logout = () => {

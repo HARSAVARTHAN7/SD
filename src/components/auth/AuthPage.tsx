@@ -30,11 +30,13 @@ export const AuthPage: React.FC = () => {
   const [studentUsername, setStudentUsername] = useState('');
   const [studentPassword, setStudentPassword] = useState('');
   const [studentRemember, setStudentRemember] = useState(false);
+  const [studentError, setStudentError] = useState('');
 
   // Teacher Form State
   const [teacherUsername, setTeacherUsername] = useState('');
   const [teacherPassword, setTeacherPassword] = useState('');
   const [teacherRemember, setTeacherRemember] = useState(false);
+  const [teacherError, setTeacherError] = useState('');
 
   // Admin Form State
   const [adminEmail, setAdminEmail] = useState('');
@@ -48,25 +50,33 @@ export const AuthPage: React.FC = () => {
 
   const handleStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setStudentError('');
     if (!studentUsername) {
-      showToast('Enter Username', 'Please enter your username or email', 'warning');
+      showToast('Enter Email / Roll No', 'Please enter your email or roll number', 'warning');
       return;
     }
     const success = login(studentUsername, studentPassword, 'student');
     if (success) {
       showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
+    } else {
+      setStudentError('Invalid Credentials: The entered Email ID, Roll No, or Password does not match any registered student account in database.');
+      showToast('Authentication Failed', 'Student email ID or password mismatch. Please check your credentials.', 'error');
     }
   };
 
   const handleTeacherSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setTeacherError('');
     if (!teacherUsername) {
-      showToast('Enter Username', 'Please enter your username or email', 'warning');
+      showToast('Enter Email / Employee ID', 'Please enter your faculty email or employee ID', 'warning');
       return;
     }
     const success = login(teacherUsername, teacherPassword, 'teacher');
     if (success) {
       showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
+    } else {
+      setTeacherError('Invalid Credentials: The entered Email ID, Employee ID, or Password does not match any registered teacher account in database.');
+      showToast('Authentication Failed', 'Teacher email ID or password mismatch. Please check your credentials.', 'error');
     }
   };
 
@@ -228,6 +238,12 @@ export const AuthPage: React.FC = () => {
 
                 {/* Student Login Form */}
                 <form onSubmit={handleStudentSubmit} className="space-y-6 max-w-sm mx-auto">
+                  {studentError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-700 text-xs font-semibold animate-fadeIn">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{studentError}</span>
+                    </div>
+                  )}
                   {/* Username Input */}
                   <div className="space-y-1">
                     <div className="relative flex items-center border-b-2 border-[#2ECC71] pb-2 transition-colors">
@@ -328,6 +344,12 @@ export const AuthPage: React.FC = () => {
 
                 {/* Teacher Login Form */}
                 <form onSubmit={handleTeacherSubmit} className="space-y-6 max-w-sm mx-auto">
+                  {teacherError && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-700 text-xs font-semibold animate-fadeIn">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span>{teacherError}</span>
+                    </div>
+                  )}
                   {/* Username Input */}
                   <div className="space-y-1">
                     <div className="relative flex items-center border-b border-slate-200 focus-within:border-slate-600 pb-2 transition-colors">
