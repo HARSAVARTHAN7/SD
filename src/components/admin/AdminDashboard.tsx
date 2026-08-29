@@ -32,6 +32,7 @@ import {
   Download,
   Award,
   Ticket,
+  Printer,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -180,12 +181,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
   const [activeTemplateModal, setActiveTemplateModal] = useState<'results' | 'hallTicket' | null>(null);
   const [publishYearModal, setPublishYearModal] = useState<'results' | 'hallTicket' | null>(null);
   const [targetPublishYear, setTargetPublishYear] = useState<string>('2026 - 2027');
+  const [targetPublishSem, setTargetPublishSem] = useState<string>('Semester 5');
+  const [activePdfViewer, setActivePdfViewer] = useState<{ title: string; content: string; fileName?: string } | null>(null);
 
   const handleHallTicketPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    showToast('Parsing Hall Tickets PDF...', `Issuing examination hall tickets from ${file.name}`, 'info');
+    const rawText = await parsePdfText(file);
+
+    showToast('Parsing Hall Tickets PDF...', `Issuing examination hall tickets for ${targetPublishYear} (${targetPublishSem}) from ${file.name}`, 'info');
     const studentList = allUsers.filter((u) => u.role === 'student');
 
     studentList.forEach((st, idx) => {
@@ -195,28 +200,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
         studentName: st.name,
         rollNo: st.rollNo || '2024-418',
         department: st.department || 'Computer Science & Engineering',
-        currentSemester: st.semester || 'Semester 5',
+        currentSemester: targetPublishSem,
         cgpa: st.gpa || 3.85,
         publishedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        academicYear: '2024 - 2028',
+        academicYear: targetPublishYear,
         semesters: {},
       };
 
       const updatedReport: StudentResultReport = {
         ...existing,
+        academicYear: targetPublishYear,
         hallTicket: {
-          hallTicketNo: `HT-2026-${st.rollNo || (4180 + idx)}`,
+          hallTicketNo: `REG-${targetPublishYear.split(' ')[0]}-${st.rollNo || (4180 + idx)}`,
+          registerNumber: st.rollNo || `CCAWBCM${140 + idx}`,
+          programme: `${st.department || 'Computer Science'} (Degree)`,
+          semester: targetPublishSem.replace('Semester ', 'Sem '),
+          candidateName: st.name,
+          dob: '11/05/2004',
           examCenter: `Main Academic Examination Complex (Block ${String.fromCharCode(65 + (idx % 3))})`,
           seatNo: `Seat ${String.fromCharCode(65 + (idx % 3))}-${10 + idx}`,
-          examDates: 'Sept 15 - Sept 25, 2026',
+          examDates: `${targetPublishYear} ${targetPublishSem} Examination Window`,
           status: 'Issued',
+          publishedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         },
       };
 
       saveStudentResult(updatedReport);
     });
 
-    showToast('Hall Tickets Published!', `Issued official examination hall tickets to all enrolled students.`, 'success');
+    setSelectedSemesterTab(targetPublishSem);
+    setActivePdfViewer({
+      title: `Issued Hall Tickets (${targetPublishYear} - ${targetPublishSem})`,
+      content: rawText || `=================================================================================\nOFFICIAL AUTONOMOUS ACADEMIC INSTITUTION\nHALL TICKET PUBLICATION REPORT (${targetPublishYear} - ${targetPublishSem})\n=================================================================================\nIssued hall tickets successfully for all enrolled students.\nTarget Academic Session: ${targetPublishYear}\nTarget Semester: ${targetPublishSem}\nStatus: PUBLISHED & ACTIVE\n=================================================================================`,
+      fileName: file.name,
+    });
+
+    showToast('Hall Tickets Published!', `Issued official examination hall tickets for ${targetPublishYear} (${targetPublishSem}).`, 'success');
     e.target.value = '';
   };
 
@@ -224,11 +243,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
     const file = e.target.files?.[0];
     if (!file) return;
 
-    showToast('Parsing Master Results PDF...', `Reading grade cards from ${file.name}`, 'info');
+    showToast('Parsing Master Results PDF...', `Reading grade cards for ${targetPublishYear} (${targetPublishSem}) from ${file.name}`, 'info');
     const rawText = await parsePdfText(file);
 
     const studentList = allUsers.filter((u) => u.role === 'student');
-    let publishedCount = 0;
 
     studentList.forEach((st) => {
       const matchesName = st.name.toLowerCase().split(' ').some((part) => part.length > 2 && rawText.toLowerCase().includes(part.toLowerCase()));
@@ -246,8 +264,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
         const existingReport = studentResults.find((r) => r.studentId === st.id || r.rollNo === st.rollNo);
         const updatedSemesters = {
           ...(existingReport?.semesters || {}),
-          [selectedSemesterTab]: {
-            semester: selectedSemesterTab,
+          [targetPublishSem]: {
+            semester: targetPublishSem,
             sgpa,
             status,
             grades: sampleGrades,
@@ -260,21 +278,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
           id: existingReport?.id || `res-${st.id}`,
           studentId: st.id,
           studentName: st.name,
-          rollNo: st.rollNo || st.studentId || '2024-418',
+          rollNo: st.rollNo || '2024-418',
           department: st.department || 'Computer Science & Engineering',
-          currentSemester: selectedSemesterTab,
+          currentSemester: targetPublishSem,
           cgpa,
           publishedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          academicYear: st.academicYear || '2024 - 2028',
+          academicYear: targetPublishYear,
           semesters: updatedSemesters,
           hallTicket: existingReport?.hallTicket,
         };
+
         saveStudentResult(report);
-        publishedCount++;
       }
     });
 
-    showToast('Results Published!', `Published ${selectedSemesterTab} academic results to ${publishedCount} student portal(s).`, 'success');
+    setSelectedSemesterTab(targetPublishSem);
+    setActivePdfViewer({
+      title: `Published Master Results (${targetPublishYear} - ${targetPublishSem})`,
+      content: rawText || `=====================================================================\nMASTER ACADEMIC RESULT PUBLICATION REPORT (${targetPublishYear} - ${targetPublishSem})\n=====================================================================\nPublished semester grade cards successfully.\nAcademic Year: ${targetPublishYear}\nTarget Semester: ${targetPublishSem}\n=====================================================================`,
+      fileName: file.name,
+    });
+
+    showToast('Results Published!', `Uploaded and published results for ${targetPublishYear} (${targetPublishSem}).`, 'success');
     e.target.value = '';
   };
 
@@ -2171,28 +2196,47 @@ SUBJECT SCHEDULE:
               </p>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-6 space-y-5 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 uppercase mb-2">Academic Session / Publication Year *</label>
+                <label className="block font-bold text-slate-700 uppercase mb-2">1. Select Academic Year / Session *</label>
                 <select
                   value={targetPublishYear}
                   onChange={(e) => setTargetPublishYear(e.target.value)}
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 mb-2"
                 >
-                  <option value="2024 - 2025">2024 - 2025 Academic Year (Session 1)</option>
-                  <option value="2025 - 2026">2025 - 2026 Academic Year (Session 2)</option>
-                  <option value="2026 - 2027">2026 - 2027 Academic Year (Session 3)</option>
-                  <option value="2027 - 2028">2027 - 2028 Academic Year (Session 4)</option>
+                  <option value="2024 - 2025">2024 - 2025 Academic Year (1st / 2nd Year)</option>
+                  <option value="2025 - 2026">2025 - 2026 Academic Year (2nd / 3rd Year)</option>
+                  <option value="2026 - 2027">2026 - 2027 Academic Year (3rd / 4th Year)</option>
+                  <option value="2027 - 2028">2027 - 2028 Academic Year (4th Year)</option>
                 </select>
 
-                <label className="block font-bold text-slate-500 uppercase text-[10px] mb-1">Or Write-in Custom Year</label>
                 <input
                   type="text"
                   value={targetPublishYear}
                   onChange={(e) => setTargetPublishYear(e.target.value)}
-                  placeholder="e.g. 2026 - 2027 Fall Examination"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none"
+                  placeholder="Or custom write-in year (e.g. 2026 - 2027 Session)"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-2">2. Select Target Semester (1 – 8) *</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+                    <button
+                      key={sem}
+                      type="button"
+                      onClick={() => setTargetPublishSem(sem)}
+                      className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        targetPublishSem === sem
+                          ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-600'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {sem.replace('Semester ', 'Sem ')}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
@@ -2208,7 +2252,7 @@ SUBJECT SCHEDULE:
                   onClick={() => {
                     const mode = publishYearModal;
                     setPublishYearModal(null);
-                    showToast('Year Confirmed', `Publishing ${mode} for Academic Session ${targetPublishYear}. Select file...`, 'info');
+                    showToast('Session Confirmed', `Publishing ${mode} for ${targetPublishYear} (${targetPublishSem}). Select PDF...`, 'info');
                     if (mode === 'results') {
                       pdfResultsInputRef.current?.click();
                     } else {
@@ -2217,8 +2261,64 @@ SUBJECT SCHEDULE:
                   }}
                   className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileUp className="w-4 h-4" /> Confirm Year & Upload PDF
+                  <FileUp className="w-4 h-4" /> Confirm & Upload PDF
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Universal In-Browser PDF Document Viewer Modal */}
+      {activePdfViewer && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fadeIn overflow-y-auto"
+          onClick={() => setActivePdfViewer(null)}
+        >
+          <div
+            className="bg-white text-slate-900 rounded-3xl shadow-2xl border border-slate-300 max-w-3xl w-full my-8 overflow-hidden print:m-0 print:shadow-none print:w-full print:max-w-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Action Bar */}
+            <div className="bg-slate-950 text-white px-6 py-4 flex items-center justify-between print:hidden">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">Universal PDF Document Viewer</span>
+                <h3 className="text-sm font-extrabold text-white">{activePdfViewer.title}</h3>
+                {activePdfViewer.fileName && <p className="text-[10px] text-slate-400 font-mono">File: {activePdfViewer.fileName}</p>}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(activePdfViewer.content);
+                    showToast('Copied', 'PDF text content copied to clipboard!', 'success');
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  📋 Copy Text
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-extrabold shadow-md flex items-center gap-1 cursor-pointer transition-all"
+                >
+                  <Printer className="w-4 h-4" /> Print Document
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePdfViewer(null)}
+                  className="p-1.5 text-white/70 hover:text-white rounded-full cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Content Canvas */}
+            <div className="p-8 space-y-4 font-mono text-xs text-slate-900 bg-white leading-relaxed">
+              <div className="p-6 bg-slate-50 border-2 border-slate-300 rounded-2xl whitespace-pre-wrap max-h-[70vh] overflow-y-auto shadow-inner text-[11px]">
+                {activePdfViewer.content}
               </div>
             </div>
           </div>
