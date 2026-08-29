@@ -134,6 +134,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     addTimetableSlot,
     deleteTimetableSlot,
     assignMentor,
+    addNotification,
   } = useApp();
 
   const [annModalOpen, setAnnModalOpen] = useState(false);
@@ -605,44 +606,84 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
           </div>
 
           {/* Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {[
-              { id: 'students', label: 'Total Enrolled', value: `${students.length} Active Students`, sub: 'Semester 5 • 100% Retained', color: 'emerald', Icon: GraduationCap },
-              { id: 'teachers', label: 'Faculty Staff', value: `${teachers.length} Professors`, sub: 'Active Mentors & Chairs', color: 'purple', Icon: Users },
-              { id: 'results', label: 'Result Publications', value: 'Results', sub: 'Auto SGPA/CGPA Cards', color: 'sky', Icon: BookOpen },
-              { id: 'timetable', label: 'Timetable Slots', value: `${timetableSlots.length} Weekly Sessions`, sub: 'Mon - Sat Master Schedule', color: 'amber', Icon: Calendar },
-            ].map(({ id, label, value, sub, color, Icon }) => (
-              <div
-                key={label}
-                onClick={() => {
-                  if (id === 'students') {
-                    setDirActiveTab('students');
-                    if (onSelectTab) onSelectTab('directory');
-                  } else if (id === 'teachers') {
-                    setDirActiveTab('teachers');
-                    if (onSelectTab) onSelectTab('directory');
-                  } else if (id === 'results') {
-                    if (onSelectTab) onSelectTab('results');
-                  } else if (id === 'timetable') {
-                    if (onSelectTab) onSelectTab('timetable');
-                  }
-                }}
-                className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all cursor-pointer group hover:border-slate-300"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-700 transition-colors">{label}</span>
-                  <div className={`w-10 h-10 rounded-2xl bg-${color}-50 text-${color}-600 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
+          {(() => {
+            const blockedStudentsCount = allUsers.filter((u) => u.role === 'student' && (u.isBlocked || u.status === 'blocked')).length;
+
+            return (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {[
+                    { id: 'students', label: 'Total Enrolled', value: `${students.length} Students`, sub: 'Active Directory', color: 'emerald', Icon: GraduationCap },
+                    { id: 'teachers', label: 'Faculty Staff', value: `${teachers.length} Professors`, sub: 'Active Mentors & Chairs', color: 'purple', Icon: Users },
+                    { id: 'blocked', label: 'Blocked Accounts', value: `${blockedStudentsCount} Suspended`, sub: blockedStudentsCount > 0 ? 'Tap to Manage' : 'All Accounts Active', color: 'rose', Icon: ShieldAlert },
+                    { id: 'results', label: 'Result Portal', value: 'Publications', sub: 'SGPA/CGPA Cards', color: 'sky', Icon: BookOpen },
+                    { id: 'timetable', label: 'Timetable Slots', value: `${timetableSlots.length} Sessions`, sub: 'Weekly Schedule', color: 'amber', Icon: Calendar },
+                  ].map(({ id, label, value, sub, color, Icon }) => (
+                    <div
+                      key={label}
+                      onClick={() => {
+                        if (id === 'students') {
+                          setDirActiveTab('students');
+                          if (onSelectTab) onSelectTab('directory');
+                        } else if (id === 'teachers') {
+                          setDirActiveTab('teachers');
+                          if (onSelectTab) onSelectTab('directory');
+                        } else if (id === 'blocked') {
+                          if (onSelectTab) onSelectTab('accounts');
+                          setAccountSubTab('blocked');
+                        } else if (id === 'results') {
+                          if (onSelectTab) onSelectTab('results');
+                        } else if (id === 'timetable') {
+                          if (onSelectTab) onSelectTab('timetable');
+                        }
+                      }}
+                      className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all cursor-pointer group hover:border-slate-300 flex flex-col justify-between"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-700 transition-colors">{label}</span>
+                        <div className={`w-9 h-9 rounded-2xl bg-${color}-50 text-${color}-600 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-xl font-extrabold text-slate-800 mt-2 flex items-center justify-between">
+                        {value}
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-700 group-hover:translate-x-1 transition-all" />
+                      </p>
+                      <p className={`text-[11px] text-${color}-600 font-semibold mt-1`}>{sub}</p>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-2xl font-extrabold text-slate-800 mt-3 flex items-center justify-between">
-                  {value}
-                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 group-hover:translate-x-1 transition-all" />
-                </p>
-                <p className={`text-xs text-${color}-600 font-semibold mt-1`}>{sub}</p>
-              </div>
-            ))}
-          </div>
+
+                {/* Blocked Students Alert Banner */}
+                {blockedStudentsCount > 0 && (
+                  <div className="bg-rose-50 border-2 border-rose-200/80 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-fadeIn">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold shrink-0 shadow-xs">
+                        <ShieldAlert className="w-6 h-6 animate-pulse text-rose-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-extrabold text-slate-900">
+                          🚨 {blockedStudentsCount} Student Account{blockedStudentsCount > 1 ? 's' : ''} Currently Blocked
+                        </h4>
+                        <p className="text-xs text-rose-700 mt-0.5 font-semibold">
+                          Student portal access suspended by Administration. Notifications sent to assigned faculty mentors.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (onSelectTab) onSelectTab('accounts');
+                        setAccountSubTab('blocked');
+                      }}
+                      className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      <ShieldAlert className="w-4 h-4" /> Manage Blocked Accounts →
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Pending Change Requests alert */}
           {pendingRequests.length > 0 && (

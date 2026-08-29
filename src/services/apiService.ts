@@ -155,6 +155,9 @@ export const NotificationAPI = {
   getAll: (params?: { roleTarget?: string; read?: string; limit?: number }) =>
     api.get<{ success: boolean; count: number; data: AppNotification[] }>('/notifications', { params }),
 
+  create: (data: Partial<AppNotification>) =>
+    api.post<ApiResponse<AppNotification>>('/notifications', data),
+
   markRead: (id: string) =>
     api.put<ApiResponse<AppNotification>>(`/notifications/${id}/read`),
 

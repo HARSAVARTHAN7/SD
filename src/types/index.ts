@@ -120,7 +120,7 @@ export interface AppNotification {
   message: string;
   timestamp: string;
   read: boolean;
-  type: 'grade' | 'announcement' | 'attendance';
+  type: 'grade' | 'announcement' | 'attendance' | 'urgent' | 'warning';
   roleTarget: 'student' | 'teacher' | 'all';
 }
 

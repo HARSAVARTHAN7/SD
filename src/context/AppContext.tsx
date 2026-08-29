@@ -52,6 +52,7 @@ interface AppContextType {
   deleteAnnouncement: (id: string) => Promise<void>;
   markNotifRead: (id: string) => Promise<void>;
   clearNotifs: () => Promise<void>;
+  addNotification: (notifData: Partial<AppNotification>) => Promise<void>;
   // User CRUD
   addUser: (user: Partial<User> & { password?: string }) => Promise<void>;
   updateUser: (user: User) => Promise<void>;
@@ -380,6 +381,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const addNotification = async (notifData: Partial<AppNotification>) => {
+    const newNotif: AppNotification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      title: notifData.title || 'System Alert',
+      message: notifData.message || '',
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      read: false,
+      type: notifData.type || 'urgent',
+      roleTarget: notifData.roleTarget || 'all',
+      ...notifData,
+    } as AppNotification;
+
+    try {
+      await NotificationAPI.create(newNotif);
+    } catch (err) {
+      console.warn('Backend notification creation error / offline. Saving notification locally...', err);
+    }
+
+    setNotifications((prev) => [newNotif, ...prev]);
+  };
+
   // ─── User CRUD ──────────────────────────────────────
   const addUser = async (userData: Partial<User> & { password?: string }) => {
     let createdUser: User | null = null;
@@ -630,6 +652,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteAnnouncement,
         markNotifRead,
         clearNotifs,
+        addNotification,
         addUser,
         updateUser,
         deleteUser,
