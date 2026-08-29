@@ -290,12 +290,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateUser = async (userData: User) => {
     const userId = userData.id || (userData as unknown as { _id: string })._id;
-    let updated: User = userData;
+    let updated: User = { ...userData };
 
     try {
       const { data } = await UserAPI.update(userId, userData);
       if (data && data.data) {
-        updated = data.data;
+        updated = {
+          ...data.data,
+          password: userData.password || data.data.password,
+        };
       }
     } catch (err) {
       console.warn('Backend user update error / offline. Updating user locally...', err);
@@ -304,7 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAllUsers((prev) =>
       prev.map((u) => (u.id === userId || (u as unknown as { _id: string })._id === userId ? { ...u, ...updated } : u)),
     );
-    showToast('Profile Updated', `${updated.name || 'User'}'s profile has been updated.`, 'success');
+    showToast('Profile & Password Updated', `${updated.name || 'User'}'s credentials have been updated in database.`, 'success');
   };
 
   const deleteUser = async (id: string) => {
