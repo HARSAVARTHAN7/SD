@@ -55,13 +55,49 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
 
   // Published result card for current student
   const myResultReport = studentResults.find(
-    (r) => r.studentId === user?.id || (r.rollNo && r.rollNo === user?.rollNo) || (r.studentName && r.studentName.toLowerCase() === user?.name?.toLowerCase())
-  );
-  const mySemesters = myResultReport?.semesters || {};
-  const currentSemData = mySemesters[studentSelectedSemester];
-  const myGrades = currentSemData ? currentSemData.grades : DEFAULT_STUDENT_GRADES;
-  const displaySgpa = currentSemData ? currentSemData.sgpa : 3.85;
-  const displayCgpa = myResultReport ? myResultReport.cgpa : (user?.gpa || 3.85);
+    (r) =>
+      r.studentId === user?.id ||
+      (r.rollNo && user?.rollNo && r.rollNo.trim() === user?.rollNo.trim()) ||
+      (r.studentName && user?.name && r.studentName.toLowerCase().trim() === user?.name.toLowerCase().trim()) ||
+      (r.studentId && user?.studentId && r.studentId.trim() === user?.studentId.trim())
+  ) || {
+    id: `res-${user?.id || 'demo'}`,
+    studentId: user?.id || 'student-murat',
+    studentName: user?.name || 'Murat Gürsoy',
+    rollNo: user?.rollNo || '2024-418',
+    department: user?.department || 'Computer Science & Engineering',
+    currentSemester: user?.semester || 'Semester 5',
+    cgpa: user?.gpa || 3.85,
+    publishedDate: 'August 28, 2026',
+    academicYear: '2024 - 2028',
+    semesters: {
+      'Semester 5': {
+        semester: 'Semester 5',
+        sgpa: user?.gpa || 3.85,
+        status: 'Pass',
+        grades: DEFAULT_STUDENT_GRADES,
+      },
+    },
+    hallTicket: {
+      hallTicketNo: `HT-2026-${user?.rollNo || '4189'}`,
+      examCenter: 'Main Academic Examination Complex (Block A)',
+      seatNo: 'Seat A-14',
+      examDates: 'Sept 15 - Sept 25, 2026',
+      status: 'Issued',
+    },
+  };
+
+  const mySemesters = myResultReport.semesters || {};
+  const currentSemData = mySemesters[studentSelectedSemester] || {
+    semester: studentSelectedSemester,
+    sgpa: user?.gpa || 3.85,
+    status: 'Pass',
+    grades: DEFAULT_STUDENT_GRADES,
+  };
+
+  const myGrades = currentSemData.grades;
+  const displaySgpa = currentSemData.sgpa;
+  const displayCgpa = myResultReport.cgpa || (user?.gpa || 3.85);
 
   // Chart data for grades
   const gradeChartData = myGrades.map((g) => ({

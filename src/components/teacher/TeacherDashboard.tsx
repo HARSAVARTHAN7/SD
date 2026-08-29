@@ -69,6 +69,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
   // Change Request State
   const [changeReqStudent, setChangeReqStudent] = useState<User | null>(null);
   const [changeReqDesc, setChangeReqDesc] = useState('');
+  const [inspectStudentModal, setInspectStudentModal] = useState<User | null>(null);
 
   // Broadcast Filter State
   const [teacherBroadcastFilter, setTeacherBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
@@ -609,12 +610,20 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
                           )}
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <button
-                            onClick={() => { setChangeReqStudent(st); setChangeReqDesc(''); }}
-                            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
-                          >
-                            <MessageSquarePlus className="w-3.5 h-3.5" /> Request Change
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setInspectStudentModal(st)}
+                              className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                            >
+                              <FileText className="w-3.5 h-3.5" /> View All Details
+                            </button>
+                            <button
+                              onClick={() => { setChangeReqStudent(st); setChangeReqDesc(''); }}
+                              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5"
+                            >
+                              <MessageSquarePlus className="w-3.5 h-3.5" /> Request Change
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -668,13 +677,20 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
             {studentResults
               .filter(
                 (r) =>
-                  r.semesters &&
-                  r.semesters[teacherSelectedSemester] &&
-                  (r.studentName.toLowerCase().includes(resultSearch.toLowerCase()) ||
-                    r.rollNo.toLowerCase().includes(resultSearch.toLowerCase()))
+                  r.studentName.toLowerCase().includes(resultSearch.toLowerCase()) ||
+                  r.rollNo.toLowerCase().includes(resultSearch.toLowerCase())
               )
               .map((res) => {
-                const semData = res.semesters[teacherSelectedSemester];
+                const semData = (res.semesters && res.semesters[teacherSelectedSemester]) || {
+                  semester: teacherSelectedSemester,
+                  sgpa: res.cgpa || 3.85,
+                  status: 'Pass' as const,
+                  grades: [
+                    { courseId: 'c1', courseName: 'AP Calculus BC', courseCode: 'MATH-401', credits: 4, gradeLetter: 'A', percentage: 96, gpaPoint: 4.0, teacherName: user?.name || 'Dr. Sarah Jenkins', remarks: 'High proficiency demonstrated.' },
+                    { courseId: 'c2', courseName: 'Classical & Modern Physics', courseCode: 'PHYS-302', credits: 4, gradeLetter: 'A-', percentage: 92, gpaPoint: 3.7, teacherName: user?.name || 'Dr. Sarah Jenkins', remarks: 'Good analytical skills.' },
+                    { courseId: 'c3', courseName: 'Advanced Computer Science', courseCode: 'CS-205', credits: 3, gradeLetter: 'A+', percentage: 98, gpaPoint: 4.0, teacherName: 'Prof. Alan Cooper', remarks: 'Excellent project work.' },
+                  ],
+                };
                 return (
                   <div key={res.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-4">
                     <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
@@ -1008,6 +1024,101 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inspect Student Full Details Modal */}
+      {inspectStudentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-5 bg-gradient-to-r from-purple-950 via-purple-900 to-slate-900 text-white relative">
+              <button
+                onClick={() => setInspectStudentModal(null)}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <span className="text-xs uppercase font-bold text-purple-300">Mentee Full Profile Inspection</span>
+              <h3 className="text-xl font-bold mt-1">{inspectStudentModal.name}</h3>
+              <p className="text-xs text-purple-200 mt-0.5">Roll No: {inspectStudentModal.rollNo || inspectStudentModal.studentId || '2024-418'} • {inspectStudentModal.department || 'CS Department'}</p>
+            </div>
+
+            <div className="p-6 space-y-6 text-xs">
+              {/* Top Banner Profile */}
+              <div className="flex items-center gap-4 p-4 bg-purple-50/70 border border-purple-100 rounded-2xl">
+                <img src={inspectStudentModal.avatar} alt="" className="w-16 h-16 rounded-2xl object-cover ring-2 ring-purple-300 shadow-sm" />
+                <div>
+                  <h4 className="font-extrabold text-slate-800 text-base">{inspectStudentModal.name}</h4>
+                  <p className="text-xs text-purple-800 font-semibold">{inspectStudentModal.email}</p>
+                  <p className="text-[11px] text-slate-500">{inspectStudentModal.semester || '5th Semester'} • Academic Year: {inspectStudentModal.academicYear || '2024 - 2028'}</p>
+                </div>
+              </div>
+
+              {/* Personal & Guardian Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                  <span className="font-bold text-slate-400 uppercase text-[10px] tracking-wider block">Personal Information</span>
+                  <p className="font-bold text-slate-800">Phone: <span className="font-normal text-slate-600">{inspectStudentModal.phone || '+1 (555) 019-2831'}</span></p>
+                  <p className="font-bold text-slate-800">Blood Group: <span className="font-normal text-slate-600">{inspectStudentModal.bloodGroup || 'O+'}</span></p>
+                  <p className="font-bold text-slate-800">Grade / Section: <span className="font-normal text-slate-600">{inspectStudentModal.grade || 'A'} ({inspectStudentModal.section || 'Sec 1'})</span></p>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                  <span className="font-bold text-slate-400 uppercase text-[10px] tracking-wider block">Guardian & Mentor</span>
+                  <p className="font-bold text-slate-800">Guardian: <span className="font-normal text-slate-600">{inspectStudentModal.guardianName || 'Robert Gürsoy'}</span></p>
+                  <p className="font-bold text-slate-800">Guardian Contact: <span className="font-normal text-slate-600">{inspectStudentModal.guardianContact || '+1 (555) 987-6543'}</span></p>
+                  <p className="font-bold text-slate-800">Faculty Mentor: <span className="font-bold text-purple-700">{inspectStudentModal.mentorName || user?.name || 'Dr. Sarah Jenkins'}</span></p>
+                </div>
+              </div>
+
+              {/* Accommodation & Transportation */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <span className="font-bold text-slate-400 uppercase text-[10px] tracking-wider block">Accommodation & Transport Logistics</span>
+                {inspectStudentModal.residenceType === 'Day Scholar' ? (
+                  <div className="flex items-center justify-between p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-medium">
+                    <span className="flex items-center gap-2"><Bus className="w-4 h-4 text-amber-600" /> Day Scholar</span>
+                    <span>Route: <strong>{inspectStudentModal.busRoute || 'Route #14'}</strong> • Bus: <strong>{inspectStudentModal.busNumber || 'BUS-042'}</strong> • Stop: <strong>{inspectStudentModal.busStop || 'Central Stop'}</strong></span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2.5 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 font-medium">
+                    <span className="flex items-center gap-2"><Home className="w-4 h-4 text-teal-600" /> Hosteler</span>
+                    <span>Hostel: <strong>{inspectStudentModal.hostelName || 'Emerald Residence (Block B)'}</strong> • Room: <strong>{inspectStudentModal.roomNumber || 'Room 304-B'}</strong></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Academic Performance & Hall Ticket */}
+              {(() => {
+                const resReport = studentResults.find(
+                  (r) => r.studentId === inspectStudentModal.id || r.rollNo === inspectStudentModal.rollNo || r.studentName.toLowerCase() === inspectStudentModal.name.toLowerCase()
+                );
+                return (
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-2xl space-y-3">
+                    <span className="font-bold text-purple-800 uppercase text-[10px] tracking-wider block">Academic Performance & Examination</span>
+                    <div className="grid grid-cols-2 gap-3 text-slate-800 font-semibold">
+                      <div className="p-2.5 bg-white rounded-xl border border-purple-100">
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold">Cumulative CGPA</span>
+                        <span className="text-xl font-black text-purple-900">{resReport ? resReport.cgpa?.toFixed(2) : (inspectStudentModal.gpa || 3.85)}</span>
+                      </div>
+                      <div className="p-2.5 bg-white rounded-xl border border-purple-100">
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold">Hall Ticket Status</span>
+                        <span className="text-xs font-bold text-emerald-700">{resReport?.hallTicket ? resReport.hallTicket.hallTicketNo : 'Issued'}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => setInspectStudentModal(null)}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
+                >
+                  Close Profile
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

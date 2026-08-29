@@ -40,7 +40,7 @@ import { User, TimetableSlot, ChangeRequest, StudentResultReport, GradeItem } fr
 import { StudentDashboard } from '../student/StudentDashboard';
 import { TeacherDashboard } from '../teacher/TeacherDashboard';
 import { PostAnnouncementModal } from '../teacher/PostAnnouncementModal';
-import { parsePdfText, extractStudentFromText, extractTeacherFromText, calculateSgpa, calculateCgpa, downloadTemplatePdf } from '../../utils/pdfParser';
+import { parsePdfText, extractStudentFromText, extractTeacherFromText, calculateSgpa, calculateCgpa, downloadTemplatePdf, downloadOverallResultsPdfTemplate, downloadHallTicketsPdfTemplate } from '../../utils/pdfParser';
 
 interface AdminDashboardProps {
   currentTab: string;
@@ -678,6 +678,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => downloadOverallResultsPdfTemplate()}
+                className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Download printable master results PDF template"
+              >
+                <Download className="w-4 h-4 text-amber-600" /> Results Template
+              </button>
+
+              <button
+                onClick={() => downloadHallTicketsPdfTemplate()}
+                className="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Download printable hall tickets PDF template"
+              >
+                <Download className="w-4 h-4 text-purple-600" /> Hall Ticket Template
+              </button>
+
               <input
                 type="file"
                 ref={pdfResultsInputRef}

@@ -218,3 +218,90 @@ Subjects Taught: AP Calculus BC, Advanced Algorithms, Machine Learning
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Download Printable Master Results PDF Template
+ */
+export function downloadOverallResultsPdfTemplate(): void {
+  const content = `=====================================================================
+INSTITUTIONAL MASTER ACADEMIC RESULT PUBLICATION MASTER PDF TEMPLATE
+=====================================================================
+Academic Year: 2024 - 2028 | Semester: Semester 5
+
+STUDENT ENTRY #1:
+---------------------------------------------------------------------
+Student Name: Murat Gürsoy
+Roll Number: 2024-418
+Department: Computer Science & Engineering
+Semester: Semester 5
+
+SUBJECT MARKS BREAKDOWN:
+1. AP Calculus BC (MATH-401) - 4 Credits - Grade: A (96%) - GPA: 4.0 - Remarks: High proficiency
+2. Classical Physics (PHYS-302) - 4 Credits - Grade: A- (92%) - GPA: 3.7 - Remarks: Good analytical skills
+3. Advanced CS (CS-205) - 3 Credits - Grade: A+ (98%) - GPA: 4.0 - Remarks: Excellent project work
+
+---------------------------------------------------------------------
+STUDENT ENTRY #2:
+---------------------------------------------------------------------
+Student Name: Emma Watson
+Roll Number: 2024-419
+Department: Computer Science & Engineering
+Semester: Semester 5
+
+SUBJECT MARKS BREAKDOWN:
+1. AP Calculus BC (MATH-401) - 4 Credits - Grade: A+ (98%) - GPA: 4.0 - Remarks: Outstanding performance
+2. Classical Physics (PHYS-302) - 4 Credits - Grade: A (95%) - GPA: 4.0 - Remarks: Excellent lab execution
+3. Advanced CS (CS-205) - 3 Credits - Grade: A (94%) - GPA: 4.0 - Remarks: Great algorithm design
+=====================================================================`;
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'overall_academic_results_template.pdf';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Download Printable Master Hall Tickets PDF Template
+ */
+export function downloadHallTicketsPdfTemplate(): void {
+  const content = `=====================================================================
+OFFICIAL EXAMINATION HALL TICKET MASTER TEMPLATE
+=====================================================================
+Semester Examination: Fall 2026
+
+ENTRY #1:
+---------------------------------------------------------------------
+Student Name: Murat Gürsoy
+Roll Number: 2024-418
+Hall Ticket Number: HT-2026-4189
+Examination Center: Central Engineering Hall (Block A)
+Seat Number: Seat A-14
+Examination Dates: Sept 15 - Sept 25, 2026
+Status: Issued
+
+ENTRY #2:
+---------------------------------------------------------------------
+Student Name: Emma Watson
+Roll Number: 2024-419
+Hall Ticket Number: HT-2026-4190
+Examination Center: Central Engineering Hall (Block B)
+Seat Number: Seat B-08
+Examination Dates: Sept 15 - Sept 25, 2026
+Status: Issued
+=====================================================================`;
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'hall_tickets_publication_template.pdf';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
