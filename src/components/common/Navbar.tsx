@@ -99,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs })
                     ? `${user?.semester || '5th Semester'} • ${user?.department || 'Computer Science'}`
                     : user?.role === 'teacher'
                     ? user?.department
-                    : 'Authorized Master Authority'}
+                    : 'Admin Dashboard'}
                 </p>
               </div>
             </div>

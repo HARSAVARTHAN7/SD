@@ -599,7 +599,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                     <span>Institutional Master Control Center</span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Welcome, Administrator 🏛️</h2>
-                  <p className="text-slate-400 text-xs sm:text-sm mt-1">Authorized Master Authority</p>
+                  <p className="text-slate-400 text-xs sm:text-sm mt-1">Admin Dashboard</p>
                 </div>
               </div>
             </div>
@@ -610,7 +610,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
             {[
               { id: 'students', label: 'Total Enrolled', value: `${students.length} Active Students`, sub: 'Semester 5 • 100% Retained', color: 'emerald', Icon: GraduationCap },
               { id: 'teachers', label: 'Faculty Staff', value: `${teachers.length} Professors`, sub: 'Active Mentors & Chairs', color: 'purple', Icon: Users },
-              { id: 'results', label: 'Result Publications', value: `${studentResults.length} Results`, sub: 'Auto SGPA/CGPA Cards', color: 'sky', Icon: BookOpen },
+              { id: 'results', label: 'Result Publications', value: 'Results', sub: 'Auto SGPA/CGPA Cards', color: 'sky', Icon: BookOpen },
               { id: 'timetable', label: 'Timetable Slots', value: `${timetableSlots.length} Weekly Sessions`, sub: 'Mon - Sat Master Schedule', color: 'amber', Icon: Calendar },
             ].map(({ id, label, value, sub, color, Icon }) => (
               <div
