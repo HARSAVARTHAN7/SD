@@ -5,7 +5,8 @@ import {
   Announcement,
   TimetableSlot,
   GradeItem,
-  AppNotification
+  AppNotification,
+  ChangeRequest,
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -16,6 +17,7 @@ const STORAGE_KEYS = {
   ANNOUNCEMENTS: 'eduportal_announcements_v5',
   NOTIFICATIONS: 'eduportal_notifications_v5',
   CURRENT_USER: 'eduportal_current_user_v5',
+  CHANGE_REQUESTS: 'eduportal_change_requests_v5',
 };
 
 // Seed default users including Admin and Faculty staff
@@ -611,7 +613,67 @@ export const StorageService = {
   clearAllNotifications(): void {
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify([]));
     notifyStoreUpdate();
-  }
+  },
+
+  // User CRUD (Admin)
+  addUser(user: User): void {
+    const users = this.getUsers();
+    users.push(user);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    notifyStoreUpdate();
+  },
+
+  updateUser(user: User): void {
+    const users = this.getUsers();
+    const idx = users.findIndex((u) => u.id === user.id);
+    if (idx !== -1) {
+      users[idx] = user;
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      // Sync current user session if the same user was updated
+      const current = this.getCurrentUser();
+      if (current && current.id === user.id) {
+        this.setCurrentUser(user);
+      }
+      notifyStoreUpdate();
+    }
+  },
+
+  deleteUser(id: string): void {
+    const users = this.getUsers().filter((u) => u.id !== id);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    notifyStoreUpdate();
+  },
+
+  // Change Requests (Teacher → Admin)
+  getChangeRequests(): ChangeRequest[] {
+    const data = localStorage.getItem(STORAGE_KEYS.CHANGE_REQUESTS);
+    return data ? JSON.parse(data) : [];
+  },
+
+  addChangeRequest(req: Omit<ChangeRequest, 'id'>): ChangeRequest {
+    const list = this.getChangeRequests();
+    const newReq: ChangeRequest = { ...req, id: `cr-${Date.now()}` };
+    list.unshift(newReq);
+    localStorage.setItem(STORAGE_KEYS.CHANGE_REQUESTS, JSON.stringify(list));
+    notifyStoreUpdate();
+    return newReq;
+  },
+
+  resolveChangeRequest(id: string): void {
+    const list = this.getChangeRequests();
+    const item = list.find((r) => r.id === id);
+    if (item) {
+      item.status = 'resolved';
+      localStorage.setItem(STORAGE_KEYS.CHANGE_REQUESTS, JSON.stringify(list));
+      notifyStoreUpdate();
+    }
+  },
+
+  deleteChangeRequest(id: string): void {
+    const list = this.getChangeRequests().filter((r) => r.id !== id);
+    localStorage.setItem(STORAGE_KEYS.CHANGE_REQUESTS, JSON.stringify(list));
+    notifyStoreUpdate();
+  },
 };
 
 StorageService.init();

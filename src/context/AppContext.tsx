@@ -5,6 +5,7 @@ import {
   Announcement,
   AppNotification,
   User,
+  ChangeRequest,
 } from '../types';
 import { StorageService, subscribeToStore } from '../services/storage';
 
@@ -21,17 +22,30 @@ interface AppContextType {
   announcements: Announcement[];
   notifications: AppNotification[];
   allUsers: User[];
+  changeRequests: ChangeRequest[];
   toasts: Toast[];
-  
+
   // Actions
   showToast: (title: string, message: string, type?: Toast['type']) => void;
   dismissToast: (id: string) => void;
-  takeAttendance: (date: string, courseId: string, records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' }>) => void;
+  takeAttendance: (
+    date: string,
+    courseId: string,
+    records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' }>
+  ) => void;
   postAnnouncement: (data: Omit<Announcement, 'id' | 'date'>) => void;
   deleteAnnouncement: (id: string) => void;
   markNotifRead: (id: string) => void;
   clearNotifs: () => void;
   resetAllDemoData: () => void;
+  // User CRUD
+  addUser: (user: User) => void;
+  updateUser: (user: User) => void;
+  deleteUser: (id: string) => void;
+  // Change requests
+  submitChangeRequest: (req: Omit<ChangeRequest, 'id'>) => void;
+  resolveChangeRequest: (id: string) => void;
+  deleteChangeRequest: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -42,6 +56,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => StorageService.getAnnouncements());
   const [notifications, setNotifications] = useState<AppNotification[]>(() => StorageService.getNotifications());
   const [allUsers, setAllUsers] = useState<User[]>(() => StorageService.getUsers());
+  const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>(() => StorageService.getChangeRequests());
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const refreshState = useCallback(() => {
@@ -50,6 +65,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAnnouncements(StorageService.getAnnouncements());
     setNotifications(StorageService.getNotifications());
     setAllUsers(StorageService.getUsers());
+    setChangeRequests(StorageService.getChangeRequests());
   }, []);
 
   useEffect(() => {
@@ -62,7 +78,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const showToast = (title: string, message: string, type: Toast['type'] = 'success') => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     setToasts((prev) => [...prev, { id, title, message, type }]);
-
     setTimeout(() => {
       dismissToast(id);
     }, 4000);
@@ -104,6 +119,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Reset Complete', 'Demo database reset to defaults.', 'info');
   };
 
+  // User CRUD
+  const addUser = (user: User) => {
+    StorageService.addUser(user);
+    showToast('User Added', `${user.name} has been registered successfully.`, 'success');
+  };
+
+  const updateUser = (user: User) => {
+    StorageService.updateUser(user);
+    showToast('Profile Updated', `${user.name}'s profile has been updated.`, 'success');
+  };
+
+  const deleteUser = (id: string) => {
+    StorageService.deleteUser(id);
+    showToast('Deleted', 'User has been removed from the system.', 'info');
+  };
+
+  // Change Requests
+  const submitChangeRequest = (req: Omit<ChangeRequest, 'id'>) => {
+    StorageService.addChangeRequest(req);
+    showToast('Request Submitted', 'Your change request has been sent to the admin.', 'success');
+  };
+
+  const resolveChangeRequest = (id: string) => {
+    StorageService.resolveChangeRequest(id);
+    showToast('Resolved', 'Change request has been marked as resolved.', 'success');
+  };
+
+  const deleteChangeRequest = (id: string) => {
+    StorageService.deleteChangeRequest(id);
+    showToast('Dismissed', 'Change request removed.', 'info');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -112,6 +159,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         announcements,
         notifications,
         allUsers,
+        changeRequests,
         toasts,
         showToast,
         dismissToast,
@@ -121,6 +169,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markNotifRead,
         clearNotifs,
         resetAllDemoData,
+        addUser,
+        updateUser,
+        deleteUser,
+        submitChangeRequest,
+        resolveChangeRequest,
+        deleteChangeRequest,
       }}
     >
       {children}

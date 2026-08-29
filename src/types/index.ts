@@ -115,3 +115,14 @@ export interface AppNotification {
   type: 'grade' | 'announcement' | 'attendance';
   roleTarget: 'student' | 'teacher' | 'all';
 }
+
+export interface ChangeRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  teacherId: string;
+  teacherName: string;
+  description: string;
+  status: 'pending' | 'resolved';
+  timestamp: string;
+}
