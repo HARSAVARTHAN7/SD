@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { StorageService, DEFAULT_TIMETABLE } from '../../services/storage';
+// Removed StorageService
 import { User, TimetableSlot, ChangeRequest, StudentResultReport, GradeItem } from '../../types';
 import { StudentDashboard } from '../student/StudentDashboard';
 import { TeacherDashboard } from '../teacher/TeacherDashboard';
@@ -118,6 +118,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     deleteUser,
     resolveChangeRequest,
     deleteChangeRequest,
+    timetable,
+    addTimetableSlot,
+    deleteTimetableSlot,
+    assignMentor,
   } = useApp();
 
   const [annModalOpen, setAnnModalOpen] = useState(false);
@@ -125,7 +129,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const [previewTab, setPreviewTab] = useState<string>('overview');
 
   // Timetable State
-  const [timetableSlots, setTimetableSlots] = useState<TimetableSlot[]>(() => StorageService.getTimetable());
+  const timetableSlots = timetable;
   const [selectedDay, setSelectedDay] = useState<string>('Monday');
   const [newSlotModalOpen, setNewSlotModalOpen] = useState(false);
   const [slotSubject, setSlotSubject] = useState('');
@@ -373,20 +377,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const pendingRequests = changeRequests.filter((r) => r.status === 'pending');
 
   // ── Handlers: Mentor Assignment ────────────────────────────────────────────
-  const handleSaveMentor = (e: React.FormEvent) => {
+  const handleSaveMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assigningStudent) return;
     const teacher = teachers.find((t) => t.id === selectedMentorId);
     if (!teacher) { showToast('Select Mentor', 'Please select a valid faculty mentor', 'warning'); return; }
-    StorageService.assignMentorToStudent(assigningStudent.id, teacher.employeeId || teacher.id, teacher.name, teacher.phone || '');
-    showToast('Mentor Assigned', `${assigningStudent.name} is now mentored by ${teacher.name}`, 'success');
+    await assignMentor(assigningStudent.id, { mentorId: teacher.employeeId || teacher.id, mentorName: teacher.name, mentorPhone: teacher.phone || '' });
     setAssigningStudent(null);
   };
 
   // ── Handlers: Timetable ────────────────────────────────────────────────────
-  const handleAddSlot = (e: React.FormEvent) => {
+  const handleAddSlot = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created = StorageService.addTimetableSlot({
+    await addTimetableSlot({
       day: selectedDay as any,
       subject: slotSubject,
       teacher: slotTeacher,
@@ -395,20 +398,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
       endTime: slotEndTime,
       color: 'bg-emerald-500/10 border-emerald-500 text-emerald-700',
     });
-    setTimetableSlots(StorageService.getTimetable());
     setNewSlotModalOpen(false);
     setSlotSubject(''); setSlotTeacher(''); setSlotRoom(''); setSlotStartTime(''); setSlotEndTime('');
-    showToast('Slot Added', `Added ${created.subject} to ${selectedDay} timetable.`, 'success');
   };
 
-  const handleDeleteSlot = (id: string) => {
-    StorageService.deleteTimetableSlot(id);
-    setTimetableSlots(StorageService.getTimetable());
-    showToast('Slot Removed', 'Timetable slot deleted.', 'info');
+  const handleDeleteSlot = async (id: string) => {
+    await deleteTimetableSlot(id);
   };
 
   // ── Handlers: Accommodation ────────────────────────────────────────────────
-  const handleSaveAccommodation = (e: React.FormEvent) => {
+  const handleSaveAccommodation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStudentAcc) return;
     const updated: User = {
@@ -420,8 +419,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
       hostelName: residenceType === 'Hosteler' ? hostelName : undefined,
       roomNumber: residenceType === 'Hosteler' ? roomNumber : undefined,
     };
-    StorageService.saveUser(updated);
-    showToast('Updated', `Accommodation updated for ${updated.name}`, 'success');
+    await updateUser(updated);
     setEditingStudentAcc(null);
   };
 

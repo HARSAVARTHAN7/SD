@@ -33,7 +33,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { Course } from '../../types';
-import { DEFAULT_TIMETABLE, DEFAULT_STUDENT_GRADES } from '../../services/storage';
+// Timetable data is now fetched from backend via AppContext
 
 interface StudentDashboardProps {
   currentTab: string;
@@ -41,7 +41,7 @@ interface StudentDashboardProps {
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }) => {
   const { user } = useAuth();
-  const { courses, announcements, attendance, studentResults, showToast } = useApp();
+  const { courses, announcements, attendance, studentResults, timetable, showToast } = useApp();
 
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
@@ -755,7 +755,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
 
           {/* Timetable slots for selected day */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {DEFAULT_TIMETABLE.filter((t) => t.day === timetableDay).map((slot) => (
+            {timetable.filter((t) => t.day === timetableDay).map((slot) => (
               <div
                 key={slot.id}
                 className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"

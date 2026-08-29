@@ -8,7 +8,18 @@ import {
   ChangeRequest,
   StudentResultReport,
 } from '../types';
-import { StorageService, subscribeToStore } from '../services/storage';
+import {
+  CourseAPI,
+  AttendanceAPI,
+  AnnouncementAPI,
+  NotificationAPI,
+  UserAPI,
+  ChangeRequestAPI,
+  ResultAPI,
+  TimetableAPI,
+} from '../services/apiService';
+import type { TimetableSlot } from '../types';
+import { useAuth } from './AuthContext';
 
 export interface Toast {
   id: string;
@@ -25,7 +36,9 @@ interface AppContextType {
   allUsers: User[];
   changeRequests: ChangeRequest[];
   studentResults: StudentResultReport[];
+  timetable: TimetableSlot[];
   toasts: Toast[];
+  isDataLoading: boolean;
 
   // Actions
   showToast: (title: string, message: string, type?: Toast['type']) => void;
@@ -33,140 +46,342 @@ interface AppContextType {
   takeAttendance: (
     date: string,
     courseId: string,
-    records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' }>
-  ) => void;
-  postAnnouncement: (data: Omit<Announcement, 'id' | 'date'>) => void;
-  deleteAnnouncement: (id: string) => void;
-  markNotifRead: (id: string) => void;
-  clearNotifs: () => void;
-  resetAllDemoData: () => void;
+    records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' }>,
+  ) => Promise<void>;
+  postAnnouncement: (data: { title: string; content: string; priority?: string; targetCourse?: string }) => Promise<void>;
+  deleteAnnouncement: (id: string) => Promise<void>;
+  markNotifRead: (id: string) => Promise<void>;
+  clearNotifs: () => Promise<void>;
   // User CRUD
-  addUser: (user: User) => void;
-  updateUser: (user: User) => void;
-  deleteUser: (id: string) => void;
+  addUser: (user: Partial<User> & { password?: string }) => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  assignMentor: (studentId: string, mentorData: { mentorId: string; mentorName: string; mentorPhone: string }) => Promise<void>;
   // Change requests
-  submitChangeRequest: (req: Omit<ChangeRequest, 'id'>) => void;
-  resolveChangeRequest: (id: string) => void;
-  deleteChangeRequest: (id: string) => void;
+  submitChangeRequest: (req: Omit<ChangeRequest, 'id'>) => Promise<void>;
+  resolveChangeRequest: (id: string) => Promise<void>;
+  deleteChangeRequest: (id: string) => Promise<void>;
   // Results
-  saveStudentResult: (report: StudentResultReport) => void;
-  deleteStudentResult: (id: string) => void;
+  saveStudentResult: (report: Partial<StudentResultReport>) => Promise<void>;
+  deleteStudentResult: (id: string) => Promise<void>;
+  // Timetable
+  addTimetableSlot: (slot: Partial<TimetableSlot>) => Promise<void>;
+  updateTimetableSlot: (id: string, data: Partial<TimetableSlot>) => Promise<void>;
+  deleteTimetableSlot: (id: string) => Promise<void>;
+  // Refresh
+  refreshData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [courses, setCourses] = useState<Course[]>(() => StorageService.getCourses());
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => StorageService.getAttendance());
-  const [announcements, setAnnouncements] = useState<Announcement[]>(() => StorageService.getAnnouncements());
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => StorageService.getNotifications());
-  const [allUsers, setAllUsers] = useState<User[]>(() => StorageService.getUsers());
-  const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>(() => StorageService.getChangeRequests());
-  const [studentResults, setStudentResults] = useState<StudentResultReport[]>(() => StorageService.getStudentResults());
+  const { user, role } = useAuth();
+
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
+  const [studentResults, setStudentResults] = useState<StudentResultReport[]>([]);
+  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(false);
 
-  const refreshState = useCallback(() => {
-    setCourses(StorageService.getCourses());
-    setAttendance(StorageService.getAttendance());
-    setAnnouncements(StorageService.getAnnouncements());
-    setNotifications(StorageService.getNotifications());
-    setAllUsers(StorageService.getUsers());
-    setChangeRequests(StorageService.getChangeRequests());
-    setStudentResults(StorageService.getStudentResults());
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToStore(() => {
-      refreshState();
-    });
-    return () => unsubscribe();
-  }, [refreshState]);
-
+  // ─── Toast Helpers ──────────────────────────────────
   const showToast = (title: string, message: string, type: Toast['type'] = 'success') => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     setToasts((prev) => [...prev, { id, title, message, type }]);
-    setTimeout(() => {
-      dismissToast(id);
-    }, 4000);
+    setTimeout(() => dismissToast(id), 4000);
   };
 
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const takeAttendance = (
+  // ─── Data Fetching ──────────────────────────────────
+  const refreshData = useCallback(async () => {
+    if (!user) return;
+    setIsDataLoading(true);
+
+    try {
+      // Fetch data in parallel based on role
+      const promises: Promise<void>[] = [];
+
+      // Everyone gets courses, announcements, timetable, notifications
+      promises.push(
+        CourseAPI.getAll().then(({ data }) => setCourses(data.data)),
+        AnnouncementAPI.getAll({ limit: 50 }).then(({ data }) => setAnnouncements(data.data)),
+        TimetableAPI.getAll().then(({ data }) => setTimetable(data.data)),
+        NotificationAPI.getAll({ roleTarget: role || undefined }).then(({ data }) => setNotifications(data.data)),
+      );
+
+      // Attendance
+      promises.push(
+        AttendanceAPI.getAll({ limit: 200 }).then(({ data }) => setAttendance(data.data)),
+      );
+
+      // Admin/teacher get users, change requests, results
+      if (role === 'admin' || role === 'teacher') {
+        promises.push(
+          UserAPI.getAll({ limit: 200 }).then(({ data }) => setAllUsers(data.data)),
+          ResultAPI.getAll().then(({ data }) => setStudentResults(data.data)),
+        );
+      }
+
+      if (role === 'admin' || role === 'teacher') {
+        promises.push(
+          ChangeRequestAPI.getAll().then(({ data }) => setChangeRequests(data.data)),
+        );
+      }
+
+      // Students get their own results
+      if (role === 'student') {
+        promises.push(
+          ResultAPI.getAll({ studentId: user.id }).then(({ data }) => setStudentResults(data.data)),
+        );
+      }
+
+      await Promise.allSettled(promises);
+    } catch (err) {
+      console.error('Data refresh failed:', err);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }, [user, role]);
+
+  useEffect(() => {
+    if (user) {
+      refreshData();
+    } else {
+      // Reset state on logout
+      setCourses([]);
+      setAttendance([]);
+      setAnnouncements([]);
+      setNotifications([]);
+      setAllUsers([]);
+      setChangeRequests([]);
+      setStudentResults([]);
+      setTimetable([]);
+    }
+  }, [user, refreshData]);
+
+  // ─── Attendance ─────────────────────────────────────
+  const takeAttendance = async (
     date: string,
     courseId: string,
-    records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' }>
+    records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' }>,
   ) => {
-    StorageService.markBatchAttendance(date, courseId, records);
-    showToast('Attendance Saved!', `Daily roll call for ${date} has been updated.`, 'success');
+    try {
+      await AttendanceAPI.markBatch({ date, courseId, records });
+      showToast('Attendance Saved!', `Daily roll call for ${date} has been updated.`, 'success');
+      // Refresh attendance data
+      const { data } = await AttendanceAPI.getAll({ limit: 200 });
+      setAttendance(data.data);
+    } catch (err) {
+      showToast('Error', 'Failed to save attendance.', 'error');
+      console.error(err);
+    }
   };
 
-  const postAnnouncement = (data: Omit<Announcement, 'id' | 'date'>) => {
-    StorageService.addAnnouncement(data);
-    showToast('Announcement Published!', `Notice has been broadcasted to all students.`, 'info');
+  // ─── Announcements ─────────────────────────────────
+  const postAnnouncement = async (annData: { title: string; content: string; priority?: string; targetCourse?: string }) => {
+    try {
+      const { data } = await AnnouncementAPI.create(annData);
+      setAnnouncements((prev) => [data.data, ...prev]);
+      showToast('Announcement Published!', 'Notice has been broadcasted to all students.', 'info');
+    } catch (err) {
+      showToast('Error', 'Failed to publish announcement.', 'error');
+      console.error(err);
+    }
   };
 
-  const deleteAnnouncement = (id: string) => {
-    StorageService.deleteAnnouncement(id);
-    showToast('Deleted', 'Announcement removed from the notice board.', 'info');
+  const deleteAnnouncement = async (id: string) => {
+    try {
+      await AnnouncementAPI.delete(id);
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id && a._id !== id));
+      showToast('Deleted', 'Announcement removed from the notice board.', 'info');
+    } catch (err) {
+      showToast('Error', 'Failed to delete announcement.', 'error');
+      console.error(err);
+    }
   };
 
-  const markNotifRead = (id: string) => {
-    StorageService.markNotificationRead(id);
+  // ─── Notifications ─────────────────────────────────
+  const markNotifRead = async (id: string) => {
+    try {
+      await NotificationAPI.markRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => ((n.id === id || n._id === id) ? { ...n, read: true } : n)),
+      );
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const clearNotifs = () => {
-    StorageService.clearAllNotifications();
+  const clearNotifs = async () => {
+    try {
+      await NotificationAPI.clearAll({ roleTarget: role || undefined });
+      setNotifications([]);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const resetAllDemoData = () => {
-    StorageService.resetDefaults();
-    showToast('Reset Complete', 'Demo database reset to defaults.', 'info');
+  // ─── User CRUD ──────────────────────────────────────
+  const addUser = async (userData: Partial<User> & { password?: string }) => {
+    try {
+      const { data } = await UserAPI.create(userData);
+      setAllUsers((prev) => [...prev, data.data]);
+      showToast('User Added', `${data.data.name} has been registered successfully.`, 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to create user.', 'error');
+      console.error(err);
+    }
   };
 
-  // User CRUD
-  const addUser = (user: User) => {
-    StorageService.addUser(user);
-    showToast('User Added', `${user.name} has been registered successfully.`, 'success');
+  const updateUser = async (userData: User) => {
+    try {
+      const userId = userData.id || (userData as unknown as { _id: string })._id;
+      const { data } = await UserAPI.update(userId, userData);
+      setAllUsers((prev) =>
+        prev.map((u) => (u.id === userId || (u as unknown as { _id: string })._id === userId ? data.data : u)),
+      );
+      showToast('Profile Updated', `${data.data.name}'s profile has been updated.`, 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to update user.', 'error');
+      console.error(err);
+    }
   };
 
-  const updateUser = (user: User) => {
-    StorageService.updateUser(user);
-    showToast('Profile Updated', `${user.name}'s profile has been updated.`, 'success');
+  const deleteUser = async (id: string) => {
+    try {
+      await UserAPI.delete(id);
+      setAllUsers((prev) => prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id));
+      showToast('Deleted', 'User has been removed from the system.', 'info');
+    } catch (err) {
+      showToast('Error', 'Failed to delete user.', 'error');
+      console.error(err);
+    }
   };
 
-  const deleteUser = (id: string) => {
-    StorageService.deleteUser(id);
-    showToast('Deleted', 'User has been removed from the system.', 'info');
+  const assignMentor = async (studentId: string, mentorData: { mentorId: string; mentorName: string; mentorPhone: string }) => {
+    try {
+      const { data } = await UserAPI.assignMentor(studentId, mentorData);
+      setAllUsers((prev) =>
+        prev.map((u) => (u.id === studentId || (u as unknown as { _id: string })._id === studentId ? data.data : u)),
+      );
+      showToast('Mentor Assigned', `Mentor assigned: ${mentorData.mentorName}`, 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to assign mentor.', 'error');
+      console.error(err);
+    }
   };
 
-  // Change Requests
-  const submitChangeRequest = (req: Omit<ChangeRequest, 'id'>) => {
-    StorageService.addChangeRequest(req);
-    showToast('Request Submitted', 'Your change request has been sent to the admin.', 'success');
+  // ─── Change Requests ───────────────────────────────
+  const submitChangeRequest = async (req: Omit<ChangeRequest, 'id'>) => {
+    try {
+      const { data } = await ChangeRequestAPI.create(req);
+      setChangeRequests((prev) => [data.data, ...prev]);
+      showToast('Request Submitted', 'Your change request has been sent to the admin.', 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to submit change request.', 'error');
+      console.error(err);
+    }
   };
 
-  const resolveChangeRequest = (id: string) => {
-    StorageService.resolveChangeRequest(id);
-    showToast('Resolved', 'Change request has been marked as resolved.', 'success');
+  const resolveChangeRequest = async (id: string) => {
+    try {
+      const { data } = await ChangeRequestAPI.resolve(id);
+      setChangeRequests((prev) =>
+        prev.map((r) => ((r.id === id || r._id === id) ? data.data : r)),
+      );
+      showToast('Resolved', 'Change request has been marked as resolved.', 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to resolve change request.', 'error');
+      console.error(err);
+    }
   };
 
-  const deleteChangeRequest = (id: string) => {
-    StorageService.deleteChangeRequest(id);
-    showToast('Dismissed', 'Change request removed.', 'info');
+  const deleteChangeRequest = async (id: string) => {
+    try {
+      await ChangeRequestAPI.delete(id);
+      setChangeRequests((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+      showToast('Dismissed', 'Change request removed.', 'info');
+    } catch (err) {
+      showToast('Error', 'Failed to delete change request.', 'error');
+      console.error(err);
+    }
   };
 
-  // Results Actions
-  const saveStudentResult = (report: StudentResultReport) => {
-    StorageService.saveStudentResult(report);
-    showToast('Results Published', `Academic results published for ${report.studentName}.`, 'success');
+  // ─── Results ────────────────────────────────────────
+  const saveStudentResult = async (report: Partial<StudentResultReport>) => {
+    try {
+      const { data } = await ResultAPI.save(report);
+      setStudentResults((prev) => {
+        const idx = prev.findIndex(
+          (r) => r.id === data.data.id || r._id === data.data._id ||
+            (r.rollNo && r.rollNo === data.data.rollNo),
+        );
+        if (idx !== -1) {
+          const updated = [...prev];
+          updated[idx] = data.data;
+          return updated;
+        }
+        return [data.data, ...prev];
+      });
+      showToast('Results Published', `Academic results published for ${report.studentName || 'student'}.`, 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to publish results.', 'error');
+      console.error(err);
+    }
   };
 
-  const deleteStudentResult = (id: string) => {
-    StorageService.deleteStudentResult(id);
-    showToast('Result Removed', 'Published grade report deleted.', 'info');
+  const deleteStudentResult = async (id: string) => {
+    try {
+      await ResultAPI.delete(id);
+      setStudentResults((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+      showToast('Result Removed', 'Published grade report deleted.', 'info');
+    } catch (err) {
+      showToast('Error', 'Failed to delete result.', 'error');
+      console.error(err);
+    }
+  };
+
+  // ─── Timetable ──────────────────────────────────────
+  const addTimetableSlot = async (slot: Partial<TimetableSlot>) => {
+    try {
+      const { data } = await TimetableAPI.create(slot);
+      setTimetable((prev) => [...prev, data.data]);
+      showToast('Slot Added', 'Timetable slot has been created.', 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to add timetable slot.', 'error');
+      console.error(err);
+    }
+  };
+
+  const updateTimetableSlot = async (id: string, slotData: Partial<TimetableSlot>) => {
+    try {
+      const { data } = await TimetableAPI.update(id, slotData);
+      setTimetable((prev) =>
+        prev.map((s) => ((s.id === id || s._id === id) ? data.data : s)),
+      );
+      showToast('Slot Updated', 'Timetable slot has been updated.', 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to update timetable slot.', 'error');
+      console.error(err);
+    }
+  };
+
+  const deleteTimetableSlot = async (id: string) => {
+    try {
+      await TimetableAPI.delete(id);
+      setTimetable((prev) => prev.filter((s) => s.id !== id && s._id !== id));
+      showToast('Slot Deleted', 'Timetable slot has been removed.', 'success');
+    } catch (err) {
+      showToast('Error', 'Failed to delete timetable slot.', 'error');
+      console.error(err);
+    }
   };
 
   return (
@@ -179,7 +394,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         allUsers,
         changeRequests,
         studentResults,
+        timetable,
         toasts,
+        isDataLoading,
         showToast,
         dismissToast,
         takeAttendance,
@@ -187,15 +404,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteAnnouncement,
         markNotifRead,
         clearNotifs,
-        resetAllDemoData,
         addUser,
         updateUser,
         deleteUser,
+        assignMentor,
         submitChangeRequest,
         resolveChangeRequest,
         deleteChangeRequest,
         saveStudentResult,
         deleteStudentResult,
+        addTimetableSlot,
+        updateTimetableSlot,
+        deleteTimetableSlot,
+        refreshData,
       }}
     >
       {children}

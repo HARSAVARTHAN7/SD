@@ -31,7 +31,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { PostAnnouncementModal } from './PostAnnouncementModal';
-import { StorageService, DEFAULT_TIMETABLE } from '../../services/storage';
+// Removed StorageService and DEFAULT_TIMETABLE
 import { User } from '../../types';
 
 interface TeacherDashboardProps {
@@ -50,6 +50,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
     studentResults,
     showToast,
     submitChangeRequest,
+    timetable,
+    updateUser,
   } = useApp();
 
   const [postAnnModalOpen, setPostAnnModalOpen] = useState(false);
@@ -121,7 +123,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
     setEditRoomNumber(student.roomNumber || 'Room 304-B');
   };
 
-  const handleSaveAccommodation = (e: React.FormEvent) => {
+  const handleSaveAccommodation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStudent) return;
 
@@ -135,15 +137,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
       roomNumber: editResidenceType === 'Hosteler' ? editRoomNumber : undefined,
     };
 
-    StorageService.saveUser(updatedUser);
-    
-    // Also if this is current student, update current session
-    const current = StorageService.getCurrentUser();
-    if (current && current.id === updatedUser.id) {
-      StorageService.setCurrentUser(updatedUser);
-    }
+    await updateUser(updatedUser);
 
-    showToast('Accommodation Updated', `${updatedUser.name} is now registered as ${editResidenceType}.`, 'success');
     setEditingStudent(null);
   };
 
@@ -504,7 +499,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {DEFAULT_TIMETABLE.filter((t) => t.day === timetableDay).map((slot) => (
+            {timetable.filter((t) => t.day === timetableDay).map((slot) => (
               <div
                 key={slot.id}
                 className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"

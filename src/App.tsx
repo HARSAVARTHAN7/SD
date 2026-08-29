@@ -8,7 +8,7 @@ import {
   Calendar,
   Users,
   UserCheck,
-  ShieldAlert
+  Loader2,
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
@@ -51,12 +51,24 @@ const ADMIN_TABS = [
 ];
 
 const MainApp: React.FC = () => {
-  const { user, role } = useAuth();
+  const { user, role, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState<string>('overview');
 
   useEffect(() => {
     setCurrentTab('overview');
   }, [role]);
+
+  // Show loading screen while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F6F7FA] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+          <p className="text-sm font-semibold text-slate-400">Loading EduPortal...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user || !role) {
     return (

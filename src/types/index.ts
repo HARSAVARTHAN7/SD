@@ -2,6 +2,7 @@ export type Role = 'student' | 'teacher' | 'admin';
 
 export interface User {
   id: string;
+  _id?: string;
   username: string;
   email: string;
   password?: string;
@@ -10,7 +11,7 @@ export interface User {
   avatar: string;
   phone?: string;
   joinedDate: string;
-  
+
   // Student-specific fields
   studentId?: string;
   rollNo?: string;
@@ -33,7 +34,7 @@ export interface User {
   guardianContact?: string;
   bloodGroup?: string;
   academicYear?: string;
-  
+
   // Teacher-specific fields
   title?: string;
   subjectsTaught?: string[];
@@ -43,6 +44,7 @@ export interface User {
 
 export interface Course {
   id: string;
+  _id?: string;
   code: string;
   title: string;
   teacherId: string;
@@ -60,7 +62,8 @@ export interface Course {
 
 export interface AttendanceRecord {
   id: string;
-  date: string; // YYYY-MM-DD
+  _id?: string;
+  date: string;
   courseId: string;
   studentId: string;
   studentName: string;
@@ -71,6 +74,7 @@ export interface AttendanceRecord {
 
 export interface Announcement {
   id: string;
+  _id?: string;
   authorId: string;
   authorName: string;
   authorRole: string;
@@ -84,6 +88,7 @@ export interface Announcement {
 
 export interface TimetableSlot {
   id: string;
+  _id?: string;
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
   startTime: string;
   endTime: string;
@@ -108,6 +113,7 @@ export interface GradeItem {
 
 export interface AppNotification {
   id: string;
+  _id?: string;
   title: string;
   message: string;
   timestamp: string;
@@ -118,6 +124,7 @@ export interface AppNotification {
 
 export interface ChangeRequest {
   id: string;
+  _id?: string;
   studentId: string;
   studentName: string;
   teacherId: string;
@@ -157,6 +164,7 @@ export interface HallTicketInfo {
 
 export interface StudentResultReport {
   id: string;
+  _id?: string;
   studentId: string;
   studentName: string;
   rollNo: string;
