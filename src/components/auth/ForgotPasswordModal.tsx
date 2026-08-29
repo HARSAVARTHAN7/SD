@@ -230,6 +230,24 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
               OTP dispatched to <strong className="text-slate-800 font-mono">{email}</strong>.
             </p>
 
+            {/* On-screen OTP Badge for Web Simulation */}
+            <div className="p-3.5 bg-purple-50 border border-purple-200 rounded-2xl flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-purple-800">Dispatched OTP Code:</p>
+                <p className="font-mono text-xl font-black text-purple-900 tracking-widest">{generatedOtp}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setInputOtp(generatedOtp);
+                  showToast('OTP Auto-Filled', '6-digit OTP copied to verification box.', 'info');
+                }}
+                className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs cursor-pointer shadow-xs transition-all"
+              >
+                Auto-Fill OTP
+              </button>
+            </div>
+
             <form onSubmit={handleVerifyTeacherOtp} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
