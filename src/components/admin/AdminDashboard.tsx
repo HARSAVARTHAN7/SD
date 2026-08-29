@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Users,
   GraduationCap,
@@ -27,6 +27,8 @@ import {
   UserPlus,
   ChevronRight,
   FileText,
+  FileUp,
+  ImageOff,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -35,6 +37,7 @@ import { User, TimetableSlot, ChangeRequest } from '../../types';
 import { StudentDashboard } from '../student/StudentDashboard';
 import { TeacherDashboard } from '../teacher/TeacherDashboard';
 import { PostAnnouncementModal } from '../teacher/PostAnnouncementModal';
+import { parsePdfText, extractStudentFromText, extractTeacherFromText } from '../../utils/pdfParser';
 
 interface AdminDashboardProps {
   currentTab: string;
@@ -154,6 +157,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
 
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Broadcast filter state
+  const [adminBroadcastFilter, setAdminBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
+
+  // PDF Refs
+  const pdfStudentInputRef = useRef<HTMLInputElement>(null);
+  const pdfTeacherInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetRole: 'student' | 'teacher') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    showToast('Parsing PDF...', `Reading text details from ${file.name}`, 'info');
+    const rawText = await parsePdfText(file);
+
+    if (targetRole === 'student') {
+      const extracted = extractStudentFromText(rawText, file.name);
+      setEditRole('student');
+      setEditMode('add');
+      setEditingUser({ ...blankStudent(), ...extracted });
+      setEditModalOpen(true);
+      showToast('PDF Auto-Filled!', `Extracted student profile for "${extracted.name}" from PDF.`, 'success');
+    } else {
+      const extracted = extractTeacherFromText(rawText, file.name);
+      setEditRole('teacher');
+      setEditMode('add');
+      setEditingUser({ ...blankTeacher(), ...extracted });
+      setSubjectsInput(extracted.subjectsTaught?.join(', ') || '');
+      setEditModalOpen(true);
+      showToast('PDF Auto-Filled!', `Extracted teacher profile for "${extracted.name}" from PDF.`, 'success');
+    }
+
+    e.target.value = '';
+  };
+
+  const handleDeletePhoto = (u: User) => {
+    const updated: User = {
+      ...u,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random&size=150`,
+    };
+    updateUser(updated);
+    if (inspectUser && inspectUser.id === u.id) {
+      setInspectUser(updated);
+    }
+    showToast('Photo Removed', `Deleted profile picture for ${u.name}.`, 'info');
+  };
 
   const students = allUsers.filter((u) => u.role === 'student');
   const teachers = allUsers.filter((u) => u.role === 'teacher');
@@ -643,10 +692,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                     placeholder="Search by name, roll no, department..."
                     className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-800 text-slate-800 shadow-xs" />
                 </div>
-                <button onClick={() => openAddModal('student')}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
-                  <UserPlus className="w-4 h-4" /> Add Student
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="file"
+                    ref={pdfStudentInputRef}
+                    accept=".pdf"
+                    onChange={(e) => handlePdfUpload(e, 'student')}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => pdfStudentInputRef.current?.click()}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Upload PDF document to auto-fill student details"
+                  >
+                    <FileUp className="w-4 h-4 text-emerald-600" /> Auto-fill from PDF
+                  </button>
+                  <button onClick={() => openAddModal('student')}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
+                    <UserPlus className="w-4 h-4" /> Add Student
+                  </button>
+                </div>
               </div>
 
               <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -729,10 +794,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                     placeholder="Search by name, employee ID, department..."
                     className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-800 text-slate-800 shadow-xs" />
                 </div>
-                <button onClick={() => openAddModal('teacher')}
-                  className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
-                  <UserPlus className="w-4 h-4" /> Add Teacher
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="file"
+                    ref={pdfTeacherInputRef}
+                    accept=".pdf"
+                    onChange={(e) => handlePdfUpload(e, 'teacher')}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => pdfTeacherInputRef.current?.click()}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Upload PDF document to auto-fill teacher details"
+                  >
+                    <FileUp className="w-4 h-4 text-purple-600" /> Auto-fill from PDF
+                  </button>
+                  <button onClick={() => openAddModal('teacher')}
+                    className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
+                    <UserPlus className="w-4 h-4" /> Add Teacher
+                  </button>
+                </div>
               </div>
 
               <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -876,8 +957,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
               <Megaphone className="w-4 h-4 text-amber-400" /> Broadcast Campus Circular
             </button>
           </div>
+
+          {/* Broadcast Filter Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-white border border-slate-200/80 rounded-2xl shadow-xs w-fit">
+            {(['all', 'admin', 'teacher'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setAdminBroadcastFilter(filter)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                  adminBroadcastFilter === filter
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {filter === 'all' ? '📢 All Broadcasts' : filter === 'admin' ? '🏛️ Admin Broadcasts' : '👨‍🏫 Teacher Broadcasts'}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-4">
-            {announcements.map((ann) => (
+            {announcements
+              .filter((a) => {
+                if (adminBroadcastFilter === 'admin') {
+                  return a.authorRole.toLowerCase().includes('admin') || a.authorId.includes('admin');
+                }
+                if (adminBroadcastFilter === 'teacher') {
+                  return !a.authorRole.toLowerCase().includes('admin') && !a.authorId.includes('admin');
+                }
+                return true;
+              })
+              .map((ann) => (
               <div key={ann.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2">
@@ -1011,7 +1120,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                 </div>
               )}
 
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => handleDeletePhoto(inspectUser)}
+                  className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  title="Admin Access Only: Delete profile photo and reset to default avatar"
+                >
+                  <ImageOff className="w-3.5 h-3.5" /> Delete Photo
+                </button>
+
                 <button onClick={() => { setInspectUser(null); openEditModal(inspectUser); }}
                   className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer">
                   <Edit className="w-3.5 h-3.5" /> Edit Profile

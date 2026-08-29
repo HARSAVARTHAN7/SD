@@ -6,7 +6,9 @@ import {
   ChevronDown,
   Menu,
   X,
-  ShieldAlert
+  ShieldAlert,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -19,11 +21,35 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs }) => {
   const { user, logout } = useAuth();
-  const { notifications, markNotifRead, clearNotifs } = useApp();
+  const { notifications, markNotifRead, clearNotifs, updateUser, showToast } = useApp();
 
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [newAvatar, setNewAvatar] = useState(user?.avatar || '');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          setNewAvatar(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSavePhoto = () => {
+    if (!user) return;
+    const avatarUrl = newAvatar.trim() || user.avatar;
+    const updatedUser = { ...user, avatar: avatarUrl };
+    updateUser(updatedUser);
+    setPhotoModalOpen(false);
+    showToast('Photo Updated', 'Your profile picture has been updated successfully.', 'success');
+  };
 
   const roleNotifs = notifications.filter(
     (n) => n.roleTarget === 'all' || n.roleTarget === user?.role
@@ -217,6 +243,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs })
                   <div className="py-2 space-y-1">
                     <button
                       onClick={() => {
+                        setPhotoModalOpen(true);
+                        setProfileDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4 text-purple-600" />
+                      Change Profile Photo
+                    </button>
+                    <button
+                      onClick={() => {
                         logout();
                         setProfileDropdownOpen(false);
                       }}
@@ -231,6 +267,78 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs })
             </div>
           </div>
         </div>
+
+        {/* Self-service Profile Photo Update Modal */}
+        {photoModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden">
+              <div className="px-6 py-5 bg-gradient-to-r from-slate-900 to-indigo-900 text-white relative">
+                <button
+                  onClick={() => setPhotoModalOpen(false)}
+                  className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <span className="text-xs uppercase font-bold text-amber-400">Account Settings</span>
+                <h3 className="text-xl font-bold mt-1">Update Profile Photo</h3>
+              </div>
+
+              <div className="p-6 space-y-5 text-xs">
+                <div className="flex items-center justify-center gap-4">
+                  <img
+                    src={newAvatar || user?.avatar}
+                    alt="Preview"
+                    className="w-20 h-20 rounded-full object-cover ring-4 ring-slate-100 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-2">Upload Local Image File</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
+                  />
+                </div>
+
+                <div className="relative flex py-1 items-center">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink mx-3 text-slate-400 text-[10px] uppercase font-bold">Or Image URL</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Image URL</label>
+                  <input
+                    type="text"
+                    value={newAvatar}
+                    onChange={(e) => setNewAvatar(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-900"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setPhotoModalOpen(false)}
+                    className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSavePhoto}
+                    className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Save Photo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (

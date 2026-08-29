@@ -66,6 +66,9 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
   const [changeReqStudent, setChangeReqStudent] = useState<User | null>(null);
   const [changeReqDesc, setChangeReqDesc] = useState('');
 
+  // Broadcast Filter State
+  const [teacherBroadcastFilter, setTeacherBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
+
   // Attendance Register State
   const [selectedAttDate, setSelectedAttDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedAttCourse, setSelectedAttCourse] = useState<string>('c1');
@@ -624,8 +627,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
         <div className="space-y-6 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Faculty Notice Broadcaster</h2>
-              <p className="text-xs text-slate-500 mt-1">Publish notices and updates that appear directly in your students' Notice Board tab.</p>
+              <h2 className="text-2xl font-bold text-slate-800">Faculty & Campus Notice Broadcaster</h2>
+              <p className="text-xs text-slate-500 mt-1">Publish notices and view official Admin & Teacher broadcasts.</p>
             </div>
 
             <button
@@ -636,8 +639,35 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }
             </button>
           </div>
 
+          {/* Broadcast Filter Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-white border border-slate-200/80 rounded-2xl shadow-xs w-fit">
+            {(['all', 'admin', 'teacher'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setTeacherBroadcastFilter(filter)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                  teacherBroadcastFilter === filter
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {filter === 'all' ? '📢 All Broadcasts' : filter === 'admin' ? '🏛️ Admin Broadcasts' : '👨‍🏫 Teacher Broadcasts'}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-4">
-            {announcements.map((ann) => (
+            {announcements
+              .filter((a) => {
+                if (teacherBroadcastFilter === 'admin') {
+                  return a.authorRole.toLowerCase().includes('admin') || a.authorId.includes('admin');
+                }
+                if (teacherBroadcastFilter === 'teacher') {
+                  return !a.authorRole.toLowerCase().includes('admin') && !a.authorId.includes('admin');
+                }
+                return true;
+              })
+              .map((ann) => (
               <div
                 key={ann.id}
                 className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-start justify-between gap-4"

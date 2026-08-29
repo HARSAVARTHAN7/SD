@@ -43,6 +43,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
   const [noticeSearch, setNoticeSearch] = useState<string>('');
+  const [broadcastFilter, setBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
 
   // Attendance stats
   const myAttendanceRecords = attendance.filter((a) => a.studentId === user?.id);
@@ -259,13 +260,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
         </div>
       )}
 
-      {/* ================= TAB 2: NOTICE BOARD (NOTICES FROM MENTOR & FACULTY) ================= */}
+      {/* ================= TAB 2: NOTICE BOARD (ADMIN & TEACHER BROADCASTS) ================= */}
       {currentTab === 'notices' && (
         <div className="space-y-6 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Notice Board</h2>
-              <p className="text-xs text-slate-500 mt-1">Official circulars, academic notices, and broadcasts from your Mentor ({user?.mentorName || 'Dr. Sarah Jenkins'}).</p>
+              <p className="text-xs text-slate-500 mt-1">Official circulars, academic notices, and broadcasts from Admin and Faculty.</p>
             </div>
 
             <div className="relative max-w-xs w-full">
@@ -280,8 +281,34 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
             </div>
           </div>
 
+          {/* Broadcast Filter Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-white border border-slate-200/80 rounded-2xl shadow-xs w-fit">
+            {(['all', 'admin', 'teacher'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setBroadcastFilter(filter)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                  broadcastFilter === filter
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {filter === 'all' ? '📢 All Broadcasts' : filter === 'admin' ? '🏛️ Admin Broadcasts' : '👨‍🏫 Teacher Broadcasts'}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-4">
             {announcements
+              .filter((a) => {
+                if (broadcastFilter === 'admin') {
+                  return a.authorRole.toLowerCase().includes('admin') || a.authorId.includes('admin');
+                }
+                if (broadcastFilter === 'teacher') {
+                  return !a.authorRole.toLowerCase().includes('admin') && !a.authorId.includes('admin');
+                }
+                return true;
+              })
               .filter((a) =>
                 a.title.toLowerCase().includes(noticeSearch.toLowerCase()) ||
                 a.content.toLowerCase().includes(noticeSearch.toLowerCase()) ||
