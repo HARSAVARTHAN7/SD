@@ -712,17 +712,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
               <button
                 onClick={() => setActiveTemplateModal('results')}
                 className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                title="Preview and download master results PDF template"
+                title="Preview master results PDF template format"
               >
-                <Download className="w-4 h-4 text-amber-600" /> Results Template
+                <Eye className="w-4 h-4 text-amber-600" /> Results Template Preview
               </button>
 
               <button
                 onClick={() => setActiveTemplateModal('hallTicket')}
                 className="px-3.5 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                title="Preview and download master hall tickets PDF template"
+                title="Preview master hall tickets PDF template format"
               >
-                <Download className="w-4 h-4 text-purple-600" /> Hall Ticket Template
+                <Eye className="w-4 h-4 text-purple-600" /> Hall Ticket Template Preview
               </button>
 
               <input
@@ -2063,7 +2063,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab }) =>
                 {activeTemplateModal === 'results' ? '📄 Overall Academic Results PDF Template' : '🎫 Master Hall Tickets PDF Template'}
               </h3>
               <p className="text-xs text-slate-300 mt-0.5">
-                Review, copy, or download the official template format to prepare PDF documents for upload.
+                Review and copy the official template format to prepare PDF documents for upload.
               </p>
             </div>
 
@@ -2143,30 +2143,13 @@ SUBJECT SCHEDULE:
                   📋 Copy Text
                 </button>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTemplateModal(null)}
-                    className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold cursor-pointer"
-                  >
-                    Close Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (activeTemplateModal === 'results') {
-                        downloadOverallResultsPdfTemplate();
-                      } else {
-                        downloadHallTicketsPdfTemplate();
-                      }
-                      setActiveTemplateModal(null);
-                      showToast('Downloading File', 'Master template file generated.', 'success');
-                    }}
-                    className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Download className="w-4 h-4 text-amber-300" /> Download Template File
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTemplateModal(null)}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-md cursor-pointer transition-all"
+                >
+                  Close Preview
+                </button>
               </div>
             </div>
           </div>
