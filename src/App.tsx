@@ -8,7 +8,7 @@ import {
   Calendar,
   Users,
   UserCheck,
-  Loader2,,
+  Loader2,
   KeyRound,
   Trash2,
   RotateCcw

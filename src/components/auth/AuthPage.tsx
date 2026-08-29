@@ -62,7 +62,7 @@ export const AuthPage: React.FC = () => {
     if (success) {
       showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
     } else {
-      setStudentError('Invalid Credentials: The entered Email ID, Roll No, or Password does not match any registered student account in database.');
+      setStudentError('Invalid Credentials: The entered Email ID, Roll No, or Password does not match any registered student account.');
       showToast('Authentication Failed', 'Student email ID or password mismatch. Please check your credentials.', 'error');
     }
   };
@@ -80,7 +80,7 @@ export const AuthPage: React.FC = () => {
     if (success) {
       showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
     } else {
-      setTeacherError('Invalid Credentials: The entered Email ID, Employee ID, or Password does not match any registered teacher account in database.');
+      setTeacherError('Invalid Credentials: The entered Email ID, Employee ID, or Password does not match any registered teacher account.');
       showToast('Authentication Failed', 'Teacher email ID or password mismatch. Please check your credentials.', 'error');
     }
   };
@@ -96,6 +96,29 @@ export const AuthPage: React.FC = () => {
     } else {
       setAdminError('Access restricted: Invalid administrator email or password.');
       showToast('Access Denied', 'Invalid administrator email or password.', 'error');
+    }
+  };
+
+  const fillQuickLogin = async (role: 'student' | 'teacher' | 'admin') => {
+    setIsSubmitting(true);
+    if (role === 'student') {
+      setStudentUsername('student@bitsathy.ac.in');
+      setStudentPassword('password123');
+      const success = await login('student@bitsathy.ac.in', 'password123', 'student');
+      setIsSubmitting(false);
+      if (success) showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
+    } else if (role === 'teacher') {
+      setTeacherUsername('teacher@bitsathy.ac.in');
+      setTeacherPassword('password123');
+      const success = await login('teacher@bitsathy.ac.in', 'password123', 'teacher');
+      setIsSubmitting(false);
+      if (success) showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
+    } else if (role === 'admin') {
+      setAdminEmail('admin@bitsathy.ac.in');
+      setAdminPassword('admin@1234');
+      const success = await login('admin@bitsathy.ac.in', 'admin@1234', 'admin');
+      setIsSubmitting(false);
+      if (success) showToast('Master Access Granted', 'Logged into Central Administrator Control Center.', 'success');
     }
   };
 
@@ -169,6 +192,38 @@ export const AuthPage: React.FC = () => {
                     <span>Login as Teacher</span><ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 max-w-3xl mx-auto border-t border-slate-200/80">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                Quick Access Demo Accounts (BIT Sathy)
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fillQuickLogin('student')}
+                  className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold hover:bg-emerald-100 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>Student (student@bitsathy.ac.in)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillQuickLogin('teacher')}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>Faculty (teacher@bitsathy.ac.in)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillQuickLogin('admin')}
+                  className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-semibold hover:bg-indigo-100 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Shield className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Admin (admin@bitsathy.ac.in)</span>
+                </button>
               </div>
             </div>
           </div>

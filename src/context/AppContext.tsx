@@ -48,7 +48,7 @@ interface AppContextType {
     courseId: string,
     records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' }>,
   ) => Promise<void>;
-  postAnnouncement: (data: { title: string; content: string; priority?: string; targetCourse?: string }) => Promise<void>;
+  postAnnouncement: (data: { title: string; content: string; priority?: string; targetCourse?: string; authorId?: string; authorName?: string; authorRole?: string; authorAvatar?: string }) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
   markNotifRead: (id: string) => Promise<void>;
   clearNotifs: () => Promise<void>;
@@ -202,7 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ─── Announcements ─────────────────────────────────
-  const postAnnouncement = async (annData: { title: string; content: string; priority?: string; targetCourse?: string }) => {
+  const postAnnouncement = async (annData: { title: string; content: string; priority?: string; targetCourse?: string; authorId?: string; authorName?: string; authorRole?: string; authorAvatar?: string }) => {
     try {
       const { data } = await AnnouncementAPI.create(annData);
       setAnnouncements((prev) => [data.data, ...prev]);
