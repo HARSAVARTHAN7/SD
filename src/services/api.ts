@@ -32,9 +32,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only trigger session expiration for explicit auth verification requests
+    const isAuthEndpoint = error.config?.url?.includes('/auth/me') || error.config?.url?.includes('/auth/verify');
+    if (error.response?.status === 401 && isAuthEndpoint) {
       clearToken();
-      // Dispatch a custom event so AuthContext can react
       window.dispatchEvent(new CustomEvent('auth:expired'));
     }
     return Promise.reject(error);

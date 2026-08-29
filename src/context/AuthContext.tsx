@@ -23,15 +23,32 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const USER_STORAGE_KEY = 'eduportal_current_user';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem(USER_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isLoading, setIsLoading] = useState(true);
+
+  const setUser = useCallback((u: User | null) => {
+    setUserState(u);
+    if (u) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+  }, []);
 
   // Hydrate user from JWT on mount
   const refreshUser = useCallback(async () => {
     const token = getToken();
     if (!token) {
-      setUser(null);
       setIsLoading(false);
       return;
     }
@@ -40,17 +57,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data } = await AuthAPI.getMe();
       if (data.success && data.user) {
         setUser(data.user);
-      } else {
-        clearToken();
-        setUser(null);
       }
     } catch {
-      clearToken();
-      setUser(null);
+      // Backend unavailable or token expired; keep local fallback session if active
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [setUser]);
 
   useEffect(() => {
     refreshUser();
@@ -63,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener('auth:expired', handleExpiry);
     return () => window.removeEventListener('auth:expired', handleExpiry);
-  }, []);
+  }, [setUser]);
 
   const login = async (
     usernameOrEmail: string,
