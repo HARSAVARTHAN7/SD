@@ -599,12 +599,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                     <span>Institutional Master Control Center</span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Welcome, Administrator 🏛️</h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-300 font-medium">
-                    <span className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 text-amber-300 font-bold">
-                      Central Academic Administration & Operations
-                    </span>
-                    <span className="text-slate-400">• Authorized Master Authority</span>
-                  </div>
+                  <p className="text-slate-400 text-xs sm:text-sm mt-1">Authorized Master Authority</p>
                 </div>
               </div>
             </div>
@@ -615,7 +610,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
             {[
               { id: 'students', label: 'Total Enrolled', value: `${students.length} Active Students`, sub: 'Semester 5 • 100% Retained', color: 'emerald', Icon: GraduationCap },
               { id: 'teachers', label: 'Faculty Staff', value: `${teachers.length} Professors`, sub: 'Active Mentors & Chairs', color: 'purple', Icon: Users },
-              { id: 'results', label: 'Result Publications', value: `${studentResults.length} Grade Reports`, sub: 'Auto SGPA/CGPA Cards', color: 'sky', Icon: BookOpen },
+              { id: 'results', label: 'Result Publications', value: `${studentResults.length} Results`, sub: 'Auto SGPA/CGPA Cards', color: 'sky', Icon: BookOpen },
               { id: 'timetable', label: 'Timetable Slots', value: `${timetableSlots.length} Weekly Sessions`, sub: 'Mon - Sat Master Schedule', color: 'amber', Icon: Calendar },
             ].map(({ id, label, value, sub, color, Icon }) => (
               <div
@@ -937,7 +932,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                 <RotateCcw className="w-7 h-7 text-indigo-600" /> Institutional Recycle Center ♻️
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Holds all deleted data across Students, Teachers, Courses, Notice Announcements, and Published Grade Reports. Items can ONLY be restored.
+                Holds all deleted data across Students, Teachers, Courses, Notice Announcements, and Published Results. Items can ONLY be restored.
               </p>
             </div>
 
@@ -1231,7 +1226,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                     <div key={res.id} className="bg-white rounded-3xl p-6 border border-rose-200/80 bg-rose-50/10 shadow-xs flex flex-col justify-between space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
-                          Grade Report
+                          Result
                         </span>
                         <span className="text-xs text-slate-400 font-medium">Deleted: {res.deletedAt || 'Recently'}</span>
                       </div>
