@@ -221,15 +221,8 @@ export const AuthPage: React.FC = () => {
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2C3E50] tracking-tight">
                     Student Login
                   </h2>
-                  <p className="text-sm text-slate-400 mt-1.5 font-medium">
-                    Not a member yet?{' '}
-                    <button
-                      type="button"
-                      onClick={() => openSignUpFor('student')}
-                      className="text-[#2ECC71] hover:text-[#27AE60] font-semibold hover:underline transition-colors cursor-pointer"
-                    >
-                      Sign up!
-                    </button>
+                  <p className="text-xs text-slate-400 mt-1.5 font-medium">
+                    Institutional Student Portal Authentication
                   </p>
                 </div>
 
@@ -328,15 +321,8 @@ export const AuthPage: React.FC = () => {
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2C3E50] tracking-tight">
                     Teacher Login
                   </h2>
-                  <p className="text-sm text-slate-400 mt-1.5 font-medium">
-                    Not a member yet?{' '}
-                    <button
-                      type="button"
-                      onClick={() => openSignUpFor('teacher')}
-                      className="text-[#2ECC71] hover:text-[#27AE60] font-semibold hover:underline transition-colors cursor-pointer"
-                    >
-                      Sign up!
-                    </button>
+                  <p className="text-xs text-slate-400 mt-1.5 font-medium">
+                    Institutional Faculty Portal Authentication
                   </p>
                 </div>
 
@@ -497,25 +483,6 @@ export const AuthPage: React.FC = () => {
                       <span>{adminError}</span>
                     </div>
                   )}
-
-                  {/* Quick Auto-Fill Demo Note */}
-                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-800">Admin Authorization:</p>
-                      <p className="font-mono text-slate-500">admin@bitsathy.ac.in</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAdminEmail('admin@bitsathy.ac.in');
-                        setAdminPassword('admin@1234');
-                        setAdminError('');
-                      }}
-                      className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold text-[10px] cursor-pointer transition-colors"
-                    >
-                      Auto-Fill
-                    </button>
-                  </div>
 
                   {/* Submit Button */}
                   <div className="pt-2">

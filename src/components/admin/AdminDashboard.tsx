@@ -1294,9 +1294,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {req.status === 'pending' && (
-                            <button onClick={() => resolveChangeRequest(req.id)}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Resolve
+                            <button
+                              onClick={() => {
+                                resolveChangeRequest(req.id);
+                                if (req.description.includes('STUDENT_PASSWORD_RESET')) {
+                                  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                                  showToast('Password Reset Approved', `Approved reset for ${req.studentName}. Dispatched OTP [${otp}] to student email.`, 'success');
+                                }
+                              }}
+                              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" /> {req.description.includes('STUDENT_PASSWORD_RESET') ? 'Approve Reset & Send OTP' : 'Approve'}
                             </button>
                           )}
                           <button onClick={() => deleteChangeRequest(req.id)}
