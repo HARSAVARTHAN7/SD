@@ -33,7 +33,9 @@ import {
   Award,
   Ticket,
   Printer,
-  KeyRound
+  KeyRound,
+  RotateCcw,
+  UserX
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -117,6 +119,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     addUser,
     updateUser,
     deleteUser,
+    deletedUsers,
+    restoreUser,
+    permanentlyDeleteUser,
     resolveChangeRequest,
     deleteChangeRequest,
   } = useApp();
@@ -138,6 +143,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   // Account Management State
   const [accountSubTab, setAccountSubTab] = useState<'pending' | 'approved'>('pending');
   const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'student' | 'teacher'>('all');
+  const [deletedUsersRoleFilter, setDeletedUsersRoleFilter] = useState<'all' | 'student' | 'teacher'>('all');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   // Mentor Assignment State
@@ -907,6 +913,138 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
               );
             })()}
           </div>
+        </div>
+      )}
+
+      {/* ===== TAB: DELETED USERS & ACCOUNT RESTORATION ===== */}
+      {currentTab === 'deleted-users' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <Trash2 className="w-7 h-7 text-rose-600" /> Deleted Users Archive & Restorations
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Restricted to Admin Master Access. Inspect deleted student and teacher accounts and restore them directly to active directory.
+              </p>
+            </div>
+
+            {/* Role Filter Pills */}
+            <div className="flex items-center gap-1.5 bg-slate-200/80 p-1.5 rounded-2xl">
+              <button
+                onClick={() => setDeletedUsersRoleFilter('all')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  deletedUsersRoleFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Deleted ({deletedUsers.length})
+              </button>
+              <button
+                onClick={() => setDeletedUsersRoleFilter('student')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  deletedUsersRoleFilter === 'student' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Deleted Students ({deletedUsers.filter((u) => u.role === 'student').length})
+              </button>
+              <button
+                onClick={() => setDeletedUsersRoleFilter('teacher')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  deletedUsersRoleFilter === 'teacher' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Deleted Teachers ({deletedUsers.filter((u) => u.role === 'teacher').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Deleted Users Grid */}
+          {(() => {
+            const filteredDeleted = deletedUsers.filter((u) => {
+              if (deletedUsersRoleFilter === 'student') return u.role === 'student';
+              if (deletedUsersRoleFilter === 'teacher') return u.role === 'teacher';
+              return true;
+            });
+
+            if (filteredDeleted.length === 0) {
+              return (
+                <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
+                  <UserX className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <h3 className="text-base font-bold text-slate-800">No Deleted User Accounts Found</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    When student or teacher accounts are deleted, they will be safely archived here for Admin restoration.
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredDeleted.map((delUser) => {
+                  const isTeacher = delUser.role === 'teacher';
+
+                  return (
+                    <div
+                      key={delUser.id}
+                      className={`bg-white rounded-3xl p-6 border shadow-sm transition-all flex flex-col justify-between ${
+                        isTeacher ? 'border-purple-200/80 bg-purple-50/10' : 'border-emerald-200/80 bg-emerald-50/10'
+                      }`}
+                    >
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-[10px] font-extrabold uppercase px-3 py-1 rounded-full ${
+                              isTeacher
+                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            }`}
+                          >
+                            {isTeacher ? 'Teacher Account' : 'Student Account'}
+                          </span>
+
+                          <span className="text-xs text-slate-400 font-medium">Deleted: {delUser.deletedAt || 'Recently'}</span>
+                        </div>
+
+                        <div className="flex items-start gap-4">
+                          <img
+                            src={delUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(delUser.name)}&background=random&size=80`}
+                            alt={delUser.name}
+                            className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-200 shadow-xs"
+                          />
+                          <div className="space-y-0.5">
+                            <h4 className="text-base font-extrabold text-slate-900">{delUser.name}</h4>
+                            <p className="text-xs text-slate-500 font-mono">{delUser.email}</p>
+                            <p className="text-xs text-slate-600 font-medium pt-1">
+                              {isTeacher
+                                ? `Employee ID: ${delUser.employeeId || '—'} • ${delUser.title || 'Faculty'}`
+                                : `Roll No: ${delUser.rollNo || '—'} • ${delUser.semester || 'Student'}`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => restoreUser(delUser.id)}
+                          className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <RotateCcw className="w-4 h-4" /> Restore Account to Active List
+                        </button>
+                        <button
+                          onClick={() => permanentlyDeleteUser(delUser.id)}
+                          className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                          title="Purge permanently"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Purge Permanently
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 

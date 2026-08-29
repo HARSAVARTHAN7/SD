@@ -44,6 +44,9 @@ interface AppContextType {
   addUser: (user: User) => void;
   updateUser: (user: User) => void;
   deleteUser: (id: string) => void;
+  deletedUsers: Array<User & { deletedAt?: string }>;
+  restoreUser: (id: string) => void;
+  permanentlyDeleteUser: (id: string) => void;
   // Change requests
   submitChangeRequest: (req: Omit<ChangeRequest, 'id'>) => void;
   resolveChangeRequest: (id: string) => void;
@@ -61,6 +64,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => StorageService.getAnnouncements());
   const [notifications, setNotifications] = useState<AppNotification[]>(() => StorageService.getNotifications());
   const [allUsers, setAllUsers] = useState<User[]>(() => StorageService.getUsers());
+  const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>(() => StorageService.getDeletedUsers());
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>(() => StorageService.getChangeRequests());
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>(() => StorageService.getStudentResults());
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -71,6 +75,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAnnouncements(StorageService.getAnnouncements());
     setNotifications(StorageService.getNotifications());
     setAllUsers(StorageService.getUsers());
+    setDeletedUsers(StorageService.getDeletedUsers());
     setChangeRequests(StorageService.getChangeRequests());
     setStudentResults(StorageService.getStudentResults());
   }, []);
@@ -139,7 +144,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteUser = (id: string) => {
     StorageService.deleteUser(id);
-    showToast('Deleted', 'User has been removed from the system.', 'info');
+    showToast('Deleted to Recycle Bin', 'User account moved to Deleted Users tab (Restorable by Admin).', 'info');
+  };
+
+  const restoreUser = (id: string) => {
+    StorageService.restoreDeletedUser(id);
+    showToast('Account Restored', 'User account restored to active student/teacher directory.', 'success');
+  };
+
+  const permanentlyDeleteUser = (id: string) => {
+    StorageService.permanentlyDeleteUser(id);
+    showToast('Permanently Deleted', 'User record purged permanently from database.', 'info');
   };
 
   // Change Requests
@@ -177,6 +192,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         announcements,
         notifications,
         allUsers,
+        deletedUsers,
         changeRequests,
         studentResults,
         toasts,
@@ -191,6 +207,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addUser,
         updateUser,
         deleteUser,
+        restoreUser,
+        permanentlyDeleteUser,
         submitChangeRequest,
         resolveChangeRequest,
         deleteChangeRequest,

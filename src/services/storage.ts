@@ -20,6 +20,7 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'eduportal_current_user_v5',
   CHANGE_REQUESTS: 'eduportal_change_requests_v5',
   RESULTS: 'eduportal_results_v5',
+  DELETED_USERS: 'eduportal_deleted_users_v5',
 };
 
 // Seed default users including Admin and Faculty staff
@@ -644,9 +645,45 @@ export const StorageService = {
     }
   },
 
+  getDeletedUsers(): Array<User & { deletedAt?: string }> {
+    const data = localStorage.getItem(STORAGE_KEYS.DELETED_USERS);
+    return data ? JSON.parse(data) : [];
+  },
+
   deleteUser(id: string): void {
-    const users = this.getUsers().filter((u) => u.id !== id);
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    const users = this.getUsers();
+    const target = users.find((u) => u.id === id);
+    if (target) {
+      const deletedList = this.getDeletedUsers();
+      deletedList.unshift({
+        ...target,
+        deletedAt: new Date().toLocaleString(),
+      });
+      localStorage.setItem(STORAGE_KEYS.DELETED_USERS, JSON.stringify(deletedList));
+    }
+    const updated = users.filter((u) => u.id !== id);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updated));
+    notifyStoreUpdate();
+  },
+
+  restoreDeletedUser(id: string): void {
+    const deletedList = this.getDeletedUsers();
+    const target = deletedList.find((u) => u.id === id);
+    if (target) {
+      const { deletedAt, ...restoredUser } = target;
+      const users = this.getUsers();
+      users.push(restoredUser as User);
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+
+      const updatedDeleted = deletedList.filter((u) => u.id !== id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_USERS, JSON.stringify(updatedDeleted));
+      notifyStoreUpdate();
+    }
+  },
+
+  permanentlyDeleteUser(id: string): void {
+    const deletedList = this.getDeletedUsers().filter((u) => u.id !== id);
+    localStorage.setItem(STORAGE_KEYS.DELETED_USERS, JSON.stringify(deletedList));
     notifyStoreUpdate();
   },
 
