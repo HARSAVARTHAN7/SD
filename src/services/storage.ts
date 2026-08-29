@@ -21,6 +21,9 @@ const STORAGE_KEYS = {
   CHANGE_REQUESTS: 'eduportal_change_requests_v5',
   RESULTS: 'eduportal_results_v5',
   DELETED_USERS: 'eduportal_deleted_users_v5',
+  DELETED_COURSES: 'eduportal_deleted_courses_v5',
+  DELETED_ANNOUNCEMENTS: 'eduportal_deleted_announcements_v5',
+  DELETED_RESULTS: 'eduportal_deleted_results_v5',
 };
 
 // Seed default users including Admin and Faculty staff
@@ -590,10 +593,76 @@ export const StorageService = {
     return newAnn;
   },
 
+  getDeletedAnnouncements(): Array<Announcement & { deletedAt?: string }> {
+    const data = localStorage.getItem(STORAGE_KEYS.DELETED_ANNOUNCEMENTS);
+    return data ? JSON.parse(data) : [];
+  },
+
   deleteAnnouncement(id: string): void {
-    const list = this.getAnnouncements().filter((a) => a.id !== id);
-    localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(list));
+    const list = this.getAnnouncements();
+    const target = list.find((a) => a.id === id);
+    if (target) {
+      const deletedList = this.getDeletedAnnouncements();
+      deletedList.unshift({
+        ...target,
+        deletedAt: new Date().toLocaleString(),
+      });
+      localStorage.setItem(STORAGE_KEYS.DELETED_ANNOUNCEMENTS, JSON.stringify(deletedList));
+    }
+    const updated = list.filter((a) => a.id !== id);
+    localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(updated));
     notifyStoreUpdate();
+  },
+
+  restoreDeletedAnnouncement(id: string): void {
+    const deletedList = this.getDeletedAnnouncements();
+    const target = deletedList.find((a) => a.id === id);
+    if (target) {
+      const { deletedAt, ...restoredAnn } = target;
+      const list = this.getAnnouncements();
+      list.unshift(restoredAnn as Announcement);
+      localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(list));
+
+      const updatedDeleted = deletedList.filter((a) => a.id !== id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_ANNOUNCEMENTS, JSON.stringify(updatedDeleted));
+      notifyStoreUpdate();
+    }
+  },
+
+  getDeletedCourses(): Array<Course & { deletedAt?: string }> {
+    const data = localStorage.getItem(STORAGE_KEYS.DELETED_COURSES);
+    return data ? JSON.parse(data) : [];
+  },
+
+  deleteCourse(id: string): void {
+    const list = this.getCourses();
+    const target = list.find((c) => c.id === id);
+    if (target) {
+      const deletedList = this.getDeletedCourses();
+      deletedList.unshift({
+        ...target,
+        deletedAt: new Date().toLocaleString(),
+      });
+      localStorage.setItem(STORAGE_KEYS.DELETED_COURSES, JSON.stringify(deletedList));
+    }
+    const updated = list.filter((c) => c.id !== id);
+    localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(updated));
+    notifyStoreUpdate();
+  },
+
+  restoreDeletedCourse(id: string): void {
+    const deletedList = this.getDeletedCourses();
+    const target = deletedList.find((c) => c.id === id);
+    if (target) {
+      const { deletedAt, ...restoredCourse } = target;
+      const list = this.getCourses();
+      list.push(restoredCourse as Course);
+      localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(list));
+
+      const updatedDeleted = deletedList.filter((c) => c.id !== id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_COURSES, JSON.stringify(updatedDeleted));
+      notifyStoreUpdate();
+    }
   },
 
   getNotifications(): AppNotification[] {
@@ -745,10 +814,40 @@ export const StorageService = {
     notifyStoreUpdate();
   },
 
+  getDeletedResults(): Array<StudentResultReport & { deletedAt?: string }> {
+    const data = localStorage.getItem(STORAGE_KEYS.DELETED_RESULTS);
+    return data ? JSON.parse(data) : [];
+  },
+
   deleteStudentResult(id: string): void {
-    const list = this.getStudentResults().filter((r) => r.id !== id);
-    localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(list));
+    const list = this.getStudentResults();
+    const target = list.find((r) => r.id === id);
+    if (target) {
+      const deletedList = this.getDeletedResults();
+      deletedList.unshift({
+        ...target,
+        deletedAt: new Date().toLocaleString(),
+      });
+      localStorage.setItem(STORAGE_KEYS.DELETED_RESULTS, JSON.stringify(deletedList));
+    }
+    const updated = list.filter((r) => r.id !== id);
+    localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(updated));
     notifyStoreUpdate();
+  },
+
+  restoreDeletedResult(id: string): void {
+    const deletedList = this.getDeletedResults();
+    const target = deletedList.find((r) => r.id === id);
+    if (target) {
+      const { deletedAt, ...restoredRes } = target;
+      const list = this.getStudentResults();
+      list.unshift(restoredRes as StudentResultReport);
+      localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(list));
+
+      const updatedDeleted = deletedList.filter((r) => r.id !== id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_RESULTS, JSON.stringify(updatedDeleted));
+      notifyStoreUpdate();
+    }
   },
 };
 

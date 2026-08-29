@@ -10,7 +10,8 @@ import {
   UserCheck,
   ShieldAlert,
   KeyRound,
-  Trash2
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
@@ -50,7 +51,7 @@ const ADMIN_TABS = [
   { id: 'results', label: 'Result Publication', icon: Award },
   { id: 'timetable', label: 'Master Timetable', icon: Calendar },
   { id: 'directory', label: 'Faculty & Students', icon: Users },
-  { id: 'deleted-users', label: 'Deleted Users', icon: Trash2 },
+  { id: 'recycle', label: 'Recycle', icon: RotateCcw },
   { id: 'notices', label: 'Campus Broadcaster', icon: Megaphone },
 ];
 

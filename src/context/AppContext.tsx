@@ -47,6 +47,13 @@ interface AppContextType {
   deletedUsers: Array<User & { deletedAt?: string }>;
   restoreUser: (id: string) => void;
   permanentlyDeleteUser: (id: string) => void;
+  // Recycle Bin Data & Restorations
+  deletedCourses: Array<Course & { deletedAt?: string }>;
+  restoreCourse: (id: string) => void;
+  deletedAnnouncements: Array<Announcement & { deletedAt?: string }>;
+  restoreAnnouncement: (id: string) => void;
+  deletedResults: Array<StudentResultReport & { deletedAt?: string }>;
+  restoreResult: (id: string) => void;
   // Change requests
   submitChangeRequest: (req: Omit<ChangeRequest, 'id'>) => void;
   resolveChangeRequest: (id: string) => void;
@@ -65,6 +72,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => StorageService.getNotifications());
   const [allUsers, setAllUsers] = useState<User[]>(() => StorageService.getUsers());
   const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>(() => StorageService.getDeletedUsers());
+  const [deletedCourses, setDeletedCourses] = useState<Array<Course & { deletedAt?: string }>>(() => StorageService.getDeletedCourses());
+  const [deletedAnnouncements, setDeletedAnnouncements] = useState<Array<Announcement & { deletedAt?: string }>>(() => StorageService.getDeletedAnnouncements());
+  const [deletedResults, setDeletedResults] = useState<Array<StudentResultReport & { deletedAt?: string }>>(() => StorageService.getDeletedResults());
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>(() => StorageService.getChangeRequests());
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>(() => StorageService.getStudentResults());
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -76,6 +86,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications(StorageService.getNotifications());
     setAllUsers(StorageService.getUsers());
     setDeletedUsers(StorageService.getDeletedUsers());
+    setDeletedCourses(StorageService.getDeletedCourses());
+    setDeletedAnnouncements(StorageService.getDeletedAnnouncements());
+    setDeletedResults(StorageService.getDeletedResults());
     setChangeRequests(StorageService.getChangeRequests());
     setStudentResults(StorageService.getStudentResults());
   }, []);
@@ -157,6 +170,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Permanently Deleted', 'User record purged permanently from database.', 'info');
   };
 
+  const restoreCourse = (id: string) => {
+    StorageService.restoreDeletedCourse(id);
+    showToast('Course Restored', 'Course restored back to active catalog.', 'success');
+  };
+
+  const restoreAnnouncement = (id: string) => {
+    StorageService.restoreDeletedAnnouncement(id);
+    showToast('Announcement Restored', 'Notice restored back to active notice board.', 'success');
+  };
+
+  const restoreResult = (id: string) => {
+    StorageService.restoreDeletedResult(id);
+    showToast('Result Report Restored', 'Grade report restored back to published academic results.', 'success');
+  };
+
   // Change Requests
   const submitChangeRequest = (req: Omit<ChangeRequest, 'id'>) => {
     StorageService.addChangeRequest(req);
@@ -181,7 +209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteStudentResult = (id: string) => {
     StorageService.deleteStudentResult(id);
-    showToast('Result Removed', 'Published grade report deleted.', 'info');
+    showToast('Result Moved to Recycle Bin', 'Published grade report moved to Recycle tab.', 'info');
   };
 
   return (
@@ -193,6 +221,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notifications,
         allUsers,
         deletedUsers,
+        deletedCourses,
+        restoreCourse,
+        deletedAnnouncements,
+        restoreAnnouncement,
+        deletedResults,
+        restoreResult,
         changeRequests,
         studentResults,
         toasts,

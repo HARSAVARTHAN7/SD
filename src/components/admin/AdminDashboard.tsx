@@ -121,7 +121,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     deleteUser,
     deletedUsers,
     restoreUser,
-    permanentlyDeleteUser,
+    deletedCourses,
+    restoreCourse,
+    deletedAnnouncements,
+    restoreAnnouncement,
+    deletedResults,
+    restoreResult,
     resolveChangeRequest,
     deleteChangeRequest,
   } = useApp();
@@ -143,7 +148,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   // Account Management State
   const [accountSubTab, setAccountSubTab] = useState<'pending' | 'approved'>('pending');
   const [accountRoleFilter, setAccountRoleFilter] = useState<'all' | 'student' | 'teacher'>('all');
-  const [deletedUsersRoleFilter, setDeletedUsersRoleFilter] = useState<'all' | 'student' | 'teacher'>('all');
+  // Recycle Bin State
+  const [recycleCategory, setRecycleCategory] = useState<'students' | 'teachers' | 'courses' | 'announcements' | 'results'>('students');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   // Mentor Assignment State
@@ -593,7 +599,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                     <span>Institutional Master Control Center</span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Welcome, Administrator 🏛️</h2>
-                  <p className="text-slate-400 text-xs sm:text-sm mt-1">Central Academic Administration • Authorized Master Authority</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-300 font-medium">
+                    <span className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 text-amber-300 font-bold">
+                      Central Academic Administration & Operations
+                    </span>
+                    <span className="text-slate-400">• Authorized Master Authority</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -916,135 +927,337 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
         </div>
       )}
 
-      {/* ===== TAB: DELETED USERS & ACCOUNT RESTORATION ===== */}
-      {currentTab === 'deleted-users' && (
+      {/* ===== TAB: INSTITUTIONAL RECYCLE BIN ===== */}
+      {currentTab === 'recycle' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
             <div>
               <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                <Trash2 className="w-7 h-7 text-rose-600" /> Deleted Users Archive & Restorations
+                <RotateCcw className="w-7 h-7 text-indigo-600" /> Institutional Recycle Center ♻️
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Restricted to Admin Master Access. Inspect deleted student and teacher accounts and restore them directly to active directory.
+                Holds all deleted data across Students, Teachers, Courses, Notice Announcements, and Published Grade Reports. Items can ONLY be restored.
               </p>
             </div>
 
-            {/* Role Filter Pills */}
-            <div className="flex items-center gap-1.5 bg-slate-200/80 p-1.5 rounded-2xl">
+            {/* Category Navigation Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
               <button
-                onClick={() => setDeletedUsersRoleFilter('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  deletedUsersRoleFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setRecycleCategory('students')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  recycleCategory === 'students' ? 'bg-white text-emerald-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                All Deleted ({deletedUsers.length})
+                <span>Students</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-800">
+                  {deletedUsers.filter((u) => u.role === 'student').length}
+                </span>
               </button>
+
               <button
-                onClick={() => setDeletedUsersRoleFilter('student')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  deletedUsersRoleFilter === 'student' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setRecycleCategory('teachers')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  recycleCategory === 'teachers' ? 'bg-white text-purple-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Deleted Students ({deletedUsers.filter((u) => u.role === 'student').length})
+                <span>Teachers</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-purple-100 text-purple-800">
+                  {deletedUsers.filter((u) => u.role === 'teacher').length}
+                </span>
               </button>
+
               <button
-                onClick={() => setDeletedUsersRoleFilter('teacher')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  deletedUsersRoleFilter === 'teacher' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => setRecycleCategory('courses')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  recycleCategory === 'courses' ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Deleted Teachers ({deletedUsers.filter((u) => u.role === 'teacher').length})
+                <span>Courses</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-blue-100 text-blue-800">
+                  {deletedCourses.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setRecycleCategory('announcements')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  recycleCategory === 'announcements' ? 'bg-white text-amber-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Notices</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-800">
+                  {deletedAnnouncements.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setRecycleCategory('results')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  recycleCategory === 'results' ? 'bg-white text-rose-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>Results</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-100 text-rose-800">
+                  {deletedResults.length}
+                </span>
               </button>
             </div>
           </div>
 
-          {/* Deleted Users Grid */}
-          {(() => {
-            const filteredDeleted = deletedUsers.filter((u) => {
-              if (deletedUsersRoleFilter === 'student') return u.role === 'student';
-              if (deletedUsersRoleFilter === 'teacher') return u.role === 'teacher';
-              return true;
-            });
+          {/* Recycle Content Area */}
+          <div className="space-y-4">
+            {/* CATEGORY: STUDENTS */}
+            {recycleCategory === 'students' && (() => {
+              const deletedStudents = deletedUsers.filter((u) => u.role === 'student');
+              if (deletedStudents.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
+                    <UserX className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-slate-800">No Deleted Student Accounts</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Any student profile deleted from the directory will be archived here and can be restored anytime.
+                    </p>
+                  </div>
+                );
+              }
 
-            if (filteredDeleted.length === 0) {
               return (
-                <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
-                  <UserX className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <h3 className="text-base font-bold text-slate-800">No Deleted User Accounts Found</h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                    When student or teacher accounts are deleted, they will be safely archived here for Admin restoration.
-                  </p>
-                </div>
-              );
-            }
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {deletedStudents.map((st) => (
+                    <div key={st.id} className="bg-white rounded-3xl p-6 border border-emerald-200/80 bg-emerald-50/10 shadow-xs flex flex-col justify-between space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          Student Account
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">Deleted: {st.deletedAt || 'Recently'}</span>
+                      </div>
 
-            return (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredDeleted.map((delUser) => {
-                  const isTeacher = delUser.role === 'teacher';
-
-                  return (
-                    <div
-                      key={delUser.id}
-                      className={`bg-white rounded-3xl p-6 border shadow-sm transition-all flex flex-col justify-between ${
-                        isTeacher ? 'border-purple-200/80 bg-purple-50/10' : 'border-emerald-200/80 bg-emerald-50/10'
-                      }`}
-                    >
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-[10px] font-extrabold uppercase px-3 py-1 rounded-full ${
-                              isTeacher
-                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                            }`}
-                          >
-                            {isTeacher ? 'Teacher Account' : 'Student Account'}
-                          </span>
-
-                          <span className="text-xs text-slate-400 font-medium">Deleted: {delUser.deletedAt || 'Recently'}</span>
-                        </div>
-
-                        <div className="flex items-start gap-4">
-                          <img
-                            src={delUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(delUser.name)}&background=random&size=80`}
-                            alt={delUser.name}
-                            className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-200 shadow-xs"
-                          />
-                          <div className="space-y-0.5">
-                            <h4 className="text-base font-extrabold text-slate-900">{delUser.name}</h4>
-                            <p className="text-xs text-slate-500 font-mono">{delUser.email}</p>
-                            <p className="text-xs text-slate-600 font-medium pt-1">
-                              {isTeacher
-                                ? `Employee ID: ${delUser.employeeId || '—'} • ${delUser.title || 'Faculty'}`
-                                : `Roll No: ${delUser.rollNo || '—'} • ${delUser.semester || 'Student'}`}
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={st.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(st.name)}&background=random`}
+                          alt={st.name}
+                          className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-200 shadow-xs"
+                        />
+                        <div className="space-y-0.5">
+                          <h4 className="text-base font-extrabold text-slate-900">{st.name}</h4>
+                          <p className="text-xs text-slate-500 font-mono">{st.email}</p>
+                          <p className="text-xs text-slate-600 font-medium pt-0.5">
+                            Roll No: {st.rollNo || '—'} • {st.department || 'Academic Department'}
+                          </p>
                         </div>
                       </div>
 
-                      <div className="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-between gap-2">
+                      <div className="pt-4 border-t border-slate-200/80">
                         <button
-                          onClick={() => restoreUser(delUser.id)}
-                          className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          onClick={() => restoreUser(st.id)}
+                          className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                         >
-                          <RotateCcw className="w-4 h-4" /> Restore Account to Active List
-                        </button>
-                        <button
-                          onClick={() => permanentlyDeleteUser(delUser.id)}
-                          className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
-                          title="Purge permanently"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Purge Permanently
+                          <RotateCcw className="w-4 h-4" /> Restore Student Account to Active List
                         </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* CATEGORY: TEACHERS */}
+            {recycleCategory === 'teachers' && (() => {
+              const deletedTeachers = deletedUsers.filter((u) => u.role === 'teacher');
+              if (deletedTeachers.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
+                    <UserX className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-slate-800">No Deleted Teacher Accounts</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Any faculty member profile deleted from the directory will be archived here and can be restored anytime.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {deletedTeachers.map((tc) => (
+                    <div key={tc.id} className="bg-white rounded-3xl p-6 border border-purple-200/80 bg-purple-50/10 shadow-xs flex flex-col justify-between space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                          Teacher Account
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">Deleted: {tc.deletedAt || 'Recently'}</span>
+                      </div>
+
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={tc.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tc.name)}&background=random`}
+                          alt={tc.name}
+                          className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-200 shadow-xs"
+                        />
+                        <div className="space-y-0.5">
+                          <h4 className="text-base font-extrabold text-slate-900">{tc.name}</h4>
+                          <p className="text-xs text-slate-500 font-mono">{tc.email}</p>
+                          <p className="text-xs text-slate-600 font-medium pt-0.5">
+                            Employee ID: {tc.employeeId || '—'} • {tc.title || tc.department || 'Faculty Member'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-200/80">
+                        <button
+                          onClick={() => restoreUser(tc.id)}
+                          className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <RotateCcw className="w-4 h-4" /> Restore Teacher Account to Active List
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* CATEGORY: COURSES */}
+            {recycleCategory === 'courses' && (() => {
+              if (deletedCourses.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
+                    <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-slate-800">No Deleted Courses</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Any deleted course modules will appear here for one-click restoration.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {deletedCourses.map((crs) => (
+                    <div key={crs.id} className="bg-white rounded-3xl p-6 border border-blue-200/80 bg-blue-50/10 shadow-xs flex flex-col justify-between space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200 font-mono">
+                          {crs.code}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">Deleted: {crs.deletedAt || 'Recently'}</span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-base font-extrabold text-slate-900">{crs.title}</h4>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{crs.description}</p>
+                        <p className="text-xs text-slate-600 font-semibold mt-2">
+                          Instructor: {crs.teacherName} • Credits: {crs.credits}
+                        </p>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-200/80">
+                        <button
+                          onClick={() => restoreCourse(crs.id)}
+                          className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <RotateCcw className="w-4 h-4" /> Restore Course Module to Active Catalog
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* CATEGORY: ANNOUNCEMENTS */}
+            {recycleCategory === 'announcements' && (() => {
+              if (deletedAnnouncements.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
+                    <Megaphone className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-slate-800">No Deleted Notice Announcements</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Any deleted campus notices or announcements will be stored here and can be restored anytime.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {deletedAnnouncements.map((ann) => (
+                    <div key={ann.id} className="bg-white rounded-3xl p-6 border border-amber-200/80 bg-amber-50/10 shadow-xs flex flex-col justify-between space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                          Notice Circular
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">Deleted: {ann.deletedAt || 'Recently'}</span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-base font-extrabold text-slate-900">{ann.title}</h4>
+                        <p className="text-xs text-slate-600 mt-1 line-clamp-2">{ann.content}</p>
+                        <p className="text-xs text-slate-500 font-semibold mt-2">
+                          Author: {ann.authorName} • Posted: {ann.date}
+                        </p>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-200/80">
+                        <button
+                          onClick={() => restoreAnnouncement(ann.id)}
+                          className="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <RotateCcw className="w-4 h-4" /> Restore Announcement to Notice Board
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* CATEGORY: RESULTS */}
+            {recycleCategory === 'results' && (() => {
+              if (deletedResults.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
+                    <Award className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-slate-800">No Deleted Academic Results</h3>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                      Any deleted student academic grade reports will be stored here and can be restored anytime.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {deletedResults.map((res) => (
+                    <div key={res.id} className="bg-white rounded-3xl p-6 border border-rose-200/80 bg-rose-50/10 shadow-xs flex flex-col justify-between space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                          Grade Report
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">Deleted: {res.deletedAt || 'Recently'}</span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-base font-extrabold text-slate-900">{res.studentName}</h4>
+                        <p className="text-xs text-slate-500 font-mono">Roll No: {res.rollNo} • {res.currentSemester}</p>
+                        <p className="text-xs text-slate-700 font-bold mt-2">
+                          CGPA: {res.cgpa.toFixed(2)} • Published: {res.publishedDate}
+                        </p>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-200/80">
+                        <button
+                          onClick={() => restoreResult(res.id)}
+                          className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <RotateCcw className="w-4 h-4" /> Restore Result to Published Results
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
