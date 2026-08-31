@@ -532,7 +532,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const takeAttendance = async (
     date: string,
     courseId: string,
-    records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused'; notes?: string }>,
+    records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' | 'unmark'; notes?: string }>,
   ) => {
     // 1. Instantly update local React state & sync with localStorage
     setAttendance((prev) => {
@@ -545,20 +545,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               (a.studentRoll && rec.studentRoll && a.studentRoll.trim() === rec.studentRoll.trim()) ||
               (a.studentName && rec.studentName && a.studentName.toLowerCase().trim() === rec.studentName.toLowerCase().trim()))
         );
-        const newRecord: AttendanceRecord = {
-          id: `att-${date}-${rec.studentId}-${courseId}`,
-          date,
-          courseId,
-          studentId: rec.studentId,
-          studentName: rec.studentName,
-          studentRoll: rec.studentRoll,
-          status: rec.status,
-          notes: rec.notes,
-        };
-        if (existingIdx !== -1) {
-          next[existingIdx] = newRecord;
+        if (rec.status === 'unmark') {
+          if (existingIdx !== -1) {
+            next.splice(existingIdx, 1);
+          }
         } else {
-          next.unshift(newRecord);
+          const newRecord: AttendanceRecord = {
+            id: `att-${date}-${rec.studentId}-${courseId}`,
+            date,
+            courseId,
+            studentId: rec.studentId,
+            studentName: rec.studentName,
+            studentRoll: rec.studentRoll,
+            status: rec.status,
+            notes: rec.notes,
+          };
+          if (existingIdx !== -1) {
+            next[existingIdx] = newRecord;
+          } else {
+            next.unshift(newRecord);
+          }
         }
       });
       try {
@@ -569,11 +575,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
 
-    showToast('Attendance Saved!', `Daily roll call for ${date} has been updated.`, 'success');
+    const isUnmarked = records.some((r) => r.status === 'unmark');
+    showToast(
+      isUnmarked ? 'Attendance Unmarked!' : 'Attendance Saved!',
+      isUnmarked ? `Date ${date} has been cleared.` : `Daily roll call for ${date} has been updated.`,
+      'success'
+    );
 
     // 2. Transmit to backend API if online
     try {
-      await AttendanceAPI.markBatch({ date, courseId, records });
+      const validRecords = records.filter((r) => r.status !== 'unmark') as Array<{
+        studentId: string;
+        studentName: string;
+        studentRoll: string;
+        status: 'present' | 'absent' | 'late' | 'excused';
+        notes?: string;
+      }>;
+      if (validRecords.length > 0) {
+        await AttendanceAPI.markBatch({ date, courseId, records: validRecords });
+      }
     } catch (err) {
       console.warn('Backend attendance endpoint offline / fallback to local storage:', err);
     }

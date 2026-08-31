@@ -26,6 +26,7 @@ import {
   MessageSquarePlus,
   Send,
   Ticket,
+  XCircle,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
@@ -1509,7 +1510,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               Choose status for <strong>{attCalendarStudent.name}</strong> ({attCalendarStudent.studentId || attCalendarStudent.rollNo || 'Student'}):
             </p>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {/* Option 1: Present */}
               <button
                 type="button"
@@ -1524,13 +1525,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
                   ]);
                   setSelectedDateModal(null);
                 }}
-                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer hover:scale-105 ${
+                className={`p-3.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer hover:scale-105 ${
                   selectedDateModal.currentStatus === 'present'
                     ? 'bg-emerald-500 text-white font-extrabold ring-2 ring-emerald-600 shadow-md'
                     : 'bg-emerald-50 border-emerald-200 text-emerald-900 hover:bg-emerald-100 font-bold'
                 }`}
               >
-                <CheckCircle2 className="w-6 h-6" />
+                <CheckCircle2 className="w-5 h-5" />
                 <span className="text-xs font-black">Present</span>
               </button>
 
@@ -1548,13 +1549,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
                   ]);
                   setSelectedDateModal(null);
                 }}
-                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer hover:scale-105 ${
+                className={`p-3.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer hover:scale-105 ${
                   selectedDateModal.currentStatus === 'absent'
                     ? 'bg-rose-500 text-white font-extrabold ring-2 ring-rose-600 shadow-md'
                     : 'bg-rose-50 border-rose-200 text-rose-900 hover:bg-rose-100 font-bold'
                 }`}
               >
-                <AlertCircle className="w-6 h-6" />
+                <AlertCircle className="w-5 h-5" />
                 <span className="text-xs font-black">Absent</span>
               </button>
 
@@ -1572,14 +1573,38 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
                   ]);
                   setSelectedDateModal(null);
                 }}
-                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all cursor-pointer hover:scale-105 ${
+                className={`p-3.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer hover:scale-105 ${
                   selectedDateModal.currentStatus === 'excused'
                     ? 'bg-indigo-600 text-white font-extrabold ring-2 ring-indigo-700 shadow-md'
                     : 'bg-indigo-50 border-indigo-200 text-indigo-900 hover:bg-indigo-100 font-bold'
                 }`}
               >
-                <Sparkles className="w-6 h-6" />
-                <span className="text-xs font-black">OD (On Duty)</span>
+                <Sparkles className="w-5 h-5" />
+                <span className="text-xs font-black">OD (Duty)</span>
+              </button>
+
+              {/* Option 4: Unmark / Clear */}
+              <button
+                type="button"
+                onClick={() => {
+                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse || 'c1', [
+                    {
+                      studentId: attCalendarStudent.id,
+                      studentName: attCalendarStudent.name,
+                      studentRoll: attCalendarStudent.studentId || attCalendarStudent.rollNo || '2024-418',
+                      status: 'unmark' as any,
+                    },
+                  ]);
+                  setSelectedDateModal(null);
+                }}
+                className={`p-3.5 rounded-2xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer hover:scale-105 ${
+                  !selectedDateModal.currentStatus
+                    ? 'bg-slate-700 text-white font-extrabold ring-2 ring-slate-800 shadow-md'
+                    : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 font-bold'
+                }`}
+              >
+                <XCircle className="w-5 h-5" />
+                <span className="text-xs font-black">Unmark</span>
               </button>
             </div>
 
