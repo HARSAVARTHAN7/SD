@@ -110,8 +110,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
     const sum = semEntries.reduce((acc, [_, semData]) => acc + (semData.sgpa || 0), 0);
     const avg = sum / semEntries.length;
     displayCgpaStr = avg > 0 ? avg.toFixed(2) : formatCgpaDisplay(myResultReport.cgpa);
-  } else if (user?.cgpa && user.cgpa > 0) {
+  } else if (user?.cgpa !== undefined && user.cgpa !== null && user.cgpa > 0) {
     displayCgpaStr = user.cgpa.toFixed(2);
+  } else if (user?.gpa !== undefined && user.gpa !== null && user.gpa > 0) {
+    displayCgpaStr = user.gpa.toFixed(2);
   } else {
     displayCgpaStr = 'Nil';
   }
@@ -505,7 +507,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
       )}
 
       {/* ================= TAB 4: GRADES & REPORT CARD ================= */}
-      {currentTab === 'grades' && (
+      {(currentTab === 'grades' || currentTab === 'results' || currentTab === 'grade' || currentTab === 'result') && (
         <div className="space-y-8 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
