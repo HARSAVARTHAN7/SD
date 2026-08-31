@@ -67,6 +67,7 @@ interface AppContextType {
   updateUser: (user: User) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   assignMentor: (studentId: string, mentorData: { mentorId: string; mentorName: string; mentorPhone: string }) => Promise<void>;
+  assignSemesterCourses: (studentId: string, semester: string, courseIds: string[]) => Promise<void>;
   
   deletedUsers: Array<User & { deletedAt?: string }>;
   restoreUser: (id: string) => void;
@@ -803,6 +804,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Mentor Assigned', `Mentor assigned: ${mentorData.mentorName}`, 'success');
   };
 
+  const assignSemesterCourses = async (studentId: string, semester: string, courseIds: string[]) => {
+    setAllUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === studentId || (u as unknown as { _id: string })._id === studentId || u.studentId === studentId) {
+          const currentMap = u.semesterCourseAssignments || {};
+          const updatedMap = { ...currentMap, [semester]: courseIds };
+          const allAssigned = Array.from(new Set(Object.values(updatedMap).flat()));
+          return {
+            ...u,
+            semesterCourseAssignments: updatedMap,
+            assignedCourseIds: allAssigned,
+          };
+        }
+        return u;
+      }),
+    );
+
+    try {
+      await UserAPI.assignSemesterCourses(studentId, { semester, courseIds });
+    } catch (err) {
+      console.warn('Backend assign semester courses offline / fallback to local storage:', err);
+    }
+
+    showToast(
+      'Courses Assigned!',
+      `${courseIds.length} course(s) registered for ${semester}.`,
+      'success',
+    );
+  };
+
   const restoreUser = (id: string) => {
     const target = deletedUsers.find((u) => u.id === id || (u as unknown as { _id: string })._id === id);
     if (target) {
@@ -997,6 +1028,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUser,
         deleteUser,
         assignMentor,
+        assignSemesterCourses,
         restoreUser,
         permanentlyDeleteUser,
         submitChangeRequest,

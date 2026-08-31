@@ -70,6 +70,9 @@ export const UserAPI = {
 
   assignMentor: (studentId: string, mentorData: { mentorId: string; mentorName: string; mentorPhone: string }) =>
     api.put<ApiResponse<User>>(`/users/${studentId}/mentor`, mentorData),
+
+  assignSemesterCourses: (studentId: string, data: { semester: string; courseIds: string[] }) =>
+    api.put<ApiResponse<User>>(`/users/${studentId}/semester-courses`, data),
 };
 
 // ─── Course Service ─────────────────────────────────

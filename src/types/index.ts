@@ -43,6 +43,10 @@ export interface User {
   subjectsTaught?: string[];
   employeeId?: string;
   officeHours?: string;
+
+  // Course Assignments
+  assignedCourseIds?: string[];
+  semesterCourseAssignments?: Record<string, string[]>;
 }
 
 export interface Course {
@@ -61,6 +65,7 @@ export interface Course {
   totalStudents: number;
   syllabusProgress: number;
   studyMaterialsCount: number;
+  semester?: string;
 }
 
 export interface AttendanceRecord {
@@ -92,6 +97,7 @@ export interface Announcement {
 export interface TimetableSlot {
   id: string;
   _id?: string;
+  semester?: string;
   day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
   startTime: string;
   endTime: string;

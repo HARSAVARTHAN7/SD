@@ -135,6 +135,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     addTimetableSlot,
     deleteTimetableSlot,
     assignMentor,
+    assignSemesterCourses,
     addNotification,
     academicTermPeriod,
     updateAcademicTermPeriod,
@@ -152,9 +153,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const [activeSubView, setActiveSubView] = useState<'admin' | 'student-preview' | 'teacher-preview'>('admin');
   const [previewTab, setPreviewTab] = useState<string>('overview');
 
-  // Timetable State
+  // Semester-Wise Timetable & Course Registration State
   const timetableSlots = timetable;
   const [selectedDay, setSelectedDay] = useState<string>('Monday');
+  const [selectedTimetableSem, setSelectedTimetableSem] = useState<string>('Semester 5');
+  const [slotSemester, setSlotSemester] = useState<string>('Semester 5');
+  const [selectedRegSem, setSelectedRegSem] = useState<string>('Semester 5');
+  const [selectedRegStudentId, setSelectedRegStudentId] = useState<string>('');
+  const [selectedRegCourseIds, setSelectedRegCourseIds] = useState<string[]>([]);
   const [newSlotModalOpen, setNewSlotModalOpen] = useState(false);
   const [slotSubject, setSlotSubject] = useState('');
   const [slotTeacher, setSlotTeacher] = useState('');
@@ -425,13 +431,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const handleAddSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     await addTimetableSlot({
+      semester: slotSemester,
       day: selectedDay as any,
       subject: slotSubject,
       teacher: slotTeacher,
       room: slotRoom,
       startTime: slotStartTime,
       endTime: slotEndTime,
-      color: 'bg-emerald-500/10 border-emerald-500 text-emerald-700',
+      color: 'bg-purple-500/10 border-purple-500 text-purple-700',
     });
     setNewSlotModalOpen(false);
     setSlotSubject(''); setSlotTeacher(''); setSlotRoom(''); setSlotStartTime(''); setSlotEndTime('');
@@ -2057,19 +2064,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
         </div>
       )}
 
-      {/* ===== TAB 3: MASTER TIMETABLE ===== */}
+      {/* ===== TAB 3: MASTER TIMETABLE & SEMESTER COURSE REGISTRATION ===== */}
       {currentTab === 'timetable' && (
-        <div className="space-y-6 animate-fadeIn">
+        <div className="space-y-8 animate-fadeIn">
+          {/* Timetable Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Master Timetable Manager (Mon - Sat)</h2>
-              <p className="text-xs text-slate-500 mt-1">Configure weekly lectures, lab periods, and tutorial sessions for all classes.</p>
+              <h2 className="text-2xl font-bold text-slate-800">Semester-Wise Timetable Manager</h2>
+              <p className="text-xs text-slate-500 mt-1">Configure weekly lectures, lab periods, and tutorial sessions semester-wise (Mon - Sat).</p>
             </div>
             <button onClick={() => setNewSlotModalOpen(true)}
               className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
               <Plus className="w-4 h-4" /> Add Timetable Slot
             </button>
           </div>
+
+          {/* Semester Filter Bar */}
+          <div className="flex items-center gap-1.5 p-1.5 bg-purple-50/80 border border-purple-200/80 rounded-2xl overflow-x-auto shadow-xs">
+            <span className="text-[10px] font-black text-purple-700 px-3 uppercase tracking-wider shrink-0">Filter Semester:</span>
+            {['All Semesters', 'Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+              <button
+                key={sem}
+                type="button"
+                onClick={() => setSelectedTimetableSem(sem)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedTimetableSem === sem ? 'bg-purple-700 text-white shadow-xs' : 'text-slate-600 hover:text-purple-900'
+                }`}
+              >
+                {sem}
+              </button>
+            ))}
+          </div>
+
+          {/* Day Filter Bar */}
           <div className="flex items-center gap-1.5 p-1 bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-x-auto">
             {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => (
               <button key={day} onClick={() => setSelectedDay(day)}
@@ -2078,28 +2105,209 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
               </button>
             ))}
           </div>
+
+          {/* Timetable Slot Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {timetableSlots.filter((t) => t.day === selectedDay).map((slot) => (
-              <div key={slot.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 font-mono">{slot.room}</span>
-                    <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+            {timetableSlots
+              .filter((t) => {
+                const dayMatch = t.day === selectedDay;
+                const semMatch = selectedTimetableSem === 'All Semesters' || !t.semester || t.semester === selectedTimetableSem;
+                return dayMatch && semMatch;
+              })
+              .map((slot) => (
+                <div key={slot.id} className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 font-mono">{slot.room}</span>
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-xl bg-purple-100 text-purple-800 uppercase tracking-wider">
+                        {slot.semester || 'Semester 5'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 mb-2">
                       <Clock className="w-3.5 h-3.5" /> {slot.startTime} {slot.endTime && `- ${slot.endTime}`}
-                    </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800">{slot.subject}</h3>
+                    <p className="text-xs text-slate-500 mt-1">Instructor: {slot.teacher}</p>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800">{slot.subject}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Instructor: {slot.teacher}</p>
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-400 font-medium">Standard Lecture Slot</span>
+                    <button onClick={() => handleDeleteSlot(slot.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer" title="Delete">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-xs text-slate-400 font-medium">Standard Slot</span>
-                  <button onClick={() => handleDeleteSlot(slot.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer" title="Delete">
-                    <Trash2 className="w-4 h-4" />
+              ))}
+          </div>
+
+          {/* ===== CARD: SEMESTER COURSE REGISTRATION & STUDENT COURSE ASSIGNMENT ===== */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-6 mt-10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-purple-100 text-purple-700 rounded-2xl">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Semester Course Registration & Student Assignment</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Register semester courses and assign curriculum course loads to students semester-wise.</p>
+                </div>
+              </div>
+
+              {/* Semester Selector Bar */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto">
+                {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+                  <button
+                    key={sem}
+                    type="button"
+                    onClick={() => setSelectedRegSem(sem)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                      selectedRegSem === sem ? 'bg-purple-700 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {sem}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Course Checklist for Selected Semester */}
+              <div className="lg:col-span-5 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-purple-600" />
+                    {selectedRegSem} Courses Checklist
+                  </h4>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full">
+                    {courses.filter((c) => !c.semester || c.semester === selectedRegSem).length} Available
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {courses.filter((c) => !c.semester || c.semester === selectedRegSem).map((course) => {
+                    const isSelected = selectedRegCourseIds.includes(course.id);
+                    return (
+                      <label
+                        key={course.id}
+                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-purple-50 border-purple-300 text-purple-950 font-bold shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-purple-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRegCourseIds([...selectedRegCourseIds, course.id]);
+                              } else {
+                                setSelectedRegCourseIds(selectedRegCourseIds.filter((id) => id !== course.id));
+                              }
+                            }}
+                            className="w-4 h-4 accent-purple-600 rounded cursor-pointer"
+                          />
+                          <div>
+                            <span className="text-xs font-black block">{course.code}: {course.title}</span>
+                            <span className="text-[10px] text-slate-400 font-medium">Faculty: {course.teacherName} • {course.credits} Credits</span>
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {/* Target Student Selector & Save Registration Button */}
+                <div className="pt-3 border-t border-slate-200/80 space-y-3">
+                  <div>
+                    <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Select Student to Assign ({selectedRegSem}):
+                    </label>
+                    <select
+                      value={selectedRegStudentId}
+                      onChange={(e) => setSelectedRegStudentId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-600"
+                    >
+                      <option value="">-- Select Student --</option>
+                      {allUsers.filter((u) => u.role === 'student').map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.name} ({st.studentId || st.rollNo || st.id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!selectedRegStudentId || selectedRegCourseIds.length === 0}
+                    onClick={() => {
+                      if (!selectedRegStudentId) return;
+                      assignSemesterCourses(selectedRegStudentId, selectedRegSem, selectedRegCourseIds);
+                    }}
+                    className="w-full px-4 py-3 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Save {selectedRegSem} Course Registration
                   </button>
                 </div>
               </div>
-            ))}
+
+              {/* Right Column: Semester Registration Roster Table */}
+              <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-col justify-between">
+                <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-purple-600" />
+                    {selectedRegSem} Student Registration Roster
+                  </h4>
+                  <span className="text-[11px] font-bold text-slate-500 font-mono">
+                    {allUsers.filter((u) => u.role === 'student').length} Enrolled Students
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                  {allUsers.filter((u) => u.role === 'student').map((st) => {
+                    const semMap = st.semesterCourseAssignments || {};
+                    const assignedIds = semMap[selectedRegSem] || [];
+                    const assignedCourseObjects = courses.filter((c) => assignedIds.includes(c.id));
+
+                    return (
+                      <div key={st.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-900">{st.name}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-mono">
+                              {st.studentId || st.rollNo || st.id}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            {assignedCourseObjects.length > 0 ? (
+                              assignedCourseObjects.map((c) => (
+                                <span key={c.id} className="text-[10px] font-extrabold px-2 py-0.5 bg-purple-50 text-purple-800 border border-purple-200 rounded-md">
+                                  {c.code}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic font-medium">No courses registered for {selectedRegSem}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedRegStudentId(st.id);
+                            setSelectedRegCourseIds(assignedIds);
+                          }}
+                          className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 border border-purple-200"
+                        >
+                          ⚙️ Edit {selectedRegSem}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -3015,6 +3223,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
               <h3 className="text-xl font-bold mt-1">Add Slot for {selectedDay}</h3>
             </div>
             <form onSubmit={handleAddSlot} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">Target Semester</label>
+                <select
+                  value={slotSemester}
+                  onChange={(e) => setSlotSemester(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-slate-900"
+                >
+                  {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+                    <option key={sem} value={sem}>{sem}</option>
+                  ))}
+                </select>
+              </div>
+
               {[
                 { label: 'Subject Name', value: slotSubject, setter: setSlotSubject, placeholder: 'AP Calculus BC' },
                 { label: 'Faculty Instructor', value: slotTeacher, setter: setSlotTeacher, placeholder: 'Dr. Sarah Jenkins' },
