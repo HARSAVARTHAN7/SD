@@ -68,7 +68,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
     const cur = new Date(start);
     while (cur <= targetEnd) {
       const day = cur.getDay();
-      if (day !== 0 && day !== 6) count++;
+      if (day !== 0) count++; // Exclude only Sundays (0 = Sunday)
       cur.setDate(cur.getDate() + 1);
     }
     return count > 0 ? count : 30;
