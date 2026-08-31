@@ -713,8 +713,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                       <input
                         type="date"
                         value={adminAttStartDate}
-                        onChange={(e) => setAdminAttStartDate(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminAttStartDate(val);
+                          if (val && adminAttEndDate) {
+                            updateAcademicTermPeriod({ startDate: val, endDate: adminAttEndDate });
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 font-mono"
                       />
                     </div>
 
@@ -725,8 +731,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                       <input
                         type="date"
                         value={adminAttEndDate}
-                        onChange={(e) => setAdminAttEndDate(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAdminAttEndDate(val);
+                          if (adminAttStartDate && val) {
+                            updateAcademicTermPeriod({ startDate: adminAttStartDate, endDate: val });
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 font-mono"
                       />
                     </div>
 

@@ -98,20 +98,36 @@ export function formatCgpaDisplay(cgpa?: number | null): string {
 
 /**
  * Calculate total working days in an academic term period (excluding Sundays).
- * Uses local YYYY-MM-DD date parsing to prevent UTC timezone offset shifts across dashboards.
+ * Supports YYYY-MM-DD, MM/DD/YYYY, and standard date strings seamlessly.
  */
 export function calculateTermWorkingDays(startDateStr?: string, endDateStr?: string): number {
   if (!startDateStr || !endDateStr) return 30;
 
-  const startParts = startDateStr.split('-').map(Number);
-  const endParts = endDateStr.split('-').map(Number);
+  const parseToLocalDate = (str: string): Date | null => {
+    if (!str) return null;
+    const clean = str.trim();
+    if (clean.includes('/')) {
+      const parts = clean.split('/').map(Number);
+      if (parts.length === 3) {
+        if (parts[2] > 1000) return new Date(parts[2], parts[0] - 1, parts[1]);
+        if (parts[0] > 1000) return new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+    }
+    if (clean.includes('-')) {
+      const parts = clean.split('T')[0].split('-').map(Number);
+      if (parts.length === 3) {
+        if (parts[0] > 1000) return new Date(parts[0], parts[1] - 1, parts[2]);
+        if (parts[2] > 1000) return new Date(parts[2], parts[0] - 1, parts[1]);
+      }
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
 
-  if (startParts.length !== 3 || endParts.length !== 3) return 30;
+  const start = parseToLocalDate(startDateStr);
+  const end = parseToLocalDate(endDateStr);
 
-  const start = new Date(startParts[0], startParts[1] - 1, startParts[2]);
-  const end = new Date(endParts[0], endParts[1] - 1, endParts[2]);
-
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 30;
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 30;
 
   let count = 0;
   const cur = new Date(start);
