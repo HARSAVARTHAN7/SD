@@ -28,7 +28,11 @@ const USER_STORAGE_KEY = 'eduportal_current_user';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUserState] = useState<User | null>(() => {
     try {
-      const saved = localStorage.getItem(USER_STORAGE_KEY);
+      // Clear legacy persistent localStorage user so initial site visit always lands on login page
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem('eduportal_token');
+
+      const saved = sessionStorage.getItem(USER_STORAGE_KEY);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -39,8 +43,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setUser = useCallback((u: User | null) => {
     setUserState(u);
     if (u) {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
+      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
     } else {
+      sessionStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
     }
   }, []);
@@ -122,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (
+      cleanQuery === 'ram.cs23@bitsathy.ac.in' ||
       cleanQuery === 'ram.cs23@bitathy.ac.in' ||
       cleanQuery === 'ram.c23@bitsathy.ac.in' ||
       cleanQuery === 'ram.c23' ||
@@ -133,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const ramUser: User = {
           id: 'student-ram',
           username: 'ram.cs23',
-          email: 'ram.cs23@bitathy.ac.in',
+          email: 'ram.cs23@bitsathy.ac.in',
           password: 'password123',
           name: 'Ram',
           role: 'student',

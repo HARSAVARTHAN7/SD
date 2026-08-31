@@ -196,7 +196,7 @@ export function extractStudentFromText(text: string, filename: string): Partial<
     role: 'student',
     name,
     username,
-    email: email || 'ram.cs23@bitathy.ac.in',
+    email: email || 'ram.cs23@bitsathy.ac.in',
     phone: phone || '+91 98765 43210',
     studentId: rollNo ? `STU-${rollNo}` : `STU-2023-123`,
     rollNo: rollNo || '2023-123',
@@ -284,7 +284,7 @@ INSTITUTIONAL STUDENT REGISTRATION MASTER TEMPLATE
 ================================================================================
 Name: Ram
 Roll Number: 2023-123
-Email: ram.cs23@bitathy.ac.in
+Email: ram.cs23@bitsathy.ac.in
 Department: Computer Science & Engineering
 Semester: Semester 5
 Academic Year: 2023 - 2027

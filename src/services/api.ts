@@ -12,9 +12,12 @@ const api = axios.create({
 // ─── Token Helpers ──────────────────────────────────
 const TOKEN_KEY = 'eduportal_token';
 
-export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
-export const setToken = (token: string): void => localStorage.setItem(TOKEN_KEY, token);
-export const clearToken = (): void => localStorage.removeItem(TOKEN_KEY);
+export const getToken = (): string | null => sessionStorage.getItem(TOKEN_KEY);
+export const setToken = (token: string): void => sessionStorage.setItem(TOKEN_KEY, token);
+export const clearToken = (): void => {
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+};
 
 // ─── Request Interceptor (attach JWT) ───────────────
 api.interceptors.request.use(

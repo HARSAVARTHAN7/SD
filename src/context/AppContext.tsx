@@ -106,7 +106,7 @@ const INITIAL_DEFAULT_USERS: User[] = [
   {
     id: 'student-ram',
     username: 'ram.cs23',
-    email: 'ram.cs23@bitathy.ac.in',
+    email: 'ram.cs23@bitsathy.ac.in',
     password: 'password123',
     name: 'Ram',
     role: 'student',
@@ -180,20 +180,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>(() => {
+  const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>(() => {
     try {
-      const saved = localStorage.getItem('eduportal_all_users');
+      const saved = localStorage.getItem('eduportal_deleted_users');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
         }
       }
+    } catch {
+      // fallback
+    }
+    const ramUser = INITIAL_DEFAULT_USERS.find((u) => u.id === 'student-ram');
+    return ramUser ? [{ ...ramUser, deletedAt: 'Recently' }] : [];
+  });
+
+  const [allUsers, setAllUsers] = useState<User[]>(() => {
+    try {
+      const saved = localStorage.getItem('eduportal_all_users');
+      const savedDeleted = localStorage.getItem('eduportal_deleted_users');
+      const deletedList: User[] = savedDeleted
+        ? JSON.parse(savedDeleted)
+        : [INITIAL_DEFAULT_USERS.find((u) => u.id === 'student-ram')].filter(Boolean) as User[];
+
+      if (saved) {
+        const parsed: User[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(
+            (u) => !deletedList.some((du) => du && (du.id === u.id || du.email === u.email || du.username === u.username)),
+          );
+        }
+      }
     } catch (e) {
       console.warn('Failed to parse saved users:', e);
     }
-    return INITIAL_DEFAULT_USERS;
+    return INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram');
   });
+
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>([]);
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
@@ -208,11 +232,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [allUsers]);
 
-  // Recycle bin states (mocked out as empty for now until backend supports it)
-  const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>([]);
-  const [deletedCourses, setDeletedCourses] = useState<Array<Course & { deletedAt?: string }>>([]);
-  const [deletedAnnouncements, setDeletedAnnouncements] = useState<Array<Announcement & { deletedAt?: string }>>([]);
-  const [deletedResults, setDeletedResults] = useState<Array<StudentResultReport & { deletedAt?: string }>>([]);
+  const [deletedCourses, setDeletedCourses] = useState<Array<Course & { deletedAt?: string }>>(() => {
+    try {
+      const saved = localStorage.getItem('eduportal_deleted_courses');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [deletedAnnouncements, setDeletedAnnouncements] = useState<Array<Announcement & { deletedAt?: string }>>(() => {
+    try {
+      const saved = localStorage.getItem('eduportal_deleted_announcements');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [deletedResults, setDeletedResults] = useState<Array<StudentResultReport & { deletedAt?: string }>>(() => {
+    try {
+      const saved = localStorage.getItem('eduportal_deleted_results');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('eduportal_deleted_users', JSON.stringify(deletedUsers));
+    } catch (e) {
+      console.warn('Failed to save deletedUsers:', e);
+    }
+  }, [deletedUsers]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('eduportal_deleted_courses', JSON.stringify(deletedCourses));
+    } catch (e) {
+      console.warn('Failed to save deletedCourses:', e);
+    }
+  }, [deletedCourses]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('eduportal_deleted_announcements', JSON.stringify(deletedAnnouncements));
+    } catch (e) {
+      console.warn('Failed to save deletedAnnouncements:', e);
+    }
+  }, [deletedAnnouncements]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('eduportal_deleted_results', JSON.stringify(deletedResults));
+    } catch (e) {
+      console.warn('Failed to save deletedResults:', e);
+    }
+  }, [deletedResults]);
+
+  // Auto-recover soft-deleted default users (e.g. ram.cs23) into deletedUsers if missing from both lists
+  useEffect(() => {
+    try {
+      const purgedRaw = localStorage.getItem('eduportal_purged_users');
+      const purgedIds: string[] = purgedRaw ? JSON.parse(purgedRaw) : [];
+
+      const missingDeleted = INITIAL_DEFAULT_USERS.filter(
+        (defaultUser) =>
+          !allUsers.some((u) => u.id === defaultUser.id || u.email === defaultUser.email) &&
+          !deletedUsers.some((du) => du.id === defaultUser.id || du.email === defaultUser.email) &&
+          !purgedIds.includes(defaultUser.id),
+      );
+
+      if (missingDeleted.length > 0) {
+        setDeletedUsers((prev) => [
+          ...missingDeleted.map((u) => ({
+            ...u,
+            deletedAt: 'Recently',
+          })),
+          ...prev,
+        ]);
+      }
+    } catch (e) {
+      console.warn('Error syncing missing deleted users:', e);
+    }
+  }, [allUsers, deletedUsers]);
+
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(false);
 
@@ -256,23 +361,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .then(({ data }) => {
               if (data && data.data && data.data.length > 0) {
                 setAllUsers((prev) => {
-                  return data.data.map((serverUser) => {
-                    const localMatch = prev.find(
-                      (u) =>
-                        u.id === serverUser.id ||
-                        (u as unknown as { _id: string })._id === serverUser.id ||
-                        u.email === serverUser.email,
-                    );
-                    if (localMatch) {
-                      return {
-                        ...serverUser,
-                        isBlocked: localMatch.isBlocked !== undefined ? localMatch.isBlocked : serverUser.isBlocked,
-                        status: localMatch.status || serverUser.status,
-                        password: localMatch.password || serverUser.password,
-                      };
-                    }
-                    return serverUser;
-                  });
+                  return data.data
+                    .filter((serverUser) => !deletedUsers.some((du) => du.id === serverUser.id || du.email === serverUser.email))
+                    .map((serverUser) => {
+                      const localMatch = prev.find(
+                        (u) =>
+                          u.id === serverUser.id ||
+                          (u as unknown as { _id: string })._id === serverUser.id ||
+                          u.email === serverUser.email,
+                      );
+                      if (localMatch) {
+                        return {
+                          ...serverUser,
+                          isBlocked: localMatch.isBlocked !== undefined ? localMatch.isBlocked : serverUser.isBlocked,
+                          status: localMatch.status || serverUser.status,
+                          password: localMatch.password || serverUser.password,
+                        };
+                      }
+                      return serverUser;
+                    });
                 });
               }
             })
@@ -350,14 +457,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAnnouncement = async (id: string) => {
+    const target = announcements.find((a) => a.id === id || a._id === id);
+    if (target) {
+      setDeletedAnnouncements((prev) => [
+        { ...target, deletedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+        ...prev,
+      ]);
+    }
+
     try {
       await AnnouncementAPI.delete(id);
-      setAnnouncements((prev) => prev.filter((a) => a.id !== id && a._id !== id));
-      showToast('Deleted', 'Announcement removed from the notice board.', 'info');
     } catch (err) {
-      showToast('Error', 'Failed to delete announcement.', 'error');
-      console.error(err);
+      console.warn('Backend announcement delete error / offline.', err);
     }
+
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id && a._id !== id));
+    showToast('Moved to Recycle Bin', 'Announcement moved to the Institutional Recycle Center.', 'info');
   };
 
   // ─── Notifications ─────────────────────────────────
@@ -468,6 +583,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteUser = async (id: string) => {
+    const target = allUsers.find((u) => u.id === id || (u as unknown as { _id: string })._id === id);
+    if (target) {
+      setDeletedUsers((prev) => [
+        { ...target, deletedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+        ...prev,
+      ]);
+    }
+
     try {
       await UserAPI.delete(id);
     } catch (err) {
@@ -475,7 +598,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setAllUsers((prev) => prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id));
-    showToast('Deleted', 'User has been removed from the system.', 'info');
+    showToast('Moved to Recycle Bin', `${target?.name || 'User'} has been moved to the Institutional Recycle Center.`, 'info');
   };
 
   const assignMentor = async (studentId: string, mentorData: { mentorId: string; mentorName: string; mentorPhone: string }) => {
@@ -500,23 +623,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const restoreUser = (id: string) => {
-    showToast('Not Supported', 'Restoring users requires backend recycle bin support.', 'info');
+    const target = deletedUsers.find((u) => u.id === id || (u as unknown as { _id: string })._id === id);
+    if (target) {
+      const { deletedAt, ...cleanedUser } = target;
+      setDeletedUsers((prev) => prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id));
+      setAllUsers((prev) => [cleanedUser as User, ...prev]);
+      showToast('Restored Successfully', `${target.name}'s account has been restored to active users.`, 'success');
+    }
   };
 
   const permanentlyDeleteUser = (id: string) => {
-    showToast('Not Supported', 'Hard delete requires backend recycle bin support.', 'info');
+    const target = deletedUsers.find((u) => u.id === id || (u as unknown as { _id: string })._id === id);
+    setDeletedUsers((prev) => prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id));
+    showToast('Permanently Deleted', `${target?.name || 'User'} account permanently purged.`, 'warning');
   };
 
   const restoreCourse = (id: string) => {
-    showToast('Not Supported', 'Restoring courses requires backend recycle bin support.', 'info');
+    const target = deletedCourses.find((c) => c.id === id || c._id === id);
+    if (target) {
+      const { deletedAt, ...cleanedCourse } = target;
+      setDeletedCourses((prev) => prev.filter((c) => c.id !== id && c._id !== id));
+      setCourses((prev) => [cleanedCourse as Course, ...prev]);
+      showToast('Course Restored', `${target.title} restored to active course catalog.`, 'success');
+    }
   };
 
   const restoreAnnouncement = (id: string) => {
-    showToast('Not Supported', 'Restoring announcements requires backend recycle bin support.', 'info');
+    const target = deletedAnnouncements.find((a) => a.id === id || a._id === id);
+    if (target) {
+      const { deletedAt, ...cleanedAnn } = target;
+      setDeletedAnnouncements((prev) => prev.filter((a) => a.id !== id && a._id !== id));
+      setAnnouncements((prev) => [cleanedAnn as Announcement, ...prev]);
+      showToast('Notice Restored', `"${target.title}" restored to the notice board.`, 'success');
+    }
   };
 
   const restoreResult = (id: string) => {
-    showToast('Not Supported', 'Restoring results requires backend recycle bin support.', 'info');
+    const target = deletedResults.find((r) => r.id === id || r._id === id);
+    if (target) {
+      const { deletedAt, ...cleanedResult } = target;
+      setDeletedResults((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+      setStudentResults((prev) => [cleanedResult as StudentResultReport, ...prev]);
+      showToast('Result Restored', `Academic grade report for ${target.studentName} restored.`, 'success');
+    };
   };
 
   // ─── Change Requests ───────────────────────────────
@@ -579,14 +728,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteStudentResult = async (id: string) => {
+    const target = studentResults.find((r) => r.id === id || r._id === id);
+    if (target) {
+      setDeletedResults((prev) => [
+        { ...target, deletedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+        ...prev,
+      ]);
+    }
+
     try {
       await ResultAPI.delete(id);
-      setStudentResults((prev) => prev.filter((r) => r.id !== id && r._id !== id));
-      showToast('Result Removed', 'Published grade report deleted.', 'info');
     } catch (err) {
-      showToast('Error', 'Failed to delete result.', 'error');
-      console.error(err);
+      console.warn('Backend result delete error / offline.', err);
     }
+
+    setStudentResults((prev) => prev.filter((r) => r.id !== id && r._id !== id));
+    showToast('Moved to Recycle Bin', 'Published grade report moved to Institutional Recycle Center.', 'info');
   };
 
   // ─── Timetable ──────────────────────────────────────
