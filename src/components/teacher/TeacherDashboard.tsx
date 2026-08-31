@@ -34,7 +34,7 @@ import { useApp } from '../../context/AppContext';
 import { PostAnnouncementModal } from './PostAnnouncementModal';
 // Removed StorageService and DEFAULT_TIMETABLE
 import { User } from '../../types';
-import { formatTeacherName } from '../../utils/teacherUtils';
+import { formatTeacherName, calculateTermWorkingDays } from '../../utils/teacherUtils';
 
 interface TeacherDashboardProps {
   currentTab: string;
@@ -103,21 +103,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
   // Filter students
   const students = allUsers.filter((u) => u.role === 'student');
 
-  // Term working days calculation based on Admin Academic Dates
-  const termWorkingDays = (() => {
-    if (!academicTermPeriod?.startDate || !academicTermPeriod?.endDate) return 30;
-    const start = new Date(academicTermPeriod.startDate);
-    const end = new Date(academicTermPeriod.endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 30;
-    let count = 0;
-    const cur = new Date(start);
-    while (cur <= end) {
-      const day = cur.getDay();
-      if (day !== 0) count++;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return count > 0 ? count : 30;
-  })();
+  // Term working days calculation based on Admin Academic Dates (Exact match with Admin & Student Dashboards)
+  const termWorkingDays = calculateTermWorkingDays(academicTermPeriod?.startDate, academicTermPeriod?.endDate);
 
   // Helper to compute student live attendance rate
   const getStudentAttStats = (st: User) => {

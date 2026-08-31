@@ -43,7 +43,7 @@ import { useApp } from '../../context/AppContext';
 // Removed StorageService
 import { User, TimetableSlot, ChangeRequest, StudentResultReport, GradeItem } from '../../types';
 import { StudentDashboard } from '../student/StudentDashboard';
-import { formatTeacherName, generateTeacherEmailAndName } from '../../utils/teacherUtils';
+import { formatTeacherName, generateTeacherEmailAndName, calculateTermWorkingDays } from '../../utils/teacherUtils';
 import { TeacherDashboard } from '../teacher/TeacherDashboard';
 import { PostAnnouncementModal } from '../teacher/PostAnnouncementModal';
 import { parsePdfText, extractStudentFromText, extractTeacherFromText, calculateSgpa, calculateCgpa, downloadTemplatePdf, downloadOverallResultsPdfTemplate, downloadHallTicketsPdfTemplate } from '../../utils/pdfParser';
@@ -764,20 +764,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                     <div className="p-4 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Calculated Term Working Days</span>
                       <span className="text-sm font-black text-emerald-950 mt-1 block font-mono">
-                        {(() => {
-                          if (!academicTermPeriod?.startDate || !academicTermPeriod?.endDate) return '30 Days';
-                          const start = new Date(academicTermPeriod.startDate);
-                          const end = new Date(academicTermPeriod.endDate);
-                          if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return '30 Days';
-                          let count = 0;
-                          const cur = new Date(start);
-                          while (cur <= end) {
-                            const day = cur.getDay();
-                            if (day !== 0) count++; // Exclude only Sundays (0 = Sunday)
-                            cur.setDate(cur.getDate() + 1);
-                          }
-                          return `${count} Working Days`;
-                        })()}
+                        {calculateTermWorkingDays(academicTermPeriod?.startDate, academicTermPeriod?.endDate)} Working Days
                       </span>
                     </div>
                   </div>

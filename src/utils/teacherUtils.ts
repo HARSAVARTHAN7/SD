@@ -95,3 +95,31 @@ export function formatCgpaDisplay(cgpa?: number | null): string {
   }
   return cgpa.toFixed(2);
 }
+
+/**
+ * Calculate total working days in an academic term period (excluding Sundays).
+ * Uses local YYYY-MM-DD date parsing to prevent UTC timezone offset shifts across dashboards.
+ */
+export function calculateTermWorkingDays(startDateStr?: string, endDateStr?: string): number {
+  if (!startDateStr || !endDateStr) return 30;
+
+  const startParts = startDateStr.split('-').map(Number);
+  const endParts = endDateStr.split('-').map(Number);
+
+  if (startParts.length !== 3 || endParts.length !== 3) return 30;
+
+  const start = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+  const end = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 30;
+
+  let count = 0;
+  const cur = new Date(start);
+  while (cur <= end) {
+    const day = cur.getDay();
+    if (day !== 0) count++; // Exclude ONLY Sundays (0 = Sunday)
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  return count > 0 ? count : 30;
+}
