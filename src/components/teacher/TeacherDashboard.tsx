@@ -325,22 +325,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Daily Attendance Roll Call</h2>
-              <p className="text-xs text-slate-500 mt-1">Take attendance by class section with quick batch actions.</p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleMarkAll('present')}
-                className="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Check className="w-3.5 h-3.5" /> Mark All Present
-              </button>
-              <button
-                onClick={handleSaveAttendance}
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-600/25 transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" /> Save Register
-              </button>
+              <p className="text-xs text-slate-500 mt-1">Manage per-student attendance with interactive calendar status popup tabs.</p>
             </div>
           </div>
 
@@ -1345,8 +1330,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
             <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-500 font-medium">
               <span>Attendance changes are saved live and reflected on the student dashboard.</span>
               <button
-                onClick={() => setAttCalendarStudent(null)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition-all cursor-pointer"
+                onClick={() => {
+                  if (attCalendarStudent) {
+                    showToast('Attendance Synced!', `Attendance changes for ${attCalendarStudent.name} have been saved and reflected on student dashboard.`, 'success');
+                  }
+                  setAttCalendarStudent(null);
+                }}
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-extrabold rounded-xl shadow-md shadow-purple-600/20 transition-all cursor-pointer"
               >
                 Done
               </button>
