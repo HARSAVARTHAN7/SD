@@ -93,9 +93,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
   const absentCount = myAttendanceRecords.filter((a) => a.status === 'absent').length;
   const totalAttRecorded = myAttendanceRecords.length;
 
-  const displayTotalDays = totalAttRecorded > 0 ? totalAttRecorded : termWorkingDays;
+  const displayTotalDays = Math.max(totalAttRecorded, termWorkingDays);
   const displayAbsentDays = absentCount;
-  const displayPresentDays = totalAttRecorded > 0 ? (presentCount + excusedCount + lateCount) : Math.max(0, displayTotalDays - displayAbsentDays);
+  const displayPresentDays = Math.max(0, displayTotalDays - displayAbsentDays);
 
   const calculatedAttendanceRate =
     displayTotalDays > 0 ? Math.round((displayPresentDays / displayTotalDays) * 100) : (user?.attendanceRate ?? 100.0);

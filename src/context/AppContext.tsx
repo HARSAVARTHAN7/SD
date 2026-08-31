@@ -404,9 +404,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         NotificationAPI.getAll({ roleTarget: role || undefined }).then(({ data }) => setNotifications(data.data)),
       );
 
-      // Attendance
+      // Attendance (Merge server records with local state & localStorage)
       promises.push(
-        AttendanceAPI.getAll({ limit: 200 }).then(({ data }) => setAttendance(data.data)),
+        AttendanceAPI.getAll({ limit: 200 })
+          .then(({ data }) => {
+            if (data && data.data && data.data.length > 0) {
+              setAttendance((prev) => {
+                const map = new Map<string, AttendanceRecord>();
+                data.data.forEach((item) => map.set(`${item.date}_${item.studentId}`, item));
+                prev.forEach((item) => map.set(`${item.date}_${item.studentId}`, item));
+                const merged = Array.from(map.values());
+                try {
+                  localStorage.setItem('eduportal_attendance_records', JSON.stringify(merged));
+                } catch (e) {}
+                return merged;
+              });
+            }
+          })
+          .catch(() => {
+            console.warn('AttendanceAPI.getAll offline / keeping local attendance records');
+          }),
       );
 
       // Academic Term Period
