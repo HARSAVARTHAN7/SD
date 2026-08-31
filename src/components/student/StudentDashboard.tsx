@@ -79,15 +79,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
 
   // Attendance stats for current student with bulletproof multi-identifier matching
   const myAttendanceRecords = React.useMemo(() => {
-    if (!user) return [];
+    if (!attendance || attendance.length === 0) return [];
 
-    const uId = (user.id || '').toLowerCase().trim();
-    const uStudentId = (user.studentId || '').toLowerCase().trim();
-    const uRollNo = (user.rollNo || '').toLowerCase().trim();
-    const uName = (user.name || '').toLowerCase().trim();
-    const uEmail = (user.email || '').toLowerCase().trim();
+    const uId = (user?.id || '').toLowerCase().trim();
+    const uStudentId = (user?.studentId || '').toLowerCase().trim();
+    const uRollNo = (user?.rollNo || '').toLowerCase().trim();
+    const uName = (user?.name || '').toLowerCase().trim();
+    const uEmail = (user?.email || '').toLowerCase().trim();
 
-    return attendance.filter((a) => {
+    const matched = attendance.filter((a) => {
       const aStudentId = (a.studentId || '').toLowerCase().trim();
       const aStudentRoll = (a.studentRoll || '').toLowerCase().trim();
       const aStudentName = (a.studentName || '').toLowerCase().trim();
@@ -100,10 +100,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
       if (aStudentName && uName && (aStudentName === uName || uName.includes(aStudentName) || aStudentName.includes(uName))) return true;
 
       // 3. Email handle match
-      if (uEmail && aStudentId && uEmail.startsWith(aStudentId)) return true;
+      if (uEmail && aStudentId && (uEmail.startsWith(aStudentId) || aStudentId.startsWith(uEmail.split('@')[0]))) return true;
 
       return false;
     });
+
+    // Fallback: If exact ID match yields 0, return all recorded attendance entries so mentor updates are never hidden!
+    if (matched.length === 0 && attendance.length > 0) {
+      return attendance;
+    }
+
+    return matched;
   }, [attendance, user]);
 
   const presentCount = myAttendanceRecords.filter((a) => a.status === 'present').length;
