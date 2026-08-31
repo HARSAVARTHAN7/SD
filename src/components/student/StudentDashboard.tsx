@@ -75,15 +75,22 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
   })();
 
   // Attendance stats filtered within Academic Term Date Range
+  const todayStr = new Date().toISOString().split('T')[0];
+  const termStart = academicTermPeriod?.startDate || '2026-01-01';
+  const termEnd = academicTermPeriod?.endDate
+    ? (academicTermPeriod.endDate < todayStr ? todayStr : academicTermPeriod.endDate)
+    : '2099-12-31';
+
   const myAttendanceRecords = attendance.filter((a) => {
     const isUserMatch =
       (a.studentId && user?.id && a.studentId === user.id) ||
       (a.studentId && (user?.studentId || user?.rollNo) && (a.studentId === user.studentId || a.studentId === user.rollNo)) ||
       (a.studentRoll && (user?.rollNo || user?.studentId) && (a.studentRoll.trim() === (user.rollNo || '').trim() || a.studentRoll.trim() === (user.studentId || '').trim())) ||
       (a.studentName && user?.name && a.studentName.toLowerCase().trim() === user.name.toLowerCase().trim());
+
     if (!isUserMatch) return false;
-    if (academicTermPeriod?.startDate && a.date && a.date < academicTermPeriod.startDate) return false;
-    if (academicTermPeriod?.endDate && a.date && a.date > academicTermPeriod.endDate) return false;
+    if (a.date && a.date < termStart) return false;
+    if (a.date && a.date > termEnd) return false;
     return true;
   });
 

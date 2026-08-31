@@ -1375,7 +1375,12 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
               const studentMonthRecords = attendance.filter((a) => {
-                if (a.studentId !== attCalendarStudent.id) return false;
+                const isUserMatch =
+                  (a.studentId && attCalendarStudent.id && a.studentId === attCalendarStudent.id) ||
+                  (a.studentId && (attCalendarStudent.studentId || attCalendarStudent.rollNo) && (a.studentId === attCalendarStudent.studentId || a.studentId === attCalendarStudent.rollNo)) ||
+                  (a.studentRoll && (attCalendarStudent.rollNo || attCalendarStudent.studentId) && (a.studentRoll.trim() === (attCalendarStudent.rollNo || '').trim() || a.studentRoll.trim() === (attCalendarStudent.studentId || '').trim())) ||
+                  (a.studentName && attCalendarStudent.name && a.studentName.toLowerCase().trim() === attCalendarStudent.name.toLowerCase().trim());
+                if (!isUserMatch) return false;
                 const parts = a.date.split('-');
                 if (parts.length === 3) {
                   return parseInt(parts[0]) === year && parseInt(parts[1]) === month + 1;
