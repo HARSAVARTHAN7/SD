@@ -30,6 +30,7 @@ export interface User {
   busStop?: string;
   hostelName?: string;
   roomNumber?: string;
+  cgpa?: number;
   gpa?: number;
   attendanceRate?: number;
   guardianName?: string;

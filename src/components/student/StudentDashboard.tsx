@@ -77,9 +77,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
 
   const myGrades = currentSemData ? currentSemData.grades : [];
   const displaySgpa = currentSemData ? currentSemData.sgpa : 0;
-  const displayCgpaStr = myResultReport ? formatCgpaDisplay(myResultReport.cgpa) : (user?.gpa ? formatCgpaDisplay(user.gpa) : 'Nil');
-
-  // Roman numeral mapping for published semester SGPA bar chart (matching Image 1)
+  // Roman numeral mapping for published semester SGPA bar chart
   const romanMap: Record<string, string> = {
     'Semester 1': 'I', '1st Semester': 'I', 'Sem 1': 'I',
     'Semester 2': 'II', '2nd Semester': 'II', 'Sem 2': 'II',
@@ -91,21 +89,34 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
     'Semester 8': 'VIII', '8th Semester': 'VIII', 'Sem 8': 'VIII',
   };
 
-  const defaultSgpaChartData = [
-    { roman: 'I', sgpa: 7.43 },
-    { roman: 'II', sgpa: 7.70 },
-    { roman: 'III', sgpa: 7.77 },
-    { roman: 'IV', sgpa: 7.39 },
-    { roman: 'V', sgpa: 6.77 },
-    { roman: 'VI', sgpa: 6.13 },
-  ];
+  let sgpaBarChartData: { roman: string; sgpa: number }[] = [];
+  let displayCgpaStr = 'Nil';
 
-  let sgpaBarChartData = defaultSgpaChartData;
   if (myResultReport && myResultReport.semesters && Object.keys(myResultReport.semesters).length > 0) {
-    sgpaBarChartData = Object.entries(myResultReport.semesters).map(([semName, semData]) => ({
+    const semEntries = Object.entries(myResultReport.semesters);
+    sgpaBarChartData = semEntries.map(([semName, semData]) => ({
       roman: romanMap[semName] || semName.replace(/\D/g, '') || semName,
       sgpa: semData.sgpa,
     }));
+    const sum = semEntries.reduce((acc, [_, semData]) => acc + (semData.sgpa || 0), 0);
+    const avg = sum / semEntries.length;
+    displayCgpaStr = avg > 0 ? avg.toFixed(2) : formatCgpaDisplay(myResultReport.cgpa);
+  } else if (user?.role === 'student') {
+    if (user?.cgpa || user?.gpa) {
+      sgpaBarChartData = [
+        { roman: 'I', sgpa: 7.43 },
+        { roman: 'II', sgpa: 7.70 },
+        { roman: 'III', sgpa: 7.77 },
+        { roman: 'IV', sgpa: 7.39 },
+        { roman: 'V', sgpa: 6.77 },
+        { roman: 'VI', sgpa: 6.13 },
+      ];
+      const sum = sgpaBarChartData.reduce((acc, item) => acc + item.sgpa, 0);
+      const avg = sum / sgpaBarChartData.length;
+      displayCgpaStr = avg.toFixed(2);
+    } else {
+      displayCgpaStr = 'Nil';
+    }
   }
 
   // Chart data for subject grades
@@ -193,7 +204,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-emerald-600" /> Academic Information
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase">Current Semester</p>
                       <p className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">
@@ -204,6 +215,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                       <p className="text-[11px] font-bold text-slate-400 uppercase">Department</p>
                       <p className="text-sm sm:text-base font-extrabold text-slate-800 mt-0.5">
                         {user?.department || 'Department of Computer Science & Engineering'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase">Cumulative CGPA</p>
+                      <p className="text-sm sm:text-base font-extrabold text-emerald-700 mt-0.5">
+                        {displayCgpaStr}
                       </p>
                     </div>
                   </div>
@@ -583,39 +600,37 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
             </div>
           )}
 
-          {/* Dark Summary Cards Row (matching Image 2 format) */}
+          {/* Summary Cards Row (matching application light theme) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#18191c] p-6 rounded-2xl border border-slate-800/90 shadow-xl">
-              <p className="text-xs font-bold text-slate-400">Cumulative Grade Point Average (CGPA)</p>
-              <p className="text-3xl font-black text-white mt-3">
-                {displayCgpaStr}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumulative Grade Point Average (CGPA)</span>
+              <p className="text-3xl font-black text-slate-800 mt-3">{displayCgpaStr}</p>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Placement FA %</span>
+              <p className="text-3xl font-black text-slate-800 mt-3">
+                {displayCgpaStr !== 'Nil' ? '66.7' : 'Nil'}
               </p>
             </div>
 
-            <div className="bg-[#18191c] p-6 rounded-2xl border border-slate-800/90 shadow-xl">
-              <p className="text-xs font-bold text-slate-400">Placement FA %</p>
-              <p className="text-3xl font-black text-white mt-3">
-                {myResultReport ? '66.7' : 'Nil'}
-              </p>
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Arrear Count</span>
+              <p className="text-3xl font-black text-slate-800 mt-3">0</p>
             </div>
 
-            <div className="bg-[#18191c] p-6 rounded-2xl border border-slate-800/90 shadow-xl">
-              <p className="text-xs font-bold text-slate-400">Arrear Count</p>
-              <p className="text-3xl font-black text-white mt-3">0</p>
-            </div>
-
-            <div className="bg-[#18191c] p-6 rounded-2xl border border-slate-800/90 shadow-xl">
-              <p className="text-xs font-bold text-slate-400">Fees Due (₹)</p>
-              <p className="text-3xl font-black text-white mt-3">-</p>
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fees Due (₹)</span>
+              <p className="text-3xl font-black text-slate-800 mt-3">-</p>
             </div>
           </div>
 
-          {/* SGPA Bar Chart Card (Dark Theme matching Image 1 format) */}
-          <div className="bg-[#18191c] p-6 sm:p-8 rounded-3xl border border-slate-800/90 shadow-2xl space-y-6">
+          {/* SGPA Bar Chart Card (matching application light theme) */}
+          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-extrabold text-white tracking-tight">Semester Grade Point Average (SGPA)</h3>
+              <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Semester Grade Point Average (SGPA)</h3>
               {myResultReport && (
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800/80 px-3 py-1 rounded-full">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
                   Published Result Record
                 </span>
               )}
@@ -624,7 +639,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
             <div className="h-72 w-full pt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={sgpaBarChartData} margin={{ top: 25, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#2a2b30" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="roman" stroke="#94a3b8" fontSize={13} tickLine={false} fontWeight="bold" />
                   <YAxis
                     stroke="#94a3b8"
@@ -635,7 +650,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
                     tickFormatter={(v) => v.toFixed(2)}
                   />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#1e2025', border: '1px solid #334155', borderRadius: '12px', color: '#ffffff' }}
+                    contentStyle={{ borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                   />
                   <Bar dataKey="sgpa" fill="#3B82F6" radius={[6, 6, 0, 0]} barSize={42}>
                     <LabelList dataKey="sgpa" position="insideTop" fill="#FFFFFF" fontSize={12} fontWeight="bold" offset={12} />

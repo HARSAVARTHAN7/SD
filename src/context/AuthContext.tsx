@@ -149,7 +149,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           studentId: 'STU-2023-123',
           rollNo: '2023-123',
           semester: 'Semester 5',
-          gpa: 3.88,
+          cgpa: 7.20,
+          gpa: 7.20,
           attendanceRate: 100.0,
         };
         clearToken();
@@ -193,7 +194,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           studentId: 'STU-2024-001',
           rollNo: '2024-001',
           semester: '5th Semester',
-          gpa: 3.90,
+          cgpa: 7.20,
+          gpa: 7.20,
           attendanceRate: 100.0,
         };
         clearToken();

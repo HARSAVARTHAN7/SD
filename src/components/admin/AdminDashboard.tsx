@@ -2048,7 +2048,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                         <th className="py-3 px-4">Department</th>
                         <th className="py-3 px-4">Semester</th>
                         <th className="py-3 px-4">Mentor</th>
-                        <th className="py-3 px-4">GPA</th>
+                        <th className="py-3 px-4">CGPA</th>
                         <th className="py-3 px-6 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -2074,8 +2074,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                             <span className="text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-lg">{st.mentorName || 'Unassigned'}</span>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className={`font-bold ${(st.gpa || 0) >= 3.7 ? 'text-emerald-600' : (st.gpa || 0) >= 3.0 ? 'text-amber-600' : 'text-rose-600'}`}>
-                              {st.gpa?.toFixed(2) || '—'}
+                            <span className="font-bold text-emerald-600">
+                              {st.cgpa ? st.cgpa.toFixed(2) : (st.gpa ? st.gpa.toFixed(2) : 'Nil')}
                             </span>
                           </td>
                           <td className="py-3.5 px-6 text-right">
@@ -2416,7 +2416,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                         { label: 'Student ID', value: inspectUser.studentId },
                         { label: 'Semester', value: inspectUser.semester },
                         { label: 'Academic Year', value: inspectUser.academicYear },
-                        { label: 'GPA', value: inspectUser.gpa?.toFixed(2) },
+                        { label: 'CGPA', value: inspectUser.cgpa?.toFixed(2) || inspectUser.gpa?.toFixed(2) },
                         { label: 'Attendance', value: inspectUser.attendanceRate ? `${inspectUser.attendanceRate}%` : undefined },
                         { label: 'Blood Group', value: inspectUser.bloodGroup },
                         { label: 'Guardian', value: inspectUser.guardianName },
@@ -2576,9 +2576,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                           placeholder="e.g. 2024 - 2028" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-900" />
                       </div>
                       <div>
-                        <label className="block font-bold text-slate-700 mb-1">GPA</label>
-                        <input type="number" step="0.01" min="0" max="4" value={editingUser.gpa ?? ''} onChange={(e) => setEditingUser({ ...editingUser, gpa: parseFloat(e.target.value) || undefined })}
-                          placeholder="e.g. 3.85" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-900" />
+                        <label className="block font-bold text-slate-700 mb-1">CGPA</label>
+                        <input type="number" step="0.01" min="0" max="10" value={editingUser.cgpa ?? editingUser.gpa ?? ''} onChange={(e) => setEditingUser({ ...editingUser, cgpa: parseFloat(e.target.value) || undefined, gpa: parseFloat(e.target.value) || undefined })}
+                          placeholder="e.g. 7.20" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-900" />
                       </div>
                       <div>
                         <label className="block font-bold text-slate-700 mb-1">Attendance Rate (%)</label>
