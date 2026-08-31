@@ -2095,7 +2095,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                           <td className="py-3.5 px-4 text-slate-600">{st.department || '—'}</td>
                           <td className="py-3.5 px-4 text-slate-600">{st.semester || '—'}</td>
                           <td className="py-3.5 px-4">
-                            <span className="text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-lg">{st.mentorName || 'Unassigned'}</span>
+                            <span className="text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-lg">
+                              {st.mentorName ? formatTeacherName(st.mentorName) : 'Unassigned'}
+                            </span>
                           </td>
                           <td className="py-3.5 px-4">
                             <span className="font-bold text-emerald-600">
@@ -2466,7 +2468,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                         { label: 'Student ID', value: inspectUser.studentId },
                         { label: 'Semester', value: inspectUser.semester },
                         { label: 'Academic Year', value: inspectUser.academicYear },
-                        { label: 'CGPA', value: inspectUser.cgpa?.toFixed(2) || inspectUser.gpa?.toFixed(2) },
+                        {
+                          label: 'CGPA',
+                          value: (() => {
+                            const report = studentResults.find(
+                              (r) =>
+                                r.studentId === inspectUser.id ||
+                                (r.rollNo && inspectUser.rollNo && r.rollNo.trim() === inspectUser.rollNo.trim()) ||
+                                (r.studentName && inspectUser.name && r.studentName.toLowerCase().trim() === inspectUser.name.toLowerCase().trim())
+                            );
+                            if (report && report.semesters && Object.keys(report.semesters).length > 0) {
+                              const sems = Object.values(report.semesters);
+                              const sum = sems.reduce((acc, sem) => acc + (sem.sgpa || 0), 0);
+                              const avg = sum / sems.length;
+                              return avg > 0 ? avg.toFixed(2) : 'Nil';
+                            }
+                            return 'Nil';
+                          })(),
+                        },
                         { label: 'Attendance', value: inspectUser.attendanceRate ? `${inspectUser.attendanceRate}%` : undefined },
                         { label: 'Blood Group', value: inspectUser.bloodGroup },
                         { label: 'Guardian', value: inspectUser.guardianName },
@@ -2483,7 +2502,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                     <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Mentor & Residence</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {[
-                        { label: 'Mentor', value: inspectUser.mentorName },
+                        { label: 'Mentor', value: inspectUser.mentorName ? formatTeacherName(inspectUser.mentorName) : undefined },
                         { label: 'Mentor Phone', value: inspectUser.mentorPhone },
                         { label: 'Residence Type', value: inspectUser.residenceType },
                         { label: inspectUser.residenceType === 'Hosteler' ? 'Hostel' : 'Bus Route', value: inspectUser.residenceType === 'Hosteler' ? inspectUser.hostelName : inspectUser.busRoute },

@@ -33,6 +33,7 @@ import { useApp } from '../../context/AppContext';
 import { PostAnnouncementModal } from './PostAnnouncementModal';
 // Removed StorageService and DEFAULT_TIMETABLE
 import { User } from '../../types';
+import { formatTeacherName } from '../../utils/teacherUtils';
 
 interface TeacherDashboardProps {
   currentTab: string;
@@ -1098,7 +1099,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
                   <span className="font-bold text-slate-400 uppercase text-[10px] tracking-wider block">Guardian & Mentor</span>
                   <p className="font-bold text-slate-800">Guardian: <span className="font-normal text-slate-600">{inspectStudentModal.guardianName || 'Robert Gürsoy'}</span></p>
                   <p className="font-bold text-slate-800">Guardian Contact: <span className="font-normal text-slate-600">{inspectStudentModal.guardianContact || '+1 (555) 987-6543'}</span></p>
-                  <p className="font-bold text-slate-800">Faculty Mentor: <span className="font-bold text-purple-700">{inspectStudentModal.mentorName || user?.name || 'Dr. Sarah Jenkins'}</span></p>
+                  <p className="font-bold text-slate-800">Faculty Mentor: <span className="font-bold text-purple-700">{formatTeacherName(inspectStudentModal.mentorName || user?.name || 'Dr. Sarah Jenkins')}</span></p>
                 </div>
               </div>
 
@@ -1121,19 +1122,40 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               {/* Academic Performance & Hall Ticket */}
               {(() => {
                 const resReport = studentResults.find(
-                  (r) => r.studentId === inspectStudentModal.id || r.rollNo === inspectStudentModal.rollNo || r.studentName.toLowerCase() === inspectStudentModal.name.toLowerCase()
+                  (r) =>
+                    r.studentId === inspectStudentModal.id ||
+                    (r.rollNo && inspectStudentModal.rollNo && r.rollNo.trim() === inspectStudentModal.rollNo.trim()) ||
+                    (r.studentName && inspectStudentModal.name && r.studentName.toLowerCase().trim() === inspectStudentModal.name.toLowerCase().trim())
                 );
+
+                const studentCgpaStr = (() => {
+                  if (resReport && resReport.semesters && Object.keys(resReport.semesters).length > 0) {
+                    const sems = Object.values(resReport.semesters);
+                    const sum = sems.reduce((acc, sem) => acc + (sem.sgpa || 0), 0);
+                    const avg = sum / sems.length;
+                    return avg > 0 ? avg.toFixed(2) : 'Nil';
+                  }
+                  return 'Nil';
+                })();
+
+                const isHallTicketIssued = Boolean(
+                  resReport && (resReport.hallTicket || Object.keys(resReport.semesters || {}).length > 0)
+                );
+                const hallTicketStatusStr = isHallTicketIssued ? 'Issued' : 'Pending / Not Published Yet';
+
                 return (
                   <div className="p-4 bg-purple-50 border border-purple-200 rounded-2xl space-y-3">
                     <span className="font-bold text-purple-800 uppercase text-[10px] tracking-wider block">Academic Performance & Examination</span>
                     <div className="grid grid-cols-2 gap-3 text-slate-800 font-semibold">
                       <div className="p-2.5 bg-white rounded-xl border border-purple-100">
                         <span className="text-[10px] text-slate-400 block uppercase font-bold">Cumulative CGPA</span>
-                        <span className="text-xl font-black text-purple-900">{resReport ? resReport.cgpa?.toFixed(2) : (inspectStudentModal.gpa || 3.85)}</span>
+                        <span className="text-xl font-black text-purple-900">{studentCgpaStr}</span>
                       </div>
                       <div className="p-2.5 bg-white rounded-xl border border-purple-100">
                         <span className="text-[10px] text-slate-400 block uppercase font-bold">Hall Ticket Status</span>
-                        <span className="text-xs font-bold text-emerald-700">{resReport?.hallTicket ? resReport.hallTicket.hallTicketNo : 'Issued'}</span>
+                        <span className={`text-xs font-bold ${isHallTicketIssued ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {hallTicketStatusStr}
+                        </span>
                       </div>
                     </div>
                   </div>
