@@ -43,7 +43,7 @@ interface StudentDashboardProps {
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, inspectUser }) => {
   const { user: authUser } = useAuth();
   const user = inspectUser || authUser;
-  const { courses, announcements, attendance, studentResults, timetable, showToast } = useApp();
+  const { courses, announcements, attendance, studentResults, timetable, showToast, academicTermPeriod } = useApp();
 
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
@@ -56,22 +56,45 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
   const [selectedDownloadSem, setSelectedDownloadSem] = useState<string>('Semester 5');
   const [semDownloadError, setSemDownloadError] = useState<string | null>(null);
 
-  // Attendance stats
-  const myAttendanceRecords = attendance.filter(
-    (a) =>
+  // Term working days calculation based on Admin Academic Dates
+  const termWorkingDays = (() => {
+    if (!academicTermPeriod?.startDate || !academicTermPeriod?.endDate) return 30;
+    const start = new Date(academicTermPeriod.startDate);
+    const end = new Date(academicTermPeriod.endDate);
+    const today = new Date();
+    const targetEnd = end < today ? end : today;
+    if (start > targetEnd) return 30;
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= targetEnd) {
+      const day = cur.getDay();
+      if (day !== 0 && day !== 6) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count > 0 ? count : 30;
+  })();
+
+  // Attendance stats filtered within Academic Term Date Range
+  const myAttendanceRecords = attendance.filter((a) => {
+    const isUserMatch =
       a.studentId === user?.id ||
       (a.studentRoll && user?.rollNo && a.studentRoll.trim() === user?.rollNo.trim()) ||
-      (a.studentName && user?.name && a.studentName.toLowerCase().trim() === user?.name.toLowerCase().trim())
-  );
+      (a.studentName && user?.name && a.studentName.toLowerCase().trim() === user?.name.toLowerCase().trim());
+    if (!isUserMatch) return false;
+    if (academicTermPeriod?.startDate && a.date && a.date < academicTermPeriod.startDate) return false;
+    if (academicTermPeriod?.endDate && a.date && a.date > academicTermPeriod.endDate) return false;
+    return true;
+  });
+
   const presentCount = myAttendanceRecords.filter((a) => a.status === 'present').length;
   const excusedCount = myAttendanceRecords.filter((a) => a.status === 'excused').length;
   const lateCount = myAttendanceRecords.filter((a) => a.status === 'late').length;
   const absentCount = myAttendanceRecords.filter((a) => a.status === 'absent').length;
   const totalAttRecorded = myAttendanceRecords.length;
 
-  const displayTotalDays = totalAttRecorded > 0 ? totalAttRecorded : 30;
-  const displayPresentDays = totalAttRecorded > 0 ? (presentCount + excusedCount + lateCount) : 30;
-  const displayAbsentDays = totalAttRecorded > 0 ? absentCount : 0;
+  const displayTotalDays = totalAttRecorded > 0 ? totalAttRecorded : termWorkingDays;
+  const displayAbsentDays = absentCount;
+  const displayPresentDays = totalAttRecorded > 0 ? (presentCount + excusedCount + lateCount) : Math.max(0, displayTotalDays - displayAbsentDays);
 
   const calculatedAttendanceRate =
     displayTotalDays > 0 ? Math.round((displayPresentDays / displayTotalDays) * 100) : (user?.attendanceRate ?? 100.0);

@@ -136,7 +136,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     deleteTimetableSlot,
     assignMentor,
     addNotification,
+    academicTermPeriod,
+    updateAcademicTermPeriod,
   } = useApp();
+
+  const [adminAttStartDate, setAdminAttStartDate] = useState<string>(academicTermPeriod?.startDate || '2026-06-01');
+  const [adminAttEndDate, setAdminAttEndDate] = useState<string>(academicTermPeriod?.endDate || '2026-11-30');
 
   const [annModalOpen, setAnnModalOpen] = useState(false);
   const [activeSubView, setActiveSubView] = useState<'admin' | 'student-preview' | 'teacher-preview'>('admin');
@@ -671,6 +676,113 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                       <p className={`text-[11px] text-${color}-600 font-semibold mt-1`}>{sub}</p>
                     </div>
                   ))}
+                </div>
+
+                {/* Academic Term Attendance Period Control Card */}
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-md space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200 text-purple-700 flex items-center justify-center font-extrabold shadow-sm">
+                        <Calendar className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md bg-purple-100 text-purple-800 border border-purple-200">
+                          Admin Attendance Control
+                        </span>
+                        <h3 className="text-xl font-extrabold text-slate-900 mt-1">Academic Term Attendance Period & Dates</h3>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Active Term Period
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Set the official <strong>Academic Start Date</strong> and <strong>Academic End Date</strong> for attendance tracking.
+                    All student dashboards and teacher registers will dynamically calculate <strong>Total Days</strong>, <strong>Total Present Days</strong>, <strong>Absent Cards</strong>, and <strong>Attendance Rate %</strong> strictly based on this date window.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 bg-slate-50 p-5 rounded-2xl border border-slate-200/80">
+                    <div>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
+                        Academic Start Date:
+                      </label>
+                      <input
+                        type="date"
+                        value={adminAttStartDate}
+                        onChange={(e) => setAdminAttStartDate(e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
+                        Academic End Date:
+                      </label>
+                      <input
+                        type="date"
+                        value={adminAttEndDate}
+                        onChange={(e) => setAdminAttEndDate(e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                      />
+                    </div>
+
+                    <div className="flex flex-col justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!adminAttStartDate || !adminAttEndDate) {
+                            showToast('Error', 'Please select both start and end dates.', 'error');
+                            return;
+                          }
+                          updateAcademicTermPeriod({
+                            startDate: adminAttStartDate,
+                            endDate: adminAttEndDate,
+                          });
+                        }}
+                        className="w-full px-5 py-3 bg-purple-700 hover:bg-purple-800 text-white rounded-2xl text-xs font-extrabold shadow-md shadow-purple-700/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> Save Academic Period
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                    <div className="p-4 bg-purple-50/70 border border-purple-100 rounded-2xl">
+                      <span className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider block">Current Start Date</span>
+                      <span className="text-sm font-black text-slate-900 mt-1 block">{academicTermPeriod?.startDate || '2026-06-01'}</span>
+                    </div>
+
+                    <div className="p-4 bg-purple-50/70 border border-purple-100 rounded-2xl">
+                      <span className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider block">Current End Date</span>
+                      <span className="text-sm font-black text-slate-900 mt-1 block">{academicTermPeriod?.endDate || '2026-11-30'}</span>
+                    </div>
+
+                    <div className="p-4 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Calculated Term Working Days</span>
+                      <span className="text-sm font-black text-emerald-950 mt-1 block font-mono">
+                        {(() => {
+                          if (!academicTermPeriod?.startDate || !academicTermPeriod?.endDate) return '30 Days';
+                          const start = new Date(academicTermPeriod.startDate);
+                          const end = new Date(academicTermPeriod.endDate);
+                          const today = new Date();
+                          const targetEnd = end < today ? end : today;
+                          if (start > targetEnd) return '30 Days';
+                          let count = 0;
+                          const cur = new Date(start);
+                          while (cur <= targetEnd) {
+                            const day = cur.getDay();
+                            if (day !== 0 && day !== 6) count++;
+                            cur.setDate(cur.getDate() + 1);
+                          }
+                          return `${count} Working Days`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Blocked Students Alert Banner */}

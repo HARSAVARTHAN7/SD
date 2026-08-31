@@ -29,6 +29,11 @@ export interface Toast {
   message: string;
 }
 
+export interface AcademicTermPeriod {
+  startDate: string;
+  endDate: string;
+}
+
 interface AppContextType {
   courses: Course[];
   attendance: AttendanceRecord[];
@@ -40,6 +45,8 @@ interface AppContextType {
   timetable: TimetableSlot[];
   toasts: Toast[];
   isDataLoading: boolean;
+  academicTermPeriod: AcademicTermPeriod;
+  updateAcademicTermPeriod: (period: AcademicTermPeriod) => void;
 
   // Actions
   showToast: (title: string, message: string, type?: Toast['type']) => void;
@@ -226,6 +233,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>([]);
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+
+  // Academic Term Attendance Period State (Default: June 1, 2026 to Nov 30, 2026)
+  const [academicTermPeriod, setAcademicTermPeriodState] = useState<AcademicTermPeriod>(() => {
+    try {
+      const saved = localStorage.getItem('eduportal_academic_term_period');
+      return saved ? JSON.parse(saved) : { startDate: '2026-06-01', endDate: '2026-11-30' };
+    } catch {
+      return { startDate: '2026-06-01', endDate: '2026-11-30' };
+    }
+  });
+
+  const updateAcademicTermPeriod = (period: AcademicTermPeriod) => {
+    setAcademicTermPeriodState(period);
+    try {
+      localStorage.setItem('eduportal_academic_term_period', JSON.stringify(period));
+    } catch (e) {
+      console.warn('Failed to save academic term period to localStorage:', e);
+    }
+    showToast('Academic Period Updated!', `Attendance period set from ${period.startDate} to ${period.endDate}.`, 'success');
+  };
 
   useEffect(() => {
     if (allUsers.length > 0) {
@@ -816,6 +843,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         timetable,
         toasts,
         isDataLoading,
+        academicTermPeriod,
+        updateAcademicTermPeriod,
         showToast,
         dismissToast,
         takeAttendance,
