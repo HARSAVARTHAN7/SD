@@ -17,6 +17,7 @@ import {
   ChangeRequestAPI,
   ResultAPI,
   TimetableAPI,
+  AcademicTermPeriodAPI,
 } from '../services/apiService';
 import type { TimetableSlot } from '../types';
 import { useAuth } from './AuthContext';
@@ -244,8 +245,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  const updateAcademicTermPeriod = (period: AcademicTermPeriod) => {
+  const updateAcademicTermPeriod = async (period: AcademicTermPeriod) => {
     setAcademicTermPeriodState(period);
+    try {
+      await AcademicTermPeriodAPI.update(period);
+    } catch (e) {
+      console.warn('Backend AcademicTermPeriod API offline / fallback to local storage:', e);
+    }
     try {
       localStorage.setItem('eduportal_academic_term_period', JSON.stringify(period));
     } catch (e) {
@@ -384,6 +390,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Attendance
       promises.push(
         AttendanceAPI.getAll({ limit: 200 }).then(({ data }) => setAttendance(data.data)),
+      );
+
+      // Academic Term Period
+      promises.push(
+        AcademicTermPeriodAPI.get()
+          .then(({ data }) => {
+            if (data && data.data) {
+              setAcademicTermPeriodState(data.data);
+              localStorage.setItem('eduportal_academic_term_period', JSON.stringify(data.data));
+            }
+          })
+          .catch(() => {}),
       );
 
       // Admin/teacher get users, change requests, results

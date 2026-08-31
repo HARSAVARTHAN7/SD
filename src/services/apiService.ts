@@ -194,3 +194,12 @@ export const ResultAPI = {
   delete: (id: string) =>
     api.delete<{ success: boolean; message: string }>(`/results/${id}`),
 };
+
+// ─── Academic Term Period Service ────────────────────
+export const AcademicTermPeriodAPI = {
+  get: () =>
+    api.get<ApiResponse<{ startDate: string; endDate: string }>>('/academic-term-period'),
+
+  update: (period: { startDate: string; endDate: string }) =>
+    api.put<ApiResponse<{ startDate: string; endDate: string }>>('/academic-term-period', period),
+};
