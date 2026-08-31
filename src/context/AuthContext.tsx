@@ -158,12 +158,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    if (cleanQuery === 'teacher@bitsathy.ac.in' || cleanQuery === 'teacher' || cleanQuery === 'sarah.jenkins@bitsathy.ac.in' || cleanQuery === 'fac-7742') {
+    if (cleanQuery === 'teacher@bitsathy.ac.in' || cleanQuery === 'sarah.jenkins@bitsathy.ac.in' || cleanQuery === 'teacher' || cleanQuery === 'sarah.jenkins' || cleanQuery === 'fac-7742') {
       if (cleanPass === 'password123') {
         const teacherUser: User = {
           id: 'teacher-demo',
-          username: 'teacher',
-          email: 'teacher@bitsathy.ac.in',
+          username: 'sarah.jenkins',
+          email: 'sarah.jenkins@bitsathy.ac.in',
           name: 'Dr. Sarah Jenkins',
           role: 'teacher',
           avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',

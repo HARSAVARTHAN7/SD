@@ -1,4 +1,5 @@
 import { User, StudentResultReport, SemesterResult, GradeItem, HallTicketInfo } from '../types';
+import { formatTeacherName } from './teacherUtils';
 
 /**
  * Utility to extract raw text from PDF ArrayBuffer / File using text stream parsing
@@ -248,7 +249,8 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
     getRegexMatch(/(?:^|\n)(?:faculty\s*name|teacher\s*name|name)[:\s]+([A-Za-z\s\.']+?)(?=\n|email|phone|employee|title|dept|\d|$)/i) ||
     filename.replace(/\.pdf$|\.txt$/i, '').replace(/[-_]/g, ' ');
 
-  const name = sanitizeExtractedName(rawName) || 'Dr. Robert Vance';
+  const rawExtractedName = sanitizeExtractedName(rawName) || 'Dr. Robert Vance';
+  const name = formatTeacherName(rawExtractedName);
   const username = generateCleanUsername(name);
 
   const email = getKeyValue(['Email:']);
@@ -263,7 +265,7 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
     role: 'teacher',
     name,
     username,
-    email: email || 'faculty@school.edu',
+    email: email || `${username}@bitsathy.ac.in`,
     phone: phone || '+1 (555) 000-0000',
     employeeId: employeeId || `FAC-${Math.floor(1000 + Math.random() * 9000)}`,
     title: title || 'Senior Professor',

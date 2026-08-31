@@ -43,6 +43,7 @@ import { useApp } from '../../context/AppContext';
 // Removed StorageService
 import { User, TimetableSlot, ChangeRequest, StudentResultReport, GradeItem } from '../../types';
 import { StudentDashboard } from '../student/StudentDashboard';
+import { formatTeacherName, generateTeacherEmailAndName } from '../../utils/teacherUtils';
 import { TeacherDashboard } from '../teacher/TeacherDashboard';
 import { PostAnnouncementModal } from '../teacher/PostAnnouncementModal';
 import { parsePdfText, extractStudentFromText, extractTeacherFromText, calculateSgpa, calculateCgpa, downloadTemplatePdf, downloadOverallResultsPdfTemplate, downloadHallTicketsPdfTemplate } from '../../utils/pdfParser';
@@ -462,17 +463,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
 
   const handleSaveUser = (e: React.FormEvent) => {
     e.preventDefault();
+    let finalName = editingUser.name || '';
+    let finalEmail = editingUser.email || '';
+    let finalUsername = editingUser.username || '';
+
+    if (editRole === 'teacher' && finalName) {
+      const generated = generateTeacherEmailAndName(finalName, allUsers);
+      finalName = generated.name;
+      if (!finalEmail || !finalEmail.includes('@bitsathy.ac.in')) {
+        finalEmail = generated.email;
+        finalUsername = generated.username;
+      }
+    }
+
     const base: User = {
       id: editMode === 'add' ? makeId(editRole) : (editingUser.id || makeId(editRole)),
-      username: editingUser.username || '',
-      email: editingUser.email || '',
+      username: finalUsername || (finalEmail ? finalEmail.split('@')[0] : `user_${Date.now()}`),
+      email: finalEmail,
       password: editingUser.password || 'password123',
-      name: editingUser.name || '',
+      name: finalName,
       role: editRole,
-      avatar: editingUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(editingUser.name || 'User')}&background=random&size=150`,
+      avatar: editingUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(finalName || 'User')}&background=random&size=150`,
       phone: editingUser.phone || '',
       joinedDate: editingUser.joinedDate || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
       department: editingUser.department || '',
+      attendanceRate: editingUser.attendanceRate ?? 100.0,
     };
 
     if (editRole === 'student') {

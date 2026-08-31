@@ -3,6 +3,7 @@ import { X, UserCheck, GraduationCap, Briefcase, Mail, User, Lock, BookOpen, Loa
 import { Role } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
+import { generateTeacherEmailAndName, formatTeacherName } from '../../utils/teacherUtils';
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -38,11 +39,24 @@ export const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, initi
       return;
     }
 
+    let finalName = name;
+    let finalEmail = email;
+    let finalUsername = username;
+
+    if (role === 'teacher') {
+      finalName = formatTeacherName(name);
+      if (!email || !email.includes('@bitsathy.ac.in')) {
+        const handle = finalName.replace(/^(dr|ms|mrs)\.\s*/i, '').toLowerCase().replace(/[^a-z0-9.]/g, '.');
+        finalEmail = `${handle}@bitsathy.ac.in`;
+        finalUsername = handle;
+      }
+    }
+
     setIsSubmitting(true);
     const success = await register({
-      name,
-      username,
-      email,
+      name: finalName,
+      username: finalUsername,
+      email: finalEmail,
       password,
       role,
       attendanceRate: 100.0,

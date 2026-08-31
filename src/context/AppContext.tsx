@@ -20,6 +20,7 @@ import {
 } from '../services/apiService';
 import type { TimetableSlot } from '../types';
 import { useAuth } from './AuthContext';
+import { generateTeacherEmailAndName, formatTeacherName } from '../utils/teacherUtils';
 
 export interface Toast {
   id: string;
@@ -144,9 +145,9 @@ const INITIAL_DEFAULT_USERS: User[] = [
   {
     id: 'teacher-priya',
     username: 'priya.sharma',
-    email: 'faculty@school.edu',
+    email: 'priya.sharma@bitsathy.ac.in',
     password: 'password123',
-    name: 'Teacher Dr Priya Sharma',
+    name: 'Dr. Priya Sharma',
     role: 'teacher',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     joinedDate: 'Aug 2020',
@@ -159,8 +160,8 @@ const INITIAL_DEFAULT_USERS: User[] = [
   },
   {
     id: 'teacher-sarah',
-    username: 'teacher',
-    email: 'teacher@bitsathy.ac.in',
+    username: 'sarah.jenkins',
+    email: 'sarah.jenkins@bitsathy.ac.in',
     password: 'password123',
     name: 'Dr. Sarah Jenkins',
     role: 'teacher',
@@ -521,9 +522,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── User CRUD ──────────────────────────────────────
   const addUser = async (userData: Partial<User> & { password?: string }) => {
+    let payload = { ...userData };
+    if (payload.role === 'teacher' && payload.name) {
+      const generated = generateTeacherEmailAndName(payload.name, allUsers);
+      payload.name = generated.name;
+      payload.email = payload.email && payload.email.includes('@bitsathy.ac.in') ? payload.email : generated.email;
+      payload.username = payload.username || generated.username;
+    }
+
     let createdUser: User | null = null;
     try {
-      const { data } = await UserAPI.create(userData);
+      const { data } = await UserAPI.create(payload);
       if (data && data.data) {
         createdUser = data.data;
       }
@@ -534,20 +543,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!createdUser) {
       const timestamp = Date.now();
       createdUser = {
-        id: userData.id || `user-${timestamp}-${Math.floor(Math.random() * 1000)}`,
-        username: userData.username || (userData.email ? userData.email.split('@')[0] : `user_${timestamp}`),
-        email: userData.email || '',
-        password: userData.password || 'password123',
-        name: userData.name || 'New Member',
-        role: userData.role || 'student',
-        avatar: userData.avatar || (userData.role === 'teacher'
+        id: payload.id || `user-${timestamp}-${Math.floor(Math.random() * 1000)}`,
+        username: payload.username || (payload.email ? payload.email.split('@')[0] : `user_${timestamp}`),
+        email: payload.email || '',
+        password: payload.password || 'password123',
+        name: payload.name || 'New Member',
+        role: payload.role || 'student',
+        avatar: payload.avatar || (payload.role === 'teacher'
           ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-          : userData.role === 'admin'
+          : payload.role === 'admin'
           ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
           : 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80'),
-        joinedDate: userData.joinedDate || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        attendanceRate: userData.attendanceRate ?? 100.0,
-        ...userData,
+        joinedDate: payload.joinedDate || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        attendanceRate: payload.attendanceRate ?? 100.0,
+        ...payload,
       } as User;
     }
 
