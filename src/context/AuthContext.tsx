@@ -159,21 +159,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    if (cleanQuery === 'teacher@bitsathy.ac.in' || cleanQuery === 'sarah.jenkins@bitsathy.ac.in' || cleanQuery === 'teacher' || cleanQuery === 'sarah.jenkins' || cleanQuery === 'fac-7742') {
-      if (cleanPass === 'password123') {
-        const teacherUser: User = {
-          id: 'teacher-demo',
-          username: 'sarah.jenkins',
-          email: 'sarah.jenkins@bitsathy.ac.in',
-          name: 'Dr. Sarah Jenkins',
-          role: 'teacher',
-          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-          joinedDate: 'Aug 2020',
-          department: 'Department of Computer Science & Mathematics',
-          title: 'Senior Professor & Department Chair',
-          employeeId: 'FAC-7742',
-          attendanceRate: 100.0,
-        };
+    if (
+      cleanQuery === 'teacher@bitsathy.ac.in' ||
+      cleanQuery === 'sarah.jenkins@bitsathy.ac.in' ||
+      cleanQuery === 'priya.sharma@bitsathy.ac.in' ||
+      cleanQuery === 'teacher' ||
+      cleanQuery === 'sarah.jenkins' ||
+      cleanQuery === 'priya.sharma' ||
+      cleanQuery === 'fac-7742' ||
+      cleanQuery === 'fac-7743'
+    ) {
+      if (cleanPass === 'password123' || cleanPass === 'password' || cleanPass === '12345678') {
+        const isPriya = cleanQuery.includes('priya') || cleanQuery === 'fac-7743';
+        const teacherUser: User = isPriya
+          ? {
+              id: 'teacher-priya',
+              username: 'priya.sharma',
+              email: 'priya.sharma@bitsathy.ac.in',
+              name: 'Dr. Priya Sharma',
+              role: 'teacher',
+              avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+              joinedDate: 'Aug 2021',
+              department: 'Department of Computer Science & Engineering',
+              title: 'Associate Professor',
+              employeeId: 'FAC-7743',
+              attendanceRate: 100.0,
+            }
+          : {
+              id: 'teacher-demo',
+              username: 'sarah.jenkins',
+              email: 'sarah.jenkins@bitsathy.ac.in',
+              name: 'Dr. Sarah Jenkins',
+              role: 'teacher',
+              avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+              joinedDate: 'Aug 2020',
+              department: 'Department of Computer Science & Mathematics',
+              title: 'Senior Professor & Department Chair',
+              employeeId: 'FAC-7742',
+              attendanceRate: 100.0,
+            };
         clearToken();
         setUser(teacherUser);
         return true;
