@@ -88,17 +88,19 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
   });
 
   const presentCount = myAttendanceRecords.filter((a) => a.status === 'present').length;
-  const excusedCount = myAttendanceRecords.filter((a) => a.status === 'excused').length;
+  const odCount = myAttendanceRecords.filter((a) => a.status === 'excused').length;
   const lateCount = myAttendanceRecords.filter((a) => a.status === 'late').length;
   const absentCount = myAttendanceRecords.filter((a) => a.status === 'absent').length;
-  const totalAttRecorded = myAttendanceRecords.length;
 
-  const displayTotalDays = Math.max(totalAttRecorded, termWorkingDays);
+  const displayTotalDays = termWorkingDays;
+  const displayPresentDays = presentCount + odCount + lateCount;
   const displayAbsentDays = absentCount;
-  const displayPresentDays = Math.max(0, displayTotalDays - displayAbsentDays);
+  const displayODDays = odCount;
 
-  const calculatedAttendanceRate =
-    displayTotalDays > 0 ? Math.round((displayPresentDays / displayTotalDays) * 100) : (user?.attendanceRate ?? 100.0);
+  // Absence % = (Total Days Absent / Total Days Attended) * 100
+  // Attendance % = 100 - Absence % (OD does NOT reduce attendance percentage)
+  const absencePercentage = displayTotalDays > 0 ? (displayAbsentDays / displayTotalDays) * 100 : 0;
+  const calculatedAttendanceRate = Math.max(0, Math.round(100 - absencePercentage));
 
   // Published result card for current student
   const myResultReport = studentResults.find(
@@ -753,8 +755,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
             <p className="text-xs text-slate-500 mt-1">Daily roll-call tracking and semester attendance percentage.</p>
           </div>
 
-          {/* Attendance Summary Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Attendance Summary Cards Grid (5 Cards: Rate, Total Days, Present Days, Absent Card, OD Card) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* 1. Attendance Rate */}
             <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
               <div>
@@ -775,19 +777,19 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span className="text-slate-700 font-bold">Classes Conducted</span>
-                <span>Total Sessions</span>
+                <span>Term Working Days</span>
               </div>
             </div>
 
-            {/* 3. Total Present Days */}
+            {/* 3. Total Present Days (Default: 0) */}
             <div className="bg-white p-5 rounded-3xl border border-emerald-100/90 shadow-sm flex flex-col justify-between">
               <div>
                 <span className="text-[11px] font-extrabold text-emerald-700 uppercase tracking-wider">Total Present Days</span>
                 <p className="text-3xl font-black text-emerald-600 mt-2">{displayPresentDays}</p>
               </div>
               <div className="mt-4 pt-3 border-t border-emerald-50 flex items-center justify-between text-xs text-emerald-800">
-                <span className="font-bold">Present / Excused</span>
-                <span>{displayTotalDays > 0 ? Math.round((displayPresentDays / displayTotalDays) * 100) : 100}%</span>
+                <span className="font-bold">Present / Attended</span>
+                <span>{displayPresentDays} Days</span>
               </div>
             </div>
 
@@ -800,6 +802,18 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
               <div className="mt-4 pt-3 border-t border-rose-50 flex items-center justify-between text-xs text-rose-800">
                 <span className="font-bold">Total Absences</span>
                 <span>{displayAbsentDays === 0 ? '0 Absences' : `${displayAbsentDays} Days`}</span>
+              </div>
+            </div>
+
+            {/* 5. OD Card (On Duty Card) */}
+            <div className="bg-white p-5 rounded-3xl border border-indigo-100/90 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider">OD Card</span>
+                <p className="text-3xl font-black text-indigo-600 mt-2">{displayODDays}</p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-indigo-50 flex items-center justify-between text-xs text-indigo-800">
+                <span className="font-bold">On Duty (No Penalty)</span>
+                <span>{displayODDays === 0 ? '0 OD Days' : `${displayODDays} Days`}</span>
               </div>
             </div>
           </div>
