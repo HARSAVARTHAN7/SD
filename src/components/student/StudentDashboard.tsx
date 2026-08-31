@@ -42,8 +42,14 @@ interface StudentDashboardProps {
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, inspectUser }) => {
   const { user: authUser } = useAuth();
-  const user = inspectUser || authUser;
-  const { courses, announcements, attendance, studentResults, timetable, showToast, academicTermPeriod } = useApp();
+  const { courses, announcements, attendance, studentResults, timetable, showToast, academicTermPeriod, allUsers } = useApp();
+
+  const user = React.useMemo(() => {
+    if (inspectUser) return inspectUser;
+    if (authUser && authUser.role === 'student') return authUser;
+    const ramStudent = allUsers.find((u) => u.id === 'student-ram' || u.role === 'student');
+    return ramStudent || authUser;
+  }, [inspectUser, authUser, allUsers]);
 
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
   const [timetableDay, setTimetableDay] = useState<string>('Monday');

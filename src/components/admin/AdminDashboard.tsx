@@ -568,7 +568,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
             </button>
           </div>
         </div>
-        <StudentDashboard currentTab={previewTab} />
+        <StudentDashboard currentTab={previewTab} inspectUser={inspectStudentDashboard || allUsers.find((u) => u.role === 'student')} />
       </div>
     );
   }
