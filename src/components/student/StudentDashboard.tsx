@@ -67,12 +67,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
     if (!academicTermPeriod?.startDate || !academicTermPeriod?.endDate) return 30;
     const start = new Date(academicTermPeriod.startDate);
     const end = new Date(academicTermPeriod.endDate);
-    const today = new Date();
-    const targetEnd = end < today ? end : today;
-    if (start > targetEnd) return 30;
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 30;
     let count = 0;
     const cur = new Date(start);
-    while (cur <= targetEnd) {
+    while (cur <= end) {
       const day = cur.getDay();
       if (day !== 0) count++; // Exclude only Sundays (0 = Sunday)
       cur.setDate(cur.getDate() + 1);
