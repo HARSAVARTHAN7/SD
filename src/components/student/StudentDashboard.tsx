@@ -57,8 +57,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
   // Attendance stats
   const myAttendanceRecords = attendance.filter((a) => a.studentId === user?.id);
   const presentCount = myAttendanceRecords.filter((a) => a.status === 'present').length;
-  const totalAttRecorded = myAttendanceRecords.length || 1;
-  const calculatedAttendanceRate = Math.round((presentCount / totalAttRecorded) * 100) || 94.8;
+  const totalAttRecorded = myAttendanceRecords.length;
+  const calculatedAttendanceRate =
+    totalAttRecorded > 0 ? Math.round((presentCount / totalAttRecorded) * 100) : (user?.attendanceRate ?? 100.0);
 
   // Published result card for current student
   const myResultReport = studentResults.find(

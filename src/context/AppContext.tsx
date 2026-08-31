@@ -118,7 +118,7 @@ const INITIAL_DEFAULT_USERS: User[] = [
     semester: 'Semester 5',
     department: 'Computer Science & Engineering',
     gpa: 3.88,
-    attendanceRate: 95.5,
+    attendanceRate: 100.0,
     isBlocked: false,
     status: 'active',
   },
@@ -137,7 +137,7 @@ const INITIAL_DEFAULT_USERS: User[] = [
     semester: 'Semester 5',
     department: 'Computer Science & Engineering',
     gpa: 3.90,
-    attendanceRate: 96.0,
+    attendanceRate: 100.0,
     isBlocked: false,
     status: 'active',
   },
@@ -153,6 +153,7 @@ const INITIAL_DEFAULT_USERS: User[] = [
     department: 'Department of Computer Science',
     title: 'Professor & Department Chair',
     employeeId: 'FAC-8989',
+    attendanceRate: 100.0,
     isBlocked: false,
     status: 'active',
   },
@@ -168,6 +169,7 @@ const INITIAL_DEFAULT_USERS: User[] = [
     department: 'Department of Computer Science & Mathematics',
     title: 'Senior Professor',
     employeeId: 'FAC-7742',
+    attendanceRate: 100.0,
     isBlocked: false,
     status: 'active',
   },
@@ -544,6 +546,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
           : 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80'),
         joinedDate: userData.joinedDate || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        attendanceRate: userData.attendanceRate ?? 100.0,
         ...userData,
       } as User;
     }

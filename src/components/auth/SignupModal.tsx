@@ -45,6 +45,7 @@ export const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, initi
       email,
       password,
       role,
+      attendanceRate: 100.0,
       grade: role === 'student' ? grade : undefined,
       rollNo: role === 'student' ? (rollNo || `2024-${Math.floor(100 + Math.random() * 900)}`) : undefined,
       department: role === 'teacher' ? department : undefined,

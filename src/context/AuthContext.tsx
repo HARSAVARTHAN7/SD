@@ -150,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           rollNo: '2023-123',
           semester: 'Semester 5',
           gpa: 3.88,
-          attendanceRate: 95.5,
+          attendanceRate: 100.0,
         };
         clearToken();
         setUser(ramUser);
@@ -171,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           department: 'Department of Computer Science & Mathematics',
           title: 'Senior Professor & Department Chair',
           employeeId: 'FAC-7742',
+          attendanceRate: 100.0,
         };
         clearToken();
         setUser(teacherUser);
@@ -193,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           rollNo: '2024-001',
           semester: '5th Semester',
           gpa: 3.90,
-          attendanceRate: 96.0,
+          attendanceRate: 100.0,
         };
         clearToken();
         setUser(studentUser);
