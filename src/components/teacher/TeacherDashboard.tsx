@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   BookOpen,
@@ -84,7 +84,16 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
 
   // Attendance Register State
   const [selectedAttDate, setSelectedAttDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [selectedAttCourse, setSelectedAttCourse] = useState<string>('c1');
+  const [selectedAttCourse, setSelectedAttCourse] = useState<string>('');
+
+  useEffect(() => {
+    if (!selectedAttCourse && courses?.length > 0 && user) {
+      const teacherCourses = courses.filter((c) => c.teacherId === user.id || c.teacherId === (user as any)._id);
+      if (teacherCourses.length > 0) {
+        setSelectedAttCourse(teacherCourses[0]._id || teacherCourses[0].id || '');
+      }
+    }
+  }, [courses, selectedAttCourse, user]);
 
   // Per-Student Attendance Calendar Modal State
   const [attCalendarStudent, setAttCalendarStudent] = useState<User | null>(null);
@@ -1502,7 +1511,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               <button
                 type="button"
                 onClick={() => {
-                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse || 'c1', [
+                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse, [
                     {
                       studentId: attCalendarStudent.id,
                       studentName: attCalendarStudent.name,
@@ -1526,7 +1535,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               <button
                 type="button"
                 onClick={() => {
-                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse || 'c1', [
+                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse, [
                     {
                       studentId: attCalendarStudent.id,
                       studentName: attCalendarStudent.name,
@@ -1550,7 +1559,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               <button
                 type="button"
                 onClick={() => {
-                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse || 'c1', [
+                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse, [
                     {
                       studentId: attCalendarStudent.id,
                       studentName: attCalendarStudent.name,
@@ -1574,7 +1583,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               <button
                 type="button"
                 onClick={() => {
-                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse || 'c1', [
+                  takeAttendance(selectedDateModal.dateStr, selectedAttCourse, [
                     {
                       studentId: attCalendarStudent.id,
                       studentName: attCalendarStudent.name,
