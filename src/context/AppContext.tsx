@@ -252,14 +252,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>([]);
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
 
-  // Academic Term Attendance Period State (Default: June 1, 2026 to Nov 30, 2026)
+  // Academic Term Attendance Period State (Default: Aug 31, 2026 to Dec 31, 2026)
   const [academicTermPeriod, setAcademicTermPeriodState] = useState<AcademicTermPeriod>(() => {
     try {
       const saved = localStorage.getItem('eduportal_academic_term_period');
-      return saved ? JSON.parse(saved) : { startDate: '2026-06-01', endDate: '2026-11-30' };
-    } catch {
-      return { startDate: '2026-06-01', endDate: '2026-11-30' };
-    }
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.startDate === '2026-06-01') {
+          const updated = { startDate: '2026-08-31', endDate: '2026-12-31' };
+          localStorage.setItem('eduportal_academic_term_period', JSON.stringify(updated));
+          return updated;
+        }
+        return parsed;
+      }
+    } catch {}
+    return { startDate: '2026-08-31', endDate: '2026-12-31' };
   });
 
   const updateAcademicTermPeriod = async (period: AcademicTermPeriod) => {

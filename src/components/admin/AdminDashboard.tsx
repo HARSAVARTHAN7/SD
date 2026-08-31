@@ -140,8 +140,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     updateAcademicTermPeriod,
   } = useApp();
 
-  const [adminAttStartDate, setAdminAttStartDate] = useState<string>(academicTermPeriod?.startDate || '2026-06-01');
-  const [adminAttEndDate, setAdminAttEndDate] = useState<string>(academicTermPeriod?.endDate || '2026-11-30');
+  const [adminAttStartDate, setAdminAttStartDate] = useState<string>(academicTermPeriod?.startDate || '2026-08-31');
+  const [adminAttEndDate, setAdminAttEndDate] = useState<string>(academicTermPeriod?.endDate || '2026-12-31');
 
   React.useEffect(() => {
     if (academicTermPeriod?.startDate) setAdminAttStartDate(academicTermPeriod.startDate);
@@ -770,12 +770,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                     <div className="p-4 bg-purple-50/70 border border-purple-100 rounded-2xl">
                       <span className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider block">Current Start Date</span>
-                      <span className="text-sm font-black text-slate-900 mt-1 block">{academicTermPeriod?.startDate || '2026-06-01'}</span>
+                      <span className="text-sm font-black text-slate-900 mt-1 block">{academicTermPeriod?.startDate || '2026-08-31'}</span>
                     </div>
 
                     <div className="p-4 bg-purple-50/70 border border-purple-100 rounded-2xl">
                       <span className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider block">Current End Date</span>
-                      <span className="text-sm font-black text-slate-900 mt-1 block">{academicTermPeriod?.endDate || '2026-11-30'}</span>
+                      <span className="text-sm font-black text-slate-900 mt-1 block">{academicTermPeriod?.endDate || '2026-12-31'}</span>
                     </div>
 
                     <div className="p-4 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
