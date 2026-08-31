@@ -36,10 +36,12 @@ import { User } from '../../types';
 
 interface TeacherDashboardProps {
   currentTab: string;
+  inspectUser?: User;
 }
 
-export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab }) => {
-  const { user } = useAuth();
+export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, inspectUser }) => {
+  const { user: authUser } = useAuth();
+  const user = inspectUser || authUser;
   const {
     courses,
     announcements,
