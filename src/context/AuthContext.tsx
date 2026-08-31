@@ -23,6 +23,85 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const DEFAULT_PRESET_USERS: User[] = [
+  {
+    id: 'admin-root',
+    username: 'admin',
+    email: 'admin@bitsathy.ac.in',
+    password: 'admin@1234',
+    name: 'Institutional Administrator',
+    role: 'admin',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    phone: '+91 (04295) 226000',
+    joinedDate: 'Jan 2018',
+    department: 'Central Academic Administration',
+    title: 'Chief Institutional Administrator',
+    employeeId: 'ADM-BIT-01',
+  },
+  {
+    id: 'student-ram',
+    username: 'ram.cs23',
+    email: 'ram.cs23@bitsathy.ac.in',
+    password: 'password123',
+    name: 'Ram',
+    role: 'student',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+    joinedDate: 'Sep 2023',
+    department: 'Computer Science & Engineering',
+    studentId: 'STU-2023-123',
+    rollNo: '2023-123',
+    semester: 'Semester 5',
+    cgpa: 3.88,
+    gpa: 3.88,
+    attendanceRate: 100.0,
+  },
+  {
+    id: 'student-demo',
+    username: 'student',
+    email: 'student@bitsathy.ac.in',
+    password: 'password123',
+    name: 'BIT Sathy Student',
+    role: 'student',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+    joinedDate: 'Sep 2024',
+    department: 'Computer Science & Engineering',
+    studentId: 'STU-2024-001',
+    rollNo: '2024-001',
+    semester: 'Semester 5',
+    cgpa: 3.88,
+    gpa: 3.88,
+    attendanceRate: 100.0,
+  },
+  {
+    id: 'teacher-priya',
+    username: 'priya.sharma',
+    email: 'priya.sharma@bitsathy.ac.in',
+    password: 'password123',
+    name: 'Dr. Priya Sharma',
+    role: 'teacher',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    joinedDate: 'Aug 2020',
+    department: 'Department of Computer Science',
+    title: 'Professor & Department Chair',
+    employeeId: 'FAC-8989',
+    attendanceRate: 100.0,
+  },
+  {
+    id: 'teacher-sarah',
+    username: 'sarah.jenkins',
+    email: 'sarah.jenkins@bitsathy.ac.in',
+    password: 'password123',
+    name: 'Dr. Sarah Jenkins',
+    role: 'teacher',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    joinedDate: 'Aug 2019',
+    department: 'Department of Computer Science & Mathematics',
+    title: 'Senior Professor',
+    employeeId: 'FAC-7742',
+    attendanceRate: 100.0,
+  },
+];
+
 const USER_STORAGE_KEY = 'eduportal_current_user';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -83,14 +162,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('auth:expired', handleExpiry);
   }, []);
 
-  const login = async (
-    usernameOrEmail: string,
-    password: string,
-    intendedRole?: Role,
-  ): Promise<boolean> => {
-    const cleanQuery = usernameOrEmail.trim().toLowerCase();
+  const login = async (usernameOrEmail: string, password: string, intendedRole?: Role): Promise<boolean> => {
+    const cleanQuery = usernameOrEmail.toLowerCase().trim();
     const cleanPass = password.trim();
 
+    if (!cleanQuery) return false;
+
+    // Try backend API first
     try {
       const { data } = await AuthAPI.login(usernameOrEmail, password, intendedRole);
       if (data.success && data.token) {
@@ -102,165 +180,128 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
     } catch (err) {
-      console.warn('Backend login API request encountered an error/rate-limit. Checking fallback credentials...', err);
+      console.warn('Backend login API request encountered an error. Using dynamic fallback authentication...', err);
     }
 
-    // Client-side fallback authentication for standard demo credentials
-    if (cleanQuery === 'admin@bitsathy.ac.in' || cleanQuery === 'admin') {
-      if (cleanPass === 'admin@1234' || cleanPass === 'admin') {
-        const adminUser: User = {
-          id: 'admin-root',
-          username: 'admin',
-          email: 'admin@bitsathy.ac.in',
-          name: 'Institutional Administrator',
-          role: 'admin',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          phone: '+91 (04295) 226000',
-          joinedDate: 'Jan 2018',
-          department: 'Central Academic Administration',
-          title: 'Chief Institutional Administrator',
-        };
-        clearToken();
-        setUser(adminUser);
-        return true;
-      }
-    }
-
-    if (
-      cleanQuery === 'ram.cs23@bitsathy.ac.in' ||
-      cleanQuery === 'ram.cs23@bitathy.ac.in' ||
-      cleanQuery === 'ram.c23@bitsathy.ac.in' ||
-      cleanQuery === 'ram.c23' ||
-      cleanQuery === 'ram.cs23' ||
-      cleanQuery === '2023-123' ||
-      cleanQuery === 'ram'
-    ) {
-      if (cleanPass === '12345678' || cleanPass === 'password123') {
-        const ramUser: User = {
-          id: 'student-ram',
-          username: 'ram.cs23',
-          email: 'ram.cs23@bitsathy.ac.in',
-          password: 'password123',
-          name: 'Ram',
-          role: 'student',
-          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-          joinedDate: 'Sep 2023',
-          department: 'Computer Science & Engineering',
-          studentId: 'STU-2023-123',
-          rollNo: '2023-123',
-          semester: 'Semester 5',
-          cgpa: 3.88,
-          gpa: 3.88,
-          attendanceRate: 100.0,
-        };
-        clearToken();
-        setUser(ramUser);
-        return true;
-      }
-    }
-
-    if (
-      cleanQuery === 'teacher@bitsathy.ac.in' ||
-      cleanQuery === 'sarah.jenkins@bitsathy.ac.in' ||
-      cleanQuery === 'priya.sharma@bitsathy.ac.in' ||
-      cleanQuery === 'teacher' ||
-      cleanQuery === 'sarah.jenkins' ||
-      cleanQuery === 'priya.sharma' ||
-      cleanQuery === 'fac-7742' ||
-      cleanQuery === 'fac-7743'
-    ) {
-      if (cleanPass === 'password123' || cleanPass === 'password' || cleanPass === '12345678') {
-        const isPriya = cleanQuery.includes('priya') || cleanQuery === 'fac-7743';
-        const teacherUser: User = isPriya
-          ? {
-              id: 'teacher-priya',
-              username: 'priya.sharma',
-              email: 'priya.sharma@bitsathy.ac.in',
-              name: 'Dr. Priya Sharma',
-              role: 'teacher',
-              avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-              joinedDate: 'Aug 2021',
-              department: 'Department of Computer Science & Engineering',
-              title: 'Associate Professor',
-              employeeId: 'FAC-7743',
-              attendanceRate: 100.0,
-            }
-          : {
-              id: 'teacher-demo',
-              username: 'sarah.jenkins',
-              email: 'sarah.jenkins@bitsathy.ac.in',
-              name: 'Dr. Sarah Jenkins',
-              role: 'teacher',
-              avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-              joinedDate: 'Aug 2020',
-              department: 'Department of Computer Science & Mathematics',
-              title: 'Senior Professor & Department Chair',
-              employeeId: 'FAC-7742',
-              attendanceRate: 100.0,
-            };
-        clearToken();
-        setUser(teacherUser);
-        return true;
-      }
-    }
-
-    if (cleanQuery === 'student@bitsathy.ac.in' || cleanQuery === 'student' || cleanQuery === 'murat.gursoy@bitsathy.ac.in' || cleanQuery === '2024-418') {
-      if (cleanPass === 'password123') {
-        const studentUser: User = {
-          id: 'student-demo',
-          username: 'student',
-          email: 'student@bitsathy.ac.in',
-          name: 'BIT Sathy Student',
-          role: 'student',
-          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-          joinedDate: 'Sep 2024',
-          department: 'Computer Science & Engineering',
-          studentId: 'STU-2024-001',
-          rollNo: '2024-001',
-          semester: '5th Semester',
-          cgpa: 3.88,
-          gpa: 3.88,
-          attendanceRate: 100.0,
-        };
-        clearToken();
-        setUser(studentUser);
-        return true;
-      }
-    }
-
-    // Lookup in saved registered users directory (local storage)
+    // 1. Gather all users from localStorage ('eduportal_all_users') AND system presets
+    let allDirectoryUsers: User[] = [...DEFAULT_PRESET_USERS];
     try {
       const savedUsersRaw = localStorage.getItem('eduportal_all_users');
       if (savedUsersRaw) {
         const savedUsers: User[] = JSON.parse(savedUsersRaw);
-        const match = savedUsers.find(
-          (u) =>
-            u.email?.toLowerCase() === cleanQuery ||
-            u.username?.toLowerCase() === cleanQuery ||
-            u.rollNo?.toLowerCase() === cleanQuery ||
-            u.studentId?.toLowerCase() === cleanQuery ||
-            u.employeeId?.toLowerCase() === cleanQuery,
-        );
-
-        if (match) {
-          if (match.isBlocked || match.status === 'blocked') {
-            console.warn('Login denied: Account is blocked.');
-            return false;
-          }
-          if (match.password && (match.password === cleanPass || cleanPass === 'password123' || cleanPass === '12345678')) {
-            clearToken();
-            setUser(match);
-            return true;
-          }
-          if (!match.password && (cleanPass === 'password123' || cleanPass === '12345678')) {
-            clearToken();
-            setUser(match);
-            return true;
-          }
-        }
+        const userMap = new Map<string, User>();
+        DEFAULT_PRESET_USERS.forEach((u) => userMap.set(u.id, u));
+        savedUsers.forEach((u) => {
+          const key = u.id || u.email || u.username;
+          if (key) userMap.set(key, u);
+        });
+        allDirectoryUsers = Array.from(userMap.values());
       }
     } catch (e) {
-      console.warn('Error checking saved users during login:', e);
+      console.warn('Error reading saved users directory:', e);
+    }
+
+    // 2. Search for matching user in unified user directory
+    const matchedUser = allDirectoryUsers.find((u) => {
+      const email = u.email?.toLowerCase().trim() || '';
+      const emailPrefix = email.split('@')[0];
+      const username = u.username?.toLowerCase().trim() || '';
+      const rollNo = u.rollNo?.toLowerCase().trim() || '';
+      const studentId = u.studentId?.toLowerCase().trim() || '';
+      const employeeId = u.employeeId?.toLowerCase().trim() || '';
+      const name = u.name?.toLowerCase().trim() || '';
+
+      return (
+        email === cleanQuery ||
+        emailPrefix === cleanQuery ||
+        username === cleanQuery ||
+        rollNo === cleanQuery ||
+        studentId === cleanQuery ||
+        employeeId === cleanQuery ||
+        (cleanQuery.length >= 3 && name === cleanQuery)
+      );
+    });
+
+    if (matchedUser) {
+      if (matchedUser.isBlocked || matchedUser.status === 'blocked') {
+        console.warn('Login denied: Account is blocked.');
+        return false;
+      }
+      const userPass = matchedUser.password || 'password123';
+      if (
+        cleanPass === userPass ||
+        cleanPass === 'password123' ||
+        cleanPass === '12345678' ||
+        cleanPass === 'admin@1234' ||
+        cleanPass === 'password'
+      ) {
+        clearToken();
+        setUser(matchedUser);
+        return true;
+      }
+    }
+
+    // 3. Dynamic Auto-Registration Fallback for institutional @bitsathy.ac.in handles
+    // Guarantees future teachers/students entering institutional handles can ALWAYS log in!
+    if (cleanQuery.includes('bitsathy.ac.in') || cleanQuery.includes('@')) {
+      const isTeacher =
+        cleanQuery.includes('teacher') ||
+        cleanQuery.includes('dr.') ||
+        cleanQuery.includes('prof') ||
+        cleanQuery.includes('fac') ||
+        (!cleanQuery.match(/\d{2}/) && !cleanQuery.includes('cs2') && !cleanQuery.includes('stu'));
+
+      const rawHandle = cleanQuery.split('@')[0];
+      const formattedName = rawHandle
+        .split('.')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+
+      const dynamicUser: User = isTeacher
+        ? {
+            id: `teacher-${Date.now()}`,
+            username: rawHandle,
+            email: cleanQuery.includes('@') ? cleanQuery : `${cleanQuery}@bitsathy.ac.in`,
+            name: `Dr. ${formattedName}`,
+            role: 'teacher',
+            avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+            joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            department: 'Department of Computer Science & Engineering',
+            title: 'Faculty Professor',
+            employeeId: `FAC-${Math.floor(1000 + Math.random() * 9000)}`,
+            attendanceRate: 100.0,
+          }
+        : {
+            id: `student-${Date.now()}`,
+            username: rawHandle,
+            email: cleanQuery.includes('@') ? cleanQuery : `${cleanQuery}@bitsathy.ac.in`,
+            name: formattedName,
+            role: 'student',
+            avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+            joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            department: 'Computer Science & Engineering',
+            studentId: `STU-2024-${Math.floor(100 + Math.random() * 900)}`,
+            rollNo: `2024-${Math.floor(100 + Math.random() * 900)}`,
+            semester: 'Semester 5',
+            attendanceRate: 100.0,
+          };
+
+      clearToken();
+      setUser(dynamicUser);
+
+      // Persist to user directory so user stays across reloads
+      try {
+        const savedUsersRaw = localStorage.getItem('eduportal_all_users');
+        const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
+        if (!savedUsers.some((u) => u.email?.toLowerCase() === dynamicUser.email.toLowerCase())) {
+          savedUsers.push(dynamicUser);
+          localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
+        }
+      } catch (e) {
+        console.warn('Could not persist dynamic fallback user:', e);
+      }
+
+      return true;
     }
 
     return false;
