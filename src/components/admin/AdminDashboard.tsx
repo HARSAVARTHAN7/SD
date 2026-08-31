@@ -143,6 +143,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const [adminAttStartDate, setAdminAttStartDate] = useState<string>(academicTermPeriod?.startDate || '2026-06-01');
   const [adminAttEndDate, setAdminAttEndDate] = useState<string>(academicTermPeriod?.endDate || '2026-11-30');
 
+  React.useEffect(() => {
+    if (academicTermPeriod?.startDate) setAdminAttStartDate(academicTermPeriod.startDate);
+    if (academicTermPeriod?.endDate) setAdminAttEndDate(academicTermPeriod.endDate);
+  }, [academicTermPeriod?.startDate, academicTermPeriod?.endDate]);
+
   const [annModalOpen, setAnnModalOpen] = useState(false);
   const [activeSubView, setActiveSubView] = useState<'admin' | 'student-preview' | 'teacher-preview'>('admin');
   const [previewTab, setPreviewTab] = useState<string>('overview');

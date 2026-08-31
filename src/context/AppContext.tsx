@@ -445,16 +445,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }),
       );
 
-      // Academic Term Period
+      // Academic Term Period (Server + Local Storage fallback)
       promises.push(
         AcademicTermPeriodAPI.get()
           .then(({ data }) => {
-            if (data && data.data) {
+            if (data && data.data && data.data.startDate && data.data.endDate) {
               setAcademicTermPeriodState(data.data);
               localStorage.setItem('eduportal_academic_term_period', JSON.stringify(data.data));
             }
           })
-          .catch(() => {}),
+          .catch(() => {
+            try {
+              const saved = localStorage.getItem('eduportal_academic_term_period');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.startDate && parsed.endDate) {
+                  setAcademicTermPeriodState(parsed);
+                }
+              }
+            } catch (e) {}
+          }),
       );
 
       // Admin/teacher get users, change requests, results
