@@ -408,21 +408,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       promises.push(
         AttendanceAPI.getAll({ limit: 200 })
           .then(({ data }) => {
-            if (data && data.data && data.data.length > 0) {
-              setAttendance((prev) => {
-                const map = new Map<string, AttendanceRecord>();
-                data.data.forEach((item) => map.set(`${item.date}_${item.studentId}`, item));
-                prev.forEach((item) => map.set(`${item.date}_${item.studentId}`, item));
-                const merged = Array.from(map.values());
-                try {
-                  localStorage.setItem('eduportal_attendance_records', JSON.stringify(merged));
-                } catch (e) {}
-                return merged;
-              });
-            }
+            const localSaved = (() => {
+              try {
+                const saved = localStorage.getItem('eduportal_attendance_records');
+                return saved ? JSON.parse(saved) : [];
+              } catch {
+                return [];
+              }
+            })();
+
+            setAttendance((prev) => {
+              const map = new Map<string, AttendanceRecord>();
+              // 1. Local saved records
+              localSaved.forEach((item: AttendanceRecord) => map.set(`${item.date}_${item.studentId}`, item));
+              // 2. Current React state records
+              prev.forEach((item) => map.set(`${item.date}_${item.studentId}`, item));
+              // 3. Server records
+              if (data && data.data && Array.isArray(data.data)) {
+                data.data.forEach((item) => {
+                  const key = `${item.date}_${item.studentId}`;
+                  if (!map.has(key)) map.set(key, item);
+                });
+              }
+              const merged = Array.from(map.values());
+              try {
+                localStorage.setItem('eduportal_attendance_records', JSON.stringify(merged));
+              } catch (e) {}
+              return merged;
+            });
           })
           .catch(() => {
-            console.warn('AttendanceAPI.getAll offline / keeping local attendance records');
+            try {
+              const saved = localStorage.getItem('eduportal_attendance_records');
+              if (saved) setAttendance(JSON.parse(saved));
+            } catch (e) {}
           }),
       );
 
@@ -499,9 +518,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (user) {
       refreshData();
     } else {
-      // Reset non-persistent data on logout, keep allUsers persisted in localStorage!
+      // Reset transient data on logout, keep persistent data (allUsers, attendance, academicTermPeriod)!
       setCourses([]);
-      setAttendance([]);
       setAnnouncements([]);
       setNotifications([]);
       setChangeRequests([]);
