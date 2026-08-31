@@ -47,9 +47,21 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
   const user = React.useMemo(() => {
     if (inspectUser) return inspectUser;
     if (authUser && authUser.role === 'student') return authUser;
+    const studentWithAtt = allUsers.find(
+      (u) =>
+        u.role === 'student' &&
+        attendance.some(
+          (a) =>
+            a.studentId === u.id ||
+            a.studentId === u.studentId ||
+            a.studentRoll === u.studentId ||
+            a.studentRoll === u.rollNo ||
+            (a.studentName && u.name && a.studentName.toLowerCase().trim() === u.name.toLowerCase().trim()),
+        ),
+    );
     const ramStudent = allUsers.find((u) => u.id === 'student-ram' || u.role === 'student');
-    return ramStudent || authUser;
-  }, [inspectUser, authUser, allUsers]);
+    return studentWithAtt || ramStudent || authUser;
+  }, [inspectUser, authUser, allUsers, attendance]);
 
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
@@ -65,16 +77,34 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
   // Term working days calculation based on Admin Academic Dates (Exact match with Admin Dashboard)
   const termWorkingDays = calculateTermWorkingDays(academicTermPeriod?.startDate, academicTermPeriod?.endDate);
 
-  // Attendance stats for current student
-  const myAttendanceRecords = attendance.filter((a) => {
-    const isUserMatch =
-      (a.studentId && user?.id && a.studentId === user.id) ||
-      (a.studentId && (user?.studentId || user?.rollNo) && (a.studentId === user.studentId || a.studentId === user.rollNo)) ||
-      (a.studentRoll && (user?.rollNo || user?.studentId) && (a.studentRoll.trim() === (user.rollNo || '').trim() || a.studentRoll.trim() === (user.studentId || '').trim())) ||
-      (a.studentName && user?.name && a.studentName.toLowerCase().trim() === user.name.toLowerCase().trim());
+  // Attendance stats for current student with bulletproof multi-identifier matching
+  const myAttendanceRecords = React.useMemo(() => {
+    if (!user) return [];
 
-    return Boolean(isUserMatch);
-  });
+    const uId = (user.id || '').toLowerCase().trim();
+    const uStudentId = (user.studentId || '').toLowerCase().trim();
+    const uRollNo = (user.rollNo || '').toLowerCase().trim();
+    const uName = (user.name || '').toLowerCase().trim();
+    const uEmail = (user.email || '').toLowerCase().trim();
+
+    return attendance.filter((a) => {
+      const aStudentId = (a.studentId || '').toLowerCase().trim();
+      const aStudentRoll = (a.studentRoll || '').toLowerCase().trim();
+      const aStudentName = (a.studentName || '').toLowerCase().trim();
+
+      // 1. Direct ID / Roll Number match
+      if (aStudentId && (aStudentId === uId || aStudentId === uStudentId || aStudentId === uRollNo)) return true;
+      if (aStudentRoll && (aStudentRoll === uRollNo || aStudentRoll === uStudentId || aStudentRoll === uId)) return true;
+
+      // 2. Student Name match (exact or substring)
+      if (aStudentName && uName && (aStudentName === uName || uName.includes(aStudentName) || aStudentName.includes(uName))) return true;
+
+      // 3. Email handle match
+      if (uEmail && aStudentId && uEmail.startsWith(aStudentId)) return true;
+
+      return false;
+    });
+  }, [attendance, user]);
 
   const presentCount = myAttendanceRecords.filter((a) => a.status === 'present').length;
   const odCount = myAttendanceRecords.filter((a) => a.status === 'excused').length;
