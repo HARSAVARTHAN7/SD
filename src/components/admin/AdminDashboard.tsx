@@ -173,7 +173,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   const [hostelName, setHostelName] = useState('');
   const [roomNumber, setRoomNumber] = useState('');
 
-  // Results & Publication State
+  // Particular Student Dashboard Inspection State (Eye Icon 👁️)
+  const [inspectStudentDashboard, setInspectStudentDashboard] = useState<User | null>(null);
+  const [inspectDashboardTab, setInspectDashboardTab] = useState<string>('overview');
   const [selectedSemesterTab, setSelectedSemesterTab] = useState<string>('Semester 5');
   const [resultSearchQuery, setResultSearchQuery] = useState('');
   const [editingResultReport, setEditingResultReport] = useState<StudentResultReport | null>(null);
@@ -2080,8 +2082,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                           </td>
                           <td className="py-3.5 px-6 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button onClick={() => setInspectUser(st)}
-                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="Inspect Profile">
+                              <button
+                                onClick={() => {
+                                  setInspectStudentDashboard(st);
+                                  setInspectDashboardTab('overview');
+                                }}
+                                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                                title="Inspect Student Live Dashboard"
+                              >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
                               <button onClick={() => openEditModal(st)}
@@ -3382,6 +3390,64 @@ Subjects Taught: MATH-401, PHYS-302, CS-205
               <div className="p-6 bg-slate-50 border-2 border-slate-300 rounded-2xl whitespace-pre-wrap max-h-[70vh] overflow-y-auto shadow-inner text-[11px]">
                 {activePdfViewer.content}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Live Student Dashboard Inspection for Admin */}
+      {inspectStudentDashboard && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 overflow-y-auto flex flex-col animate-fadeIn">
+          {/* Admin Inspection Top Navigation Bar */}
+          <div className="bg-slate-950 text-white px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold">
+                <Eye className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider border border-emerald-400/30">
+                    Admin Live Student Inspection Mode
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    ID: {inspectStudentDashboard.studentId || inspectStudentDashboard.rollNo || inspectStudentDashboard.id}
+                  </span>
+                </div>
+                <h2 className="text-base font-extrabold text-white mt-0.5">
+                  Viewing Live Student Dashboard: {inspectStudentDashboard.name} ({inspectStudentDashboard.department || 'Computer Science & Engineering'})
+                </h2>
+              </div>
+            </div>
+
+            {/* Tab Navigation for Inspected Student Dashboard */}
+            <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-2xl border border-slate-800 text-xs font-semibold">
+              {(['overview', 'results', 'attendance', 'notices', 'timetable'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setInspectDashboardTab(tab)}
+                  className={`px-3.5 py-1.5 rounded-xl capitalize transition-all cursor-pointer ${
+                    inspectDashboardTab === tab
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setInspectStudentDashboard(null)}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-md"
+            >
+              <X className="w-4 h-4" /> Close Inspection
+            </button>
+          </div>
+
+          {/* Student Dashboard Body Container */}
+          <div className="flex-1 bg-slate-100 p-4 sm:p-8">
+            <div className="max-w-7xl mx-auto">
+              <StudentDashboard currentTab={inspectDashboardTab} inspectUser={inspectStudentDashboard} />
             </div>
           </div>
         </div>

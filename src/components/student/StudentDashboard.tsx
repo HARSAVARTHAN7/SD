@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import {
-  User,
+import { User as UserIcon,
   GraduationCap,
   Building2,
   UserCheck,
@@ -32,16 +31,18 @@ import {
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { Course } from '../../types';
+import { Course, User } from '../../types';
 import { formatCgpaDisplay } from '../../utils/teacherUtils';
 // Timetable data is now fetched from backend via AppContext
 
 interface StudentDashboardProps {
   currentTab: string;
+  inspectUser?: User;
 }
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }) => {
-  const { user } = useAuth();
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, inspectUser }) => {
+  const { user: authUser } = useAuth();
+  const user = inspectUser || authUser;
   const { courses, announcements, attendance, studentResults, timetable, showToast } = useApp();
 
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<Course | null>(null);
@@ -77,6 +78,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
 
   const myGrades = currentSemData ? currentSemData.grades : [];
   const displaySgpa = currentSemData ? currentSemData.sgpa : 0;
+
   // Roman numeral mapping for published semester SGPA bar chart
   const romanMap: Record<string, string> = {
     'Semester 1': 'I', '1st Semester': 'I', 'Sem 1': 'I',
@@ -89,7 +91,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
     'Semester 8': 'VIII', '8th Semester': 'VIII', 'Sem 8': 'VIII',
   };
 
-  let sgpaBarChartData: { roman: string; sgpa: number }[] = [];
+  let sgpaBarChartData: { roman: string; sgpa: number }[] = [
+    { roman: 'I', sgpa: 0 },
+    { roman: 'II', sgpa: 0 },
+    { roman: 'III', sgpa: 0 },
+    { roman: 'IV', sgpa: 0 },
+    { roman: 'V', sgpa: 0 },
+    { roman: 'VI', sgpa: 0 },
+  ];
   let displayCgpaStr = 'Nil';
 
   if (myResultReport && myResultReport.semesters && Object.keys(myResultReport.semesters).length > 0) {
@@ -101,22 +110,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab }
     const sum = semEntries.reduce((acc, [_, semData]) => acc + (semData.sgpa || 0), 0);
     const avg = sum / semEntries.length;
     displayCgpaStr = avg > 0 ? avg.toFixed(2) : formatCgpaDisplay(myResultReport.cgpa);
-  } else if (user?.role === 'student') {
-    if (user?.cgpa || user?.gpa) {
-      sgpaBarChartData = [
-        { roman: 'I', sgpa: 7.43 },
-        { roman: 'II', sgpa: 7.70 },
-        { roman: 'III', sgpa: 7.77 },
-        { roman: 'IV', sgpa: 7.39 },
-        { roman: 'V', sgpa: 6.77 },
-        { roman: 'VI', sgpa: 6.13 },
-      ];
-      const sum = sgpaBarChartData.reduce((acc, item) => acc + item.sgpa, 0);
-      const avg = sum / sgpaBarChartData.length;
-      displayCgpaStr = avg.toFixed(2);
-    } else {
-      displayCgpaStr = 'Nil';
-    }
+  } else if (user?.cgpa && user.cgpa > 0) {
+    displayCgpaStr = user.cgpa.toFixed(2);
+  } else {
+    displayCgpaStr = 'Nil';
   }
 
   // Chart data for subject grades
