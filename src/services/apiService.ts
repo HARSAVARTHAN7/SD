@@ -103,6 +103,7 @@ export const AttendanceAPI = {
       studentName: string;
       studentRoll: string;
       status: 'present' | 'absent' | 'late' | 'excused';
+      notes?: string;
     }>;
   }) => api.post<{ success: boolean; message: string; modified: number; upserted: number }>(
     '/attendance/batch',
@@ -113,14 +114,29 @@ export const AttendanceAPI = {
     api.get<{
       success: boolean;
       data: {
-        total: number;
-        present: number;
-        late: number;
-        absent: number;
-        excused: number;
+        totalDays: number;
+        presentDays: number;
+        absentDays: number;
+        odDays: number;
+        lateDays: number;
         attendanceRate: number;
+        absencePercentage: number;
       };
     }>(`/attendance/stats/${studentId}`),
+
+  getLowAttendanceStudents: (threshold: number = 80) =>
+    api.get<{
+      success: boolean;
+      count: number;
+      data: Array<{
+        studentId: string;
+        studentName: string;
+        studentRoll: string;
+        attendanceRate: number;
+        absentDays: number;
+        odDays: number;
+      }>;
+    }>('/attendance/low-attendance', { params: { threshold } }),
 };
 
 // ─── Announcement Service ───────────────────────────
