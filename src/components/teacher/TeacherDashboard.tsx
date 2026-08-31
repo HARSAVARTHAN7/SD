@@ -55,6 +55,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
     submitChangeRequest,
     timetable,
     updateUser,
+    academicTermPeriod,
   } = useApp();
 
   const [postAnnModalOpen, setPostAnnModalOpen] = useState(false);
@@ -100,6 +101,53 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
 
   // Filter students
   const students = allUsers.filter((u) => u.role === 'student');
+
+  // Term working days calculation based on Admin Academic Dates
+  const termWorkingDays = (() => {
+    if (!academicTermPeriod?.startDate || !academicTermPeriod?.endDate) return 30;
+    const start = new Date(academicTermPeriod.startDate);
+    const end = new Date(academicTermPeriod.endDate);
+    const today = new Date();
+    const targetEnd = end < today ? end : today;
+    if (start > targetEnd) return 30;
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= targetEnd) {
+      const day = cur.getDay();
+      if (day !== 0) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count > 0 ? count : 30;
+  })();
+
+  // Helper to compute student live attendance rate
+  const getStudentAttStats = (st: User) => {
+    const studentRecords = attendance.filter((a) => {
+      const isUserMatch =
+        (a.studentId && st.id && a.studentId === st.id) ||
+        (a.studentId && (st.studentId || st.rollNo) && (a.studentId === st.studentId || a.studentId === st.rollNo)) ||
+        (a.studentRoll && (st.rollNo || st.studentId) && (a.studentRoll.trim() === (st.rollNo || '').trim() || a.studentRoll.trim() === (st.studentId || '').trim())) ||
+        (a.studentName && st.name && a.studentName.toLowerCase().trim() === st.name.toLowerCase().trim());
+      if (!isUserMatch) return false;
+      if (academicTermPeriod?.startDate && a.date && a.date < academicTermPeriod.startDate) return false;
+      if (academicTermPeriod?.endDate && a.date && a.date > academicTermPeriod.endDate) return false;
+      return true;
+    });
+
+    const absentCount = studentRecords.filter((a) => a.status === 'absent').length;
+    const odCount = studentRecords.filter((a) => a.status === 'excused').length;
+    const presentCount = studentRecords.filter((a) => a.status === 'present').length;
+    const termDays = termWorkingDays || 30;
+    const absencePct = termDays > 0 ? (absentCount / termDays) * 100 : 0;
+    const rate = Math.max(0, Math.round(100 - absencePct));
+    return { rate, absentCount, odCount, presentCount, termDays };
+  };
+
+  // List of students with attendance rate < 80%
+  const lowAttendanceStudents = students.filter((st) => {
+    const { rate } = getStudentAttStats(st);
+    return rate < 80;
+  });
 
   // Roll call local state
   const [rollCallState, setRollCallState] = useState<Record<string, 'present' | 'absent' | 'late' | 'excused'>>(() => {
@@ -218,8 +266,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
             <div className="absolute right-0 top-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-white/5 pointer-events-none" />
           </div>
 
-          {/* 3 Analytics Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {/* 4 Analytics Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mentored Students</span>
@@ -252,6 +300,83 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
               <p className="text-2xl font-extrabold text-slate-800 mt-3">96.4%</p>
               <p className="text-xs text-emerald-600 font-semibold mt-1">Exceeding Academic Target</p>
             </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-rose-200/90 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-rose-500 uppercase tracking-wider">Below 80% Att.</span>
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+              </div>
+              <p className="text-2xl font-extrabold text-rose-700 mt-3">{lowAttendanceStudents.length} Students</p>
+              <p className="text-xs text-rose-600 font-semibold mt-1">Requires Mentorship Review</p>
+            </div>
+          </div>
+
+          {/* Low Attendance Alert Card (< 80%) */}
+          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-rose-200/90 shadow-sm relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 border-b border-rose-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-rose-100 text-rose-700 rounded-2xl">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900">Low Attendance Alert (&lt; 80%)</h3>
+                  <p className="text-xs text-slate-500">Students falling below the mandatory 80% attendance standing threshold.</p>
+                </div>
+              </div>
+
+              <span className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                lowAttendanceStudents.length > 0
+                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                  : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+              }`}>
+                {lowAttendanceStudents.length === 0 ? '🎉 All Clear (0 Below 80%)' : `⚠️ ${lowAttendanceStudents.length} Students Below 80%`}
+              </span>
+            </div>
+
+            {lowAttendanceStudents.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-center space-y-1">
+                <p className="text-sm font-bold text-emerald-900">Excellent Attendance Standing!</p>
+                <p className="text-xs text-emerald-700">All enrolled students currently maintain an attendance rate of 80% or higher.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {lowAttendanceStudents.map((st) => {
+                  const { rate, absentCount, odCount } = getStudentAttStats(st);
+                  return (
+                    <div
+                      key={st.id}
+                      className="p-4 rounded-2xl bg-rose-50/50 border border-rose-200/80 flex items-center justify-between gap-4 hover:bg-rose-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <img src={st.avatar} alt="" className="w-12 h-12 rounded-2xl object-cover ring-2 ring-rose-200" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-900 text-sm">{st.name}</h4>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-600 text-white shadow-2xs">
+                              {rate}% Rate
+                            </span>
+                          </div>
+                          <p className="text-xs font-mono font-semibold text-rose-800">{st.studentId || st.rollNo}</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            <strong className="text-rose-700">{absentCount} Days Absent</strong> • {odCount} OD Days
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setAttCalendarStudent(st)}
+                        className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Manage</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Student Mentorship Roster Overview */}
