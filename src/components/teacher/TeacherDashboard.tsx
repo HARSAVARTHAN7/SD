@@ -27,13 +27,14 @@ import {
   Send,
   Ticket,
   XCircle,
+  Eye,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { PostAnnouncementModal } from './PostAnnouncementModal';
 // Removed StorageService and DEFAULT_TIMETABLE
-import { User } from '../../types';
+import { User, Course } from '../../types';
 import { formatTeacherName, calculateTermWorkingDays } from '../../utils/teacherUtils';
 
 interface TeacherDashboardProps {
@@ -64,6 +65,12 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
   const [resultSearch, setResultSearch] = useState('');
   const [teacherSelectedSemester, setTeacherSelectedSemester] = useState<string>('Semester 5');
   const [timetableDay, setTimetableDay] = useState<string>('Monday');
+  const [mentorRegSem, setMentorRegSem] = useState<string>('Semester 5');
+  const [inspectMenteeCourseModal, setInspectMenteeCourseModal] = useState<{
+    student: User;
+    semester: string;
+    courses: Course[];
+  } | null>(null);
 
   // Editing student accommodation state
   const [editingStudent, setEditingStudent] = useState<User | null>(null);
@@ -111,6 +118,26 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
 
   // Filter students
   const students = allUsers.filter((u) => u.role === 'student');
+
+  // Filter mentee students specific to current faculty mentor
+  const menteeStudents = React.useMemo(() => {
+    if (!user) return students;
+    const teacherId = (user.id || '').toLowerCase().trim();
+    const teacherEmpId = (user.employeeId || '').toLowerCase().trim();
+    const teacherName = (user.name || '').toLowerCase().trim();
+
+    const assigned = students.filter((st) => {
+      const stMentorId = (st.mentorId || '').toLowerCase().trim();
+      const stMentorName = (st.mentorName || '').toLowerCase().trim();
+
+      if (stMentorId && (stMentorId === teacherId || stMentorId === teacherEmpId)) return true;
+      if (stMentorName && (stMentorName === teacherName || teacherName.includes(stMentorName) || stMentorName.includes(teacherName))) return true;
+      return false;
+    });
+
+    // Fallback: If no explicit mentee matches, display all students so mentor can inspect course registrations
+    return assigned.length > 0 ? assigned : students;
+  }, [students, user]);
 
   // Term working days calculation based on Admin Academic Dates (Exact match with Admin & Student Dashboards)
   const termWorkingDays = calculateTermWorkingDays(academicTermPeriod?.startDate, academicTermPeriod?.endDate);
@@ -571,6 +598,109 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* ===== CARD: MENTEE STUDENTS COURSE REGISTRATION DETAILS ===== */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-purple-200/90 shadow-sm space-y-6 mt-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-purple-100 text-purple-700 rounded-2xl">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Mentee Students Course Registration Details</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Enrolled semester courses and academic credit loads for your assigned mentees.</p>
+                </div>
+              </div>
+
+              {/* Semester Filter */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto">
+                {['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'].map((sem) => (
+                  <button
+                    key={sem}
+                    type="button"
+                    onClick={() => setMentorRegSem(sem)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                      mentorRegSem === sem ? 'bg-purple-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {sem}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {menteeStudents.map((st) => {
+                const semMap = st.semesterCourseAssignments || {};
+                const assignedIds = semMap[mentorRegSem] || [];
+                const assignedCourseObjects = courses.filter((c) => assignedIds.includes(c.id));
+                const totalCredits = assignedCourseObjects.reduce((acc, curr) => acc + (curr.credits || 3), 0);
+
+                return (
+                  <div key={st.id} className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:border-purple-200 transition-all flex flex-col justify-between space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={st.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(st.name)}&background=random`}
+                            alt={st.name}
+                            className="w-10 h-10 rounded-full border border-purple-200 object-cover"
+                          />
+                          <div>
+                            <h4 className="text-sm font-extrabold text-slate-900">{st.name}</h4>
+                            <p className="text-[11px] text-slate-500 font-medium">{st.department || 'Computer Science'} • {st.semester || 'Semester 5'}</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold px-2.5 py-1 bg-purple-100 text-purple-800 rounded-lg shrink-0">
+                          {st.studentId || st.rollNo || st.id}
+                        </span>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-200/60 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-extrabold text-slate-700 uppercase tracking-wider text-[10px]">
+                            {mentorRegSem} Registered Courses ({assignedCourseObjects.length}):
+                          </span>
+                          <span className="font-bold text-purple-700 text-[11px] font-mono">{totalCredits} Total Credits</span>
+                        </div>
+
+                        {assignedCourseObjects.length > 0 ? (
+                          <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                            {assignedCourseObjects.map((c) => (
+                              <div key={c.id} className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div>
+                                  <span className="text-xs font-bold text-slate-900 block">{c.code}: {c.title}</span>
+                                  <span className="text-[10px] text-slate-500">Instructor: {c.teacherName} • Room: {c.room}</span>
+                                </div>
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 bg-purple-50 text-purple-800 border border-purple-200 rounded-md shrink-0 font-mono">
+                                  {c.credits} CR
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-white rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-400 font-medium italic">
+                            No courses registered for {st.name} in {mentorRegSem}.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium text-[11px]">Mentorship Assigned</span>
+                      <button
+                        type="button"
+                        onClick={() => setInspectMenteeCourseModal({ student: st, semester: mentorRegSem, courses: assignedCourseObjects })}
+                        className="px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold transition-all text-xs cursor-pointer shadow-2xs flex items-center gap-1.5"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Full Course Load
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1612,6 +1742,68 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
                 className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors cursor-pointer"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: INSPECT MENTEE FULL COURSE LOAD */}
+      {inspectMenteeCourseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setInspectMenteeCourseModal(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 bg-purple-900 text-white relative">
+              <button onClick={() => setInspectMenteeCourseModal(null)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+              <span className="text-[10px] uppercase font-extrabold text-purple-300 tracking-wider">Faculty Mentor Inspection</span>
+              <h3 className="text-xl font-bold mt-1">{inspectMenteeCourseModal.student.name}'s Course Load</h3>
+              <p className="text-xs text-purple-200 mt-0.5">
+                ID: {inspectMenteeCourseModal.student.studentId || inspectMenteeCourseModal.student.rollNo || inspectMenteeCourseModal.student.id} • {inspectMenteeCourseModal.semester}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 pb-2 border-b border-slate-100">
+                <span>Registered Courses ({inspectMenteeCourseModal.courses.length})</span>
+                <span className="font-mono text-purple-700">
+                  {inspectMenteeCourseModal.courses.reduce((acc, curr) => acc + (curr.credits || 3), 0)} Total Credits
+                </span>
+              </div>
+
+              {inspectMenteeCourseModal.courses.length > 0 ? (
+                <div className="space-y-3">
+                  {inspectMenteeCourseModal.courses.map((c) => (
+                    <div key={c.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono font-bold bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-md">
+                          {c.code}
+                        </span>
+                        <span className="text-xs font-bold text-slate-600 font-mono">{c.credits} Credits</span>
+                      </div>
+                      <h4 className="text-sm font-extrabold text-slate-900">{c.title}</h4>
+                      <p className="text-xs text-slate-500">{c.description}</p>
+                      <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
+                        <span>Instructor: <strong>{c.teacherName}</strong></span>
+                        <span>Room: <strong>{c.room}</strong></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-400 font-medium italic">
+                  No courses assigned to this student for {inspectMenteeCourseModal.semester}.
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setInspectMenteeCourseModal(null)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
+              >
+                Close Inspection
               </button>
             </div>
           </div>
