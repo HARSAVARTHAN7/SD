@@ -109,12 +109,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
     }));
     const sum = semEntries.reduce((acc, [_, semData]) => acc + (semData.sgpa || 0), 0);
     const avg = sum / semEntries.length;
-    displayCgpaStr = avg > 0 ? avg.toFixed(2) : formatCgpaDisplay(myResultReport.cgpa);
-  } else if (user?.cgpa !== undefined && user.cgpa !== null && user.cgpa > 0) {
-    displayCgpaStr = user.cgpa.toFixed(2);
-  } else if (user?.gpa !== undefined && user.gpa !== null && user.gpa > 0) {
-    displayCgpaStr = user.gpa.toFixed(2);
+    displayCgpaStr = avg > 0 ? avg.toFixed(2) : 'Nil';
   } else {
+    // Locked / unpublished results -> display Nil
     displayCgpaStr = 'Nil';
   }
 
@@ -599,18 +596,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
             </div>
           )}
 
-          {/* Summary Cards Row (matching application light theme) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Summary Cards Row (3 Cards: CGPA, Arrear Count, Fees Due) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumulative Grade Point Average (CGPA)</span>
               <p className="text-3xl font-black text-slate-800 mt-3">{displayCgpaStr}</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Placement FA %</span>
-              <p className="text-3xl font-black text-slate-800 mt-3">
-                {displayCgpaStr !== 'Nil' ? '66.7' : 'Nil'}
-              </p>
             </div>
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">

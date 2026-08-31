@@ -2077,7 +2077,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                           </td>
                           <td className="py-3.5 px-4">
                             <span className="font-bold text-emerald-600">
-                              {st.cgpa ? st.cgpa.toFixed(2) : (st.gpa ? st.gpa.toFixed(2) : 'Nil')}
+                              {(() => {
+                                const report = studentResults.find(
+                                  (r) =>
+                                    r.studentId === st.id ||
+                                    (r.rollNo && st.rollNo && r.rollNo.trim() === st.rollNo.trim()) ||
+                                    (r.studentName && st.name && r.studentName.toLowerCase().trim() === st.name.toLowerCase().trim())
+                                );
+                                if (report && report.semesters && Object.keys(report.semesters).length > 0) {
+                                  const sems = Object.values(report.semesters);
+                                  const sum = sems.reduce((acc, sem) => acc + (sem.sgpa || 0), 0);
+                                  const avg = sum / sems.length;
+                                  return avg > 0 ? avg.toFixed(2) : 'Nil';
+                                }
+                                return 'Nil';
+                              })()}
                             </span>
                           </td>
                           <td className="py-3.5 px-6 text-right">
