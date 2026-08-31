@@ -57,11 +57,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
   const [semDownloadError, setSemDownloadError] = useState<string | null>(null);
 
   // Attendance stats
-  const myAttendanceRecords = attendance.filter((a) => a.studentId === user?.id);
+  const myAttendanceRecords = attendance.filter(
+    (a) =>
+      a.studentId === user?.id ||
+      (a.studentRoll && user?.rollNo && a.studentRoll.trim() === user?.rollNo.trim()) ||
+      (a.studentName && user?.name && a.studentName.toLowerCase().trim() === user?.name.toLowerCase().trim())
+  );
   const presentCount = myAttendanceRecords.filter((a) => a.status === 'present').length;
+  const excusedCount = myAttendanceRecords.filter((a) => a.status === 'excused').length;
+  const lateCount = myAttendanceRecords.filter((a) => a.status === 'late').length;
+  const absentCount = myAttendanceRecords.filter((a) => a.status === 'absent').length;
   const totalAttRecorded = myAttendanceRecords.length;
+
+  const displayTotalDays = totalAttRecorded > 0 ? totalAttRecorded : 30;
+  const displayPresentDays = totalAttRecorded > 0 ? (presentCount + excusedCount + lateCount) : 30;
+  const displayAbsentDays = totalAttRecorded > 0 ? absentCount : 0;
+
   const calculatedAttendanceRate =
-    totalAttRecorded > 0 ? Math.round((presentCount / totalAttRecorded) * 100) : (user?.attendanceRate ?? 100.0);
+    displayTotalDays > 0 ? Math.round((displayPresentDays / displayTotalDays) * 100) : (user?.attendanceRate ?? 100.0);
 
   // Published result card for current student
   const myResultReport = studentResults.find(
@@ -716,23 +729,59 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
             <p className="text-xs text-slate-500 mt-1">Daily roll-call tracking and semester attendance percentage.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          {/* Attendance Summary Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. Attendance Rate */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
               <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Attendance Rate</span>
-                <p className="text-4xl font-black text-emerald-600 mt-3">{calculatedAttendanceRate}%</p>
-                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                  Meets school honors criteria (Min 90% required).
-                </p>
+                <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Attendance Rate</span>
+                <p className="text-3xl font-black text-emerald-600 mt-2">{calculatedAttendanceRate}%</p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-emerald-700 font-bold">Good Standing</span>
-                <span className="text-slate-400">Total Recorded: {myAttendanceRecords.length} Sessions</span>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="text-emerald-700 font-bold">Overall Rate</span>
+                <span>{calculatedAttendanceRate >= 90 ? 'Good Standing' : 'Needs Attn'}</span>
               </div>
             </div>
 
-            <div className="md:col-span-2 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
-              <h3 className="font-bold text-slate-800 text-sm mb-4">Recent Daily Roll-Call Entries</h3>
+            {/* 2. Total Days */}
+            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Total Days</span>
+                <p className="text-3xl font-black text-slate-900 mt-2">{displayTotalDays}</p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="text-slate-700 font-bold">Classes Conducted</span>
+                <span>Total Sessions</span>
+              </div>
+            </div>
+
+            {/* 3. Total Present Days */}
+            <div className="bg-white p-5 rounded-3xl border border-emerald-100/90 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-extrabold text-emerald-700 uppercase tracking-wider">Total Present Days</span>
+                <p className="text-3xl font-black text-emerald-600 mt-2">{displayPresentDays}</p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-emerald-50 flex items-center justify-between text-xs text-emerald-800">
+                <span className="font-bold">Present / Excused</span>
+                <span>{displayTotalDays > 0 ? Math.round((displayPresentDays / displayTotalDays) * 100) : 100}%</span>
+              </div>
+            </div>
+
+            {/* 4. Absent Card */}
+            <div className="bg-white p-5 rounded-3xl border border-rose-100/90 shadow-sm flex flex-col justify-between">
+              <div>
+                <span className="text-[11px] font-extrabold text-rose-700 uppercase tracking-wider">Absent Card</span>
+                <p className="text-3xl font-black text-rose-600 mt-2">{displayAbsentDays}</p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-rose-50 flex items-center justify-between text-xs text-rose-800">
+                <span className="font-bold">Total Absences</span>
+                <span>{displayAbsentDays === 0 ? '0 Absences' : `${displayAbsentDays} Days`}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+            <h3 className="font-bold text-slate-800 text-sm mb-4">Recent Daily Roll-Call Entries</h3>
               <div className="space-y-2.5">
                 {myAttendanceRecords.map((att) => (
                   <div
@@ -773,7 +822,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ currentTab, 
                 ))}
               </div>
             </div>
-          </div>
         </div>
       )}
 
