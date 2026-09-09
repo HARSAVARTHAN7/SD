@@ -49,6 +49,18 @@ export const AuthPage: React.FC = () => {
   const [signupRole, setSignupRole] = useState<Role>('student');
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
+  React.useEffect(() => {
+    try {
+      const blockedMsg = localStorage.getItem('eduportal_blocked_reason');
+      if (blockedMsg) {
+        setStudentError(blockedMsg);
+        setTeacherError(blockedMsg);
+        showToast('Account Blocked', 'Your account has been administratively suspended.', 'error');
+        localStorage.removeItem('eduportal_blocked_reason');
+      }
+    } catch {}
+  }, [showToast]);
+
   const checkIfBlocked = (query: string): boolean => {
     try {
       const savedUsersRaw = localStorage.getItem('eduportal_all_users');

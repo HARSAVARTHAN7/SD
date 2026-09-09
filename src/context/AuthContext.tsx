@@ -162,12 +162,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('auth:expired', handleExpiry);
   }, []);
 
-  // Listen for active user block status & immediately log out blocked user with alert
+  // Listen for active user block status & cleanly log out blocked user without browser alert popups
   useEffect(() => {
     if (!user) return;
 
     if (user.isBlocked || user.status === 'blocked') {
-      alert('Account Suspended: Your account has been administratively blocked by the institutional authority. You will now be logged out.');
+      try {
+        localStorage.setItem('eduportal_blocked_reason', 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.');
+      } catch {}
       logout();
       return;
     }
@@ -186,7 +188,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               (u.studentId && user.studentId && u.studentId.trim() === user.studentId.trim())
           );
           if (currentInDir && (currentInDir.isBlocked || currentInDir.status === 'blocked')) {
-            alert('Account Suspended: Your student/teacher account has been administratively blocked by the institutional authority. You will now be logged out.');
+            try {
+              localStorage.setItem('eduportal_blocked_reason', 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.');
+            } catch {}
             logout();
           }
         }
