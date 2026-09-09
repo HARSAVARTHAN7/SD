@@ -1,44 +1,153 @@
 import { User, StudentResultReport, SemesterResult, GradeItem, HallTicketInfo } from '../types';
 import { formatTeacherName } from './teacherUtils';
+import * as pdfjsLib from 'pdfjs-dist';
+
+if (typeof window !== 'undefined' && pdfjsLib && 'GlobalWorkerOptions' in pdfjsLib) {
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '4.0.379'}/pdf.worker.min.mjs`;
+  } catch (e) {
+    // Ignore worker setup error fallback
+  }
+}
 
 /**
- * Utility to extract raw text from PDF ArrayBuffer / File using text stream parsing
+ * Clean up extracted text by stripping raw PDF stream markers (%PDF-1.4, obj, stream, xref, trailer)
+ * and extracting human-readable text contents.
  */
+export function sanitizeExtractedPdfText(raw: string): string {
+  if (!raw) return '';
+
+  // If raw string starts with %PDF- or contains PDF structure tags, strip structural metadata
+  if (raw.includes('%PDF-') || raw.includes('endobj') || raw.includes('startxref') || raw.includes('FlateDecode')) {
+    const lines = raw.split(/\r?\n/);
+    const cleanLines: string[] = [];
+    let insideStream = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Check stream bounds
+      if (trimmed === 'stream' || trimmed.startsWith('stream')) {
+        insideStream = true;
+        continue;
+      }
+      if (trimmed === 'endstream' || trimmed.endsWith('endstream')) {
+        insideStream = false;
+        continue;
+      }
+
+      // Ignore standard PDF structure lines & raw ReportLab metadata
+      if (
+        trimmed.startsWith('%PDF-') ||
+        trimmed.startsWith('% ReportLab') ||
+        /^\d+\s+\d+\s+obj$/.test(trimmed) ||
+        trimmed === 'endobj' ||
+        trimmed === 'xref' ||
+        trimmed === 'trailer' ||
+        trimmed.startsWith('startxref') ||
+        trimmed.startsWith('%%EOF') ||
+        trimmed.startsWith('/Filter') ||
+        trimmed.startsWith('/MediaBox') ||
+        trimmed.startsWith('/Parent') ||
+        trimmed.startsWith('/Resources') ||
+        trimmed.startsWith('/ProcSet') ||
+        trimmed.startsWith('/Font') ||
+        trimmed.startsWith('/Type') ||
+        trimmed.startsWith('/BaseFont') ||
+        trimmed.startsWith('/Subtype') ||
+        trimmed.startsWith('/Encoding') ||
+        trimmed.startsWith('/Widths') ||
+        trimmed.startsWith('<<') ||
+        trimmed.startsWith('>>') ||
+        trimmed.startsWith('Gb!') ||
+        trimmed.startsWith('<~') ||
+        trimmed.endsWith('~>')
+      ) {
+        continue;
+      }
+
+      if (insideStream) {
+        // Look for printable text inside streams, e.g. text in parentheses (Hello World) Tj
+        const matches = Array.from(line.matchAll(/\(([^()]+)\)\s*T[jJ]/g));
+        if (matches.length > 0) {
+          cleanLines.push(matches.map((m) => m[1]).join(' '));
+          continue;
+        }
+        // Skip unreadable binary stream lines
+        if (trimmed.length > 15 && !/\s/.test(trimmed)) {
+          continue;
+        }
+      }
+
+      if (trimmed.length > 0) {
+        cleanLines.push(line);
+      }
+    }
+
+    const result = cleanLines.join('\n').trim();
+    if (result) return result;
+  }
+
+  // Fallback: strip non-printable characters & remaining raw markers
+  return raw
+    .replace(/%PDF-\d\.\d/g, '')
+    .replace(/% ReportLab Generated PDF document \(opensource\)/gi, '')
+    .replace(/\d+\s+\d+\s+obj[\s\S]*?endobj/g, '')
+    .replace(/xref[\s\S]*?%%EOF/g, '')
+    .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+}
+
 /**
- * Utility to extract raw text from PDF / text File using text stream parsing with line preservation
+ * Utility to extract raw text from PDF / text File using pdfjs-dist stream parsing
  */
 export async function parsePdfText(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
+  try {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
 
-    reader.onload = async () => {
+    // If file starts with PDF magic number %PDF- or has .pdf extension
+    const isBinaryPdf =
+      file.name.toLowerCase().endsWith('.pdf') ||
+      (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46);
+
+    if (isBinaryPdf) {
       try {
-        const buffer = reader.result as ArrayBuffer;
-        const bytes = new Uint8Array(buffer);
+        const loadingTask = pdfjsLib.getDocument({
+          data: bytes,
+          useSystemFonts: true,
+        });
+        const pdfDoc = await loadingTask.promise;
+        let extractedText = '';
 
-        let text = '';
-        for (let i = 0; i < bytes.length; i++) {
-          const char = String.fromCharCode(bytes[i]);
-          text += char;
+        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+          const page = await pdfDoc.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => ('str' in item ? item.str : ''))
+            .filter(Boolean)
+            .join(' ');
+          extractedText += pageText + '\n';
         }
 
-        // Clean non-printable characters BUT preserve line breaks (\n)
-        const cleanText = text
-          .replace(/\r\n/g, '\n')
-          .replace(/\r/g, '\n')
-          .replace(/[^\x20-\x7E\n]/g, ' ')
-          .replace(/[ \t]+/g, ' ');
-
-        resolve(cleanText);
-      } catch (err) {
-        console.error('PDF text extraction error:', err);
-        resolve('');
+        const cleaned = sanitizeExtractedPdfText(extractedText);
+        if (cleaned.trim()) {
+          return cleaned;
+        }
+      } catch (pdfErr) {
+        console.warn('pdfjs-dist parsing fallback triggered:', pdfErr);
       }
-    };
+    }
 
-    reader.onerror = () => resolve('');
-    reader.readAsArrayBuffer(file);
-  });
+    // Fallback: decode text bytes directly & sanitize raw PDF tags
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    const rawText = decoder.decode(bytes);
+    return sanitizeExtractedPdfText(rawText);
+  } catch (err) {
+    console.error('PDF text extraction error:', err);
+    return '';
+  }
 }
 
 /**
