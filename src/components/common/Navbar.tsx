@@ -20,7 +20,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { notifications, markNotifRead, clearNotifs, updateUser, showToast } = useApp();
 
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
@@ -42,10 +42,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs })
     }
   };
 
-  const handleSavePhoto = () => {
+  const handleSavePhoto = async () => {
     if (!user) return;
     const avatarUrl = newAvatar.trim() || user.avatar;
     const updatedUser = { ...user, avatar: avatarUrl };
+    await updateProfile({ avatar: avatarUrl });
     updateUser(updatedUser);
     setPhotoModalOpen(false);
     showToast('Photo Updated', 'Your profile picture has been updated successfully.', 'success');

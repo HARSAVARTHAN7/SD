@@ -162,6 +162,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('auth:expired', handleExpiry);
   }, []);
 
+  // Listen for active user block status & immediately log out blocked user with alert
+  useEffect(() => {
+    if (!user) return;
+
+    const checkBlockedStatus = () => {
+      try {
+        const savedUsersRaw = localStorage.getItem('eduportal_all_users');
+        if (savedUsersRaw) {
+          const allUsers: User[] = JSON.parse(savedUsersRaw);
+          const currentInDir = allUsers.find(
+            (u) => u.id === user.id || (u.email && u.email.toLowerCase() === user.email.toLowerCase())
+          );
+          if (currentInDir && (currentInDir.isBlocked || currentInDir.status === 'blocked')) {
+            alert('Account Suspended: Your student/teacher account has been administratively blocked by the institutional authority. You will now be logged out.');
+            logout();
+          }
+        }
+      } catch (e) {
+        console.warn('Error checking blocked status:', e);
+      }
+    };
+
+    checkBlockedStatus();
+    const interval = setInterval(checkBlockedStatus, 1000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const login = async (usernameOrEmail: string, password: string, intendedRole?: Role): Promise<boolean> => {
     const cleanQuery = usernameOrEmail.toLowerCase().trim();
     const cleanPass = password.trim();
@@ -334,13 +361,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProfile = async (updatedData: Partial<User>) => {
+    if (user) {
+      const newUserData = { ...user, ...updatedData };
+      setUser(newUserData);
+      try {
+        localStorage.setItem('eduportal_user', JSON.stringify(newUserData));
+      } catch (e) {
+        console.warn('Failed to save updated user to localStorage:', e);
+      }
+    }
+
     try {
       const { data } = await AuthAPI.updateProfile(updatedData);
       if (data.success && data.user) {
         setUser(data.user);
+        try {
+          localStorage.setItem('eduportal_user', JSON.stringify(data.user));
+        } catch {}
       }
     } catch (err) {
-      console.error('Profile update failed:', err);
+      console.warn('Backend AuthAPI.updateProfile offline / local state synced:', err);
     }
   };
 
