@@ -304,21 +304,21 @@ export function extractStudentFromText(text: string, filename: string): Partial<
 
   return {
     role: 'student',
-    name,
-    username,
-    email: email || 'ram.cs23@bitsathy.ac.in',
-    phone: phone || '+91 98765 43210',
-    studentId: rollNo ? `STU-${rollNo}` : `STU-2023-123`,
-    rollNo: rollNo || '2023-123',
-    department: department || 'Computer Science & Engineering',
-    semester: semester || 'Semester 5',
-    academicYear: academicYear || '2023 - 2027',
-    section: section || 'Section A',
-    guardianName: guardianName || 'Kumar',
-    guardianContact: guardianContact || '+91 98765 43211',
-    bloodGroup: bloodGroup || 'B+',
-    residenceType,
-    mentorName: mentorName || 'Dr. Priya Sharma',
+    name: name || '-',
+    username: username || '-',
+    email: email || '-',
+    phone: phone || '-',
+    studentId: rollNo ? `STU-${rollNo}` : '-',
+    rollNo: rollNo || '-',
+    department: department || '-',
+    semester: semester || '-',
+    academicYear: academicYear || '-',
+    section: section || '-',
+    guardianName: guardianName || '-',
+    guardianContact: guardianContact || '-',
+    bloodGroup: bloodGroup || '-',
+    residenceType: residenceTypeRaw ? (residenceTypeRaw.toLowerCase().includes('hostel') ? 'Hosteler' : 'Day Scholar') : '-',
+    mentorName: mentorName || '-',
   };
 }
 
@@ -358,8 +358,8 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
     getRegexMatch(/(?:^|\n)(?:faculty\s*name|teacher\s*name|name)[:\s]+([A-Za-z\s\.']+?)(?=\n|email|phone|employee|title|dept|\d|$)/i) ||
     filename.replace(/\.pdf$|\.txt$/i, '').replace(/[-_]/g, ' ');
 
-  const rawExtractedName = sanitizeExtractedName(rawName) || 'Dr. Robert Vance';
-  const name = formatTeacherName(rawExtractedName);
+  const rawExtractedName = sanitizeExtractedName(rawName) || '-';
+  const name = rawExtractedName !== '-' ? formatTeacherName(rawExtractedName) : '-';
   const username = generateCleanUsername(name);
 
   const email = getKeyValue(['Email:']);
@@ -374,13 +374,13 @@ export function extractTeacherFromText(text: string, filename: string): Partial<
     role: 'teacher',
     name,
     username,
-    email: email || `${username}@bitsathy.ac.in`,
-    phone: phone || '+1 (555) 000-0000',
-    employeeId: employeeId || `FAC-${Math.floor(1000 + Math.random() * 9000)}`,
-    title: title || 'Senior Professor',
-    department: department || 'Department of Computer Science',
-    officeHours: officeHours || 'Mon & Wed 2:00 PM - 4:00 PM',
-    subjectsTaught: subjectsRaw ? subjectsRaw.split(',').map((s) => s.trim()) : ['Computer Science Fundamentals'],
+    email: email || '-',
+    phone: phone || '-',
+    employeeId: employeeId || '-',
+    title: title || '-',
+    department: department || '-',
+    officeHours: officeHours || '-',
+    subjectsTaught: subjectsRaw ? subjectsRaw.split(',').map((s) => s.trim()).filter(Boolean) : ['-'],
   };
 }
 

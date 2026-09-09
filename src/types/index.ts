@@ -24,7 +24,7 @@ export interface User {
   mentorName?: string;
   mentorId?: string;
   mentorPhone?: string;
-  residenceType?: 'Day Scholar' | 'Hosteler';
+  residenceType?: 'Day Scholar' | 'Hosteler' | '-';
   busRoute?: string;
   busNumber?: string;
   busStop?: string;

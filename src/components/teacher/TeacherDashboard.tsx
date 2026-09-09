@@ -202,7 +202,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
 
   const handleOpenEditAccommodation = (student: User) => {
     setEditingStudent(student);
-    setEditResidenceType(student.residenceType || 'Day Scholar');
+    setEditResidenceType(student.residenceType === 'Hosteler' ? 'Hosteler' : 'Day Scholar');
     setEditBusRoute(student.busRoute || 'Route #14 - North City Express');
     setEditBusNumber(student.busNumber || 'BUS-042');
     setEditBusStop(student.busStop || 'Central Square Stop');

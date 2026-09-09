@@ -54,16 +54,24 @@ export const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose, initi
 
     setIsSubmitting(true);
     const success = await register({
-      name: finalName,
-      username: finalUsername,
-      email: finalEmail,
+      name: finalName || '-',
+      username: finalUsername || '-',
+      email: finalEmail || '-',
       password,
       role,
       attendanceRate: 100.0,
-      grade: role === 'student' ? grade : undefined,
-      rollNo: role === 'student' ? (rollNo || `2024-${Math.floor(100 + Math.random() * 900)}`) : undefined,
-      department: role === 'teacher' ? department : undefined,
-      title: role === 'teacher' ? title : undefined,
+      phone: '-',
+      grade: role === 'student' ? (grade.trim() || '-') : undefined,
+      rollNo: role === 'student' ? (rollNo.trim() || '-') : undefined,
+      department: role === 'teacher' ? (department.trim() || '-') : (role === 'student' ? '-' : undefined),
+      title: role === 'teacher' ? (title.trim() || '-') : undefined,
+      guardianName: role === 'student' ? '-' : undefined,
+      guardianContact: role === 'student' ? '-' : undefined,
+      bloodGroup: role === 'student' ? '-' : undefined,
+      mentorName: role === 'student' ? '-' : undefined,
+      employeeId: role === 'teacher' ? '-' : undefined,
+      officeHours: role === 'teacher' ? '-' : undefined,
+      subjectsTaught: role === 'teacher' ? ['-'] : undefined,
     });
     setIsSubmitting(false);
 
