@@ -895,26 +895,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateUser = async (userData: User) => {
     const userId = userData.id || (userData as unknown as { _id: string })._id;
-    let updated: User = { ...userData };
+    const updated: User = { ...userData };
 
-    try {
-      const { data } = await UserAPI.update(userId, userData);
-      if (data && data.data) {
-        updated = {
-          ...userData,
-          ...data.data,
-          password: userData.password || data.data.password,
-          isBlocked: userData.isBlocked !== undefined ? userData.isBlocked : data.data.isBlocked,
-          status: userData.status || data.data.status,
-        };
-      }
-    } catch (err) {
-      console.warn('Backend user update error / offline. Updating user locally...', err);
-    }
-
+    // 1. Instantly & synchronously update local state and localStorage
     setAllUsers((prev) => {
       const nextUsers = prev.map((u) =>
-        u.id === userId || (u as unknown as { _id: string })._id === userId || (u.email && u.email === userData.email)
+        u.id === userId ||
+        (u as unknown as { _id: string })._id === userId ||
+        (u.email && userData.email && u.email.toLowerCase().trim() === userData.email.toLowerCase().trim())
           ? { ...u, ...updated }
           : u,
       );
@@ -930,6 +918,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const label = updated.isBlocked ? 'Account Blocked' : 'Account Updated';
     showToast(label, `${updated.name || 'User'}'s account details have been updated.`, updated.isBlocked ? 'warning' : 'success');
+
+    // 2. Sync with backend API in background without overwriting local blocked status
+    try {
+      await UserAPI.update(userId, updated);
+    } catch (err) {
+      console.warn('Backend user update error / offline. Preserving local state.', err);
+    }
   };
 
   const deleteUser = async (id: string) => {
