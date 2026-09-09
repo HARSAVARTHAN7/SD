@@ -39,11 +39,28 @@ export const DEFAULT_PRESET_USERS: User[] = [
     employeeId: 'ADM-BIT-01',
   },
   {
+    id: 'student-ram-direct',
+    username: 'ram',
+    email: 'ram@bitsathy.ac.in',
+    password: '12345678',
+    name: 'Ram',
+    role: 'student',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+    joinedDate: 'Sep 2023',
+    department: 'Computer Science & Engineering',
+    studentId: 'STU-2023-124',
+    rollNo: '2023-124',
+    semester: 'Semester 5',
+    cgpa: 3.88,
+    gpa: 3.88,
+    attendanceRate: 100.0,
+  },
+  {
     id: 'student-ram',
     username: 'ram.cs23',
     email: 'ram.cs23@bitsathy.ac.in',
     password: 'password123',
-    name: 'Ram',
+    name: 'Ram CS23',
     role: 'student',
     avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
     joinedDate: 'Sep 2023',
@@ -112,6 +129,7 @@ export const getAllDirectoryUsers = (): User[] => {
     DEFAULT_PRESET_USERS.forEach((u) => {
       if (u.id) userMap.set(u.id, u);
       if (u.email) userMap.set(u.email.toLowerCase(), u);
+      if (u.username) userMap.set(u.username.toLowerCase(), u);
     });
 
     savedUsers.forEach((u) => {
@@ -132,14 +150,15 @@ export const findUserInDirectory = (query: string): User | undefined => {
   const cleanQ = query.toLowerCase().trim();
   if (!cleanQ) return undefined;
   const allUsers = getAllDirectoryUsers();
-  return allUsers.find((u) => {
+
+  // 1. Primary Priority: Exact match by email, username, email prefix/handle, rollNo, studentId, employeeId
+  const exactMatch = allUsers.find((u) => {
     const email = u.email?.toLowerCase().trim() || '';
     const emailPrefix = email.split('@')[0];
     const username = u.username?.toLowerCase().trim() || '';
     const rollNo = u.rollNo?.toLowerCase().trim() || '';
     const studentId = u.studentId?.toLowerCase().trim() || '';
     const employeeId = u.employeeId?.toLowerCase().trim() || '';
-    const name = u.name?.toLowerCase().trim() || '';
 
     return (
       email === cleanQ ||
@@ -147,9 +166,16 @@ export const findUserInDirectory = (query: string): User | undefined => {
       username === cleanQ ||
       rollNo === cleanQ ||
       studentId === cleanQ ||
-      employeeId === cleanQ ||
-      (cleanQ.length >= 3 && name === cleanQ)
+      employeeId === cleanQ
     );
+  });
+
+  if (exactMatch) return exactMatch;
+
+  // 2. Secondary Fallback: Match by full name
+  return allUsers.find((u) => {
+    const name = u.name?.toLowerCase().trim() || '';
+    return cleanQ.length >= 3 && name === cleanQ;
   });
 };
 
