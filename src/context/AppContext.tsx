@@ -912,13 +912,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Backend user update error / offline. Updating user locally...', err);
     }
 
-    setAllUsers((prev) =>
-      prev.map((u) =>
+    setAllUsers((prev) => {
+      const nextUsers = prev.map((u) =>
         u.id === userId || (u as unknown as { _id: string })._id === userId || (u.email && u.email === userData.email)
           ? { ...u, ...updated }
           : u,
-      ),
-    );
+      );
+      try {
+        localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
+        window.dispatchEvent(new Event('user:blocked'));
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {
+        console.warn('Failed to save allUsers to localStorage:', e);
+      }
+      return nextUsers;
+    });
+
     const label = updated.isBlocked ? 'Account Blocked' : 'Account Updated';
     showToast(label, `${updated.name || 'User'}'s account details have been updated.`, updated.isBlocked ? 'warning' : 'success');
   };

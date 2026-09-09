@@ -166,13 +166,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
 
+    if (user.isBlocked || user.status === 'blocked') {
+      alert('Account Suspended: Your account has been administratively blocked by the institutional authority. You will now be logged out.');
+      logout();
+      return;
+    }
+
     const checkBlockedStatus = () => {
       try {
         const savedUsersRaw = localStorage.getItem('eduportal_all_users');
         if (savedUsersRaw) {
           const allUsers: User[] = JSON.parse(savedUsersRaw);
           const currentInDir = allUsers.find(
-            (u) => u.id === user.id || (u.email && u.email.toLowerCase() === user.email.toLowerCase())
+            (u) =>
+              u.id === user.id ||
+              (u.email && user.email && u.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
+              (u.username && user.username && u.username.toLowerCase().trim() === user.username.toLowerCase().trim()) ||
+              (u.rollNo && user.rollNo && u.rollNo.trim() === user.rollNo.trim()) ||
+              (u.studentId && user.studentId && u.studentId.trim() === user.studentId.trim())
           );
           if (currentInDir && (currentInDir.isBlocked || currentInDir.status === 'blocked')) {
             alert('Account Suspended: Your student/teacher account has been administratively blocked by the institutional authority. You will now be logged out.');
@@ -185,8 +196,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkBlockedStatus();
-    const interval = setInterval(checkBlockedStatus, 1000);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkBlockedStatus, 300);
+    window.addEventListener('storage', checkBlockedStatus);
+    window.addEventListener('user:blocked', checkBlockedStatus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkBlockedStatus);
+      window.removeEventListener('user:blocked', checkBlockedStatus);
+    };
   }, [user]);
 
   const login = async (usernameOrEmail: string, password: string, intendedRole?: Role): Promise<boolean> => {
