@@ -23,7 +23,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEFAULT_PRESET_USERS: User[] = [
+export const DEFAULT_PRESET_USERS: User[] = [
   {
     id: 'admin-root',
     username: 'admin',
@@ -101,6 +101,57 @@ const DEFAULT_PRESET_USERS: User[] = [
     attendanceRate: 100.0,
   },
 ];
+
+export const getAllDirectoryUsers = (): User[] => {
+  let allDirectoryUsers: User[] = [];
+  try {
+    const savedUsersRaw = localStorage.getItem('eduportal_all_users');
+    const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [];
+    const userMap = new Map<string, User>();
+
+    DEFAULT_PRESET_USERS.forEach((u) => {
+      if (u.id) userMap.set(u.id, u);
+      if (u.email) userMap.set(u.email.toLowerCase(), u);
+    });
+
+    savedUsers.forEach((u) => {
+      if (u.id) userMap.set(u.id, u);
+      if (u.email) userMap.set(u.email.toLowerCase(), u);
+      if (u.username) userMap.set(u.username.toLowerCase(), u);
+    });
+
+    allDirectoryUsers = Array.from(userMap.values());
+  } catch (e) {
+    console.warn('Error reading saved users directory:', e);
+    allDirectoryUsers = [...DEFAULT_PRESET_USERS];
+  }
+  return allDirectoryUsers;
+};
+
+export const findUserInDirectory = (query: string): User | undefined => {
+  const cleanQ = query.toLowerCase().trim();
+  if (!cleanQ) return undefined;
+  const allUsers = getAllDirectoryUsers();
+  return allUsers.find((u) => {
+    const email = u.email?.toLowerCase().trim() || '';
+    const emailPrefix = email.split('@')[0];
+    const username = u.username?.toLowerCase().trim() || '';
+    const rollNo = u.rollNo?.toLowerCase().trim() || '';
+    const studentId = u.studentId?.toLowerCase().trim() || '';
+    const employeeId = u.employeeId?.toLowerCase().trim() || '';
+    const name = u.name?.toLowerCase().trim() || '';
+
+    return (
+      email === cleanQ ||
+      (emailPrefix && emailPrefix === cleanQ) ||
+      username === cleanQ ||
+      rollNo === cleanQ ||
+      studentId === cleanQ ||
+      employeeId === cleanQ ||
+      (cleanQ.length >= 3 && name === cleanQ)
+    );
+  });
+};
 
 const USER_STORAGE_KEY = 'eduportal_current_user';
 
@@ -232,54 +283,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Backend login API request encountered an error. Using dynamic fallback authentication...', err);
     }
 
-    // 1. Gather all users from localStorage ('eduportal_all_users') AND system presets
-    let allDirectoryUsers: User[] = [];
-    try {
-      const savedUsersRaw = localStorage.getItem('eduportal_all_users');
-      const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [];
-      const userMap = new Map<string, User>();
-
-      DEFAULT_PRESET_USERS.forEach((u) => {
-        if (u.id) userMap.set(u.id, u);
-        if (u.email) userMap.set(u.email.toLowerCase(), u);
-      });
-
-      savedUsers.forEach((u) => {
-        if (u.id) userMap.set(u.id, u);
-        if (u.email) userMap.set(u.email.toLowerCase(), u);
-        if (u.username) userMap.set(u.username.toLowerCase(), u);
-      });
-
-      allDirectoryUsers = Array.from(userMap.values());
-    } catch (e) {
-      console.warn('Error reading saved users directory:', e);
-      allDirectoryUsers = [...DEFAULT_PRESET_USERS];
-    }
-
-    // 2. Search for matching user in unified user directory
-    const matchedUser = allDirectoryUsers.find((u) => {
-      const email = u.email?.toLowerCase().trim() || '';
-      const emailPrefix = email.split('@')[0];
-      const username = u.username?.toLowerCase().trim() || '';
-      const rollNo = u.rollNo?.toLowerCase().trim() || '';
-      const studentId = u.studentId?.toLowerCase().trim() || '';
-      const employeeId = u.employeeId?.toLowerCase().trim() || '';
-      const name = u.name?.toLowerCase().trim() || '';
-
-      return (
-        email === cleanQuery ||
-        (emailPrefix && emailPrefix === cleanQuery) ||
-        username === cleanQuery ||
-        rollNo === cleanQuery ||
-        studentId === cleanQuery ||
-        employeeId === cleanQuery ||
-        (cleanQuery.length >= 3 && name === cleanQuery)
-      );
-    });
+    // 1. Search for matching user in directory
+    const matchedUser = findUserInDirectory(cleanQuery);
 
     if (matchedUser) {
       if (matchedUser.isBlocked || matchedUser.status === 'blocked') {
         console.warn('Login denied: Account is blocked.');
+        return false;
+      }
+      if (intendedRole && matchedUser.role !== intendedRole) {
+        console.warn(`Login denied: Role mismatch. Expected ${intendedRole}, got ${matchedUser.role}`);
         return false;
       }
       const userPass = matchedUser.password || 'password123';
@@ -294,70 +307,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(matchedUser);
         return true;
       }
-      return false; // Wrong password for existing user, stop fallback
-    }
-
-    // 3. Dynamic Auto-Registration Fallback for institutional @bitsathy.ac.in handles
-    // Guarantees future teachers/students entering institutional handles can ALWAYS log in!
-    if (cleanQuery.includes('bitsathy.ac.in') || cleanQuery.includes('@')) {
-      const isTeacher =
-        cleanQuery.includes('teacher') ||
-        cleanQuery.includes('dr.') ||
-        cleanQuery.includes('prof') ||
-        cleanQuery.includes('fac') ||
-        (!cleanQuery.match(/\d{2}/) && !cleanQuery.includes('cs2') && !cleanQuery.includes('stu'));
-
-      const rawHandle = cleanQuery.split('@')[0];
-      const formattedName = rawHandle
-        .split('.')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-
-      const dynamicUser: User = isTeacher
-        ? {
-            id: `teacher-${Date.now()}`,
-            username: rawHandle,
-            email: cleanQuery.includes('@') ? cleanQuery : `${cleanQuery}@bitsathy.ac.in`,
-            name: `Dr. ${formattedName}`,
-            role: 'teacher',
-            avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-            joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            department: 'Department of Computer Science & Engineering',
-            title: 'Faculty Professor',
-            employeeId: `FAC-${Math.floor(1000 + Math.random() * 9000)}`,
-            attendanceRate: 100.0,
-          }
-        : {
-            id: `student-${Date.now()}`,
-            username: rawHandle,
-            email: cleanQuery.includes('@') ? cleanQuery : `${cleanQuery}@bitsathy.ac.in`,
-            name: formattedName,
-            role: 'student',
-            avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-            joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-            department: 'Computer Science & Engineering',
-            studentId: `STU-2024-${Math.floor(100 + Math.random() * 900)}`,
-            rollNo: `2024-${Math.floor(100 + Math.random() * 900)}`,
-            semester: 'Semester 5',
-            attendanceRate: 100.0,
-          };
-
-      clearToken();
-      setUser(dynamicUser);
-
-      // Persist to user directory so user stays across reloads
-      try {
-        const savedUsersRaw = localStorage.getItem('eduportal_all_users');
-        const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
-        if (!savedUsers.some((u) => u.email?.toLowerCase() === dynamicUser.email.toLowerCase())) {
-          savedUsers.push(dynamicUser);
-          localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
-        }
-      } catch (e) {
-        console.warn('Could not persist dynamic fallback user:', e);
-      }
-
-      return true;
+      return false; // Wrong password for existing user
     }
 
     return false;
@@ -381,12 +331,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.success && data.token) {
         setToken(data.token);
         setUser(data.user);
+        try {
+          const savedUsersRaw = localStorage.getItem('eduportal_all_users');
+          const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
+          if (!savedUsers.some((u) => u.email?.toLowerCase() === data.user.email.toLowerCase())) {
+            savedUsers.push(data.user);
+            localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
+          }
+        } catch {}
         return true;
       }
-      return false;
     } catch {
-      return false;
+      // Local database registration when backend API is offline
+      const newUser: User = {
+        id: `${userData.role}-${Date.now()}`,
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        name: userData.name || '-',
+        role: userData.role,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        joinedDate: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        department: (userData.department as string) || '-',
+        grade: (userData.grade as string) || '-',
+        rollNo: (userData.rollNo as string) || '-',
+        title: (userData.title as string) || '-',
+        phone: (userData.phone as string) || '-',
+        attendanceRate: 100.0,
+      };
+
+      setUser(newUser);
+      try {
+        const savedUsersRaw = localStorage.getItem('eduportal_all_users');
+        const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
+        if (!savedUsers.some((u) => u.email?.toLowerCase() === newUser.email.toLowerCase() || u.username?.toLowerCase() === newUser.username?.toLowerCase())) {
+          savedUsers.push(newUser);
+          localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
+        }
+      } catch (e) {
+        console.warn('Failed to save registered user to eduportal_all_users:', e);
+      }
+      return true;
     }
+    return false;
   };
 
   const updateProfile = async (updatedData: Partial<User>) => {
@@ -395,6 +382,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(newUserData);
       try {
         localStorage.setItem('eduportal_user', JSON.stringify(newUserData));
+        // Persist to central directory database ('eduportal_all_users')
+        const savedUsersRaw = localStorage.getItem('eduportal_all_users');
+        const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
+        const index = savedUsers.findIndex((u) => u.id === newUserData.id || (u.email && u.email.toLowerCase() === newUserData.email.toLowerCase()));
+        if (index !== -1) {
+          savedUsers[index] = newUserData;
+        } else {
+          savedUsers.push(newUserData);
+        }
+        localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
       } catch (e) {
         console.warn('Failed to save updated user to localStorage:', e);
       }

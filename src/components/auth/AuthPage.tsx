@@ -11,14 +11,16 @@ import {
   KeyRound,
   AlertTriangle,
   Loader2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { StudentIllustration } from '../illustrations/StudentIllustration';
 import { TeacherIllustration } from '../illustrations/TeacherIllustration';
 import { SignupModal } from './SignupModal';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, findUserInDirectory } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { User, Role } from '../../types';
+import { Role } from '../../types';
 
 export const AuthPage: React.FC = () => {
   const { login } = useAuth();
@@ -30,18 +32,21 @@ export const AuthPage: React.FC = () => {
   // Student Form State
   const [studentUsername, setStudentUsername] = useState('');
   const [studentPassword, setStudentPassword] = useState('');
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
   const [studentRemember, setStudentRemember] = useState(false);
   const [studentError, setStudentError] = useState('');
 
   // Teacher Form State
   const [teacherUsername, setTeacherUsername] = useState('');
   const [teacherPassword, setTeacherPassword] = useState('');
+  const [showTeacherPassword, setShowTeacherPassword] = useState(false);
   const [teacherRemember, setTeacherRemember] = useState(false);
   const [teacherError, setTeacherError] = useState('');
 
   // Admin Form State
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminError, setAdminError] = useState('');
 
   // Modals
@@ -61,85 +66,140 @@ export const AuthPage: React.FC = () => {
     } catch {}
   }, [showToast]);
 
-  const checkIfBlocked = (query: string): boolean => {
-    try {
-      const savedUsersRaw = localStorage.getItem('eduportal_all_users');
-      if (savedUsersRaw) {
-        const allUsers: User[] = JSON.parse(savedUsersRaw);
-        const cleanQ = query.toLowerCase().trim();
-        const found = allUsers.find(
-          (u) =>
-            u.email?.toLowerCase().trim() === cleanQ ||
-            u.email?.toLowerCase().trim().split('@')[0] === cleanQ ||
-            u.username?.toLowerCase().trim() === cleanQ ||
-            u.rollNo?.toLowerCase().trim() === cleanQ ||
-            u.studentId?.toLowerCase().trim() === cleanQ ||
-            u.employeeId?.toLowerCase().trim() === cleanQ
-        );
-        if (found && (found.isBlocked || found.status === 'blocked')) {
-          return true;
-        }
-      }
-    } catch {}
-    return false;
-  };
-
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStudentError('');
-    if (!studentUsername) {
+    if (!studentUsername.trim()) {
       showToast('Enter Email / Roll No', 'Please enter your email or roll number', 'warning');
       return;
     }
+
+    // 1. Database account existence check
+    const matched = findUserInDirectory(studentUsername);
+    if (!matched) {
+      const msg = 'Account Not Found: No registered student account matches the entered User ID. Please check your details or register.';
+      setStudentError(msg);
+      showToast('Account Not Found', 'No registered student account matches the entered User ID.', 'error');
+      return;
+    }
+
+    // 2. Active vs Blocked status check
+    if (matched.isBlocked || matched.status === 'blocked') {
+      const msg = 'Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.';
+      setStudentError(msg);
+      showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
+      return;
+    }
+
+    // 3. Strict Portal Role matching check
+    if (matched.role !== 'student') {
+      const msg = `Role Mismatch: This account belongs to a ${matched.role.toUpperCase()}. Please switch to the ${matched.role.charAt(0).toUpperCase() + matched.role.slice(1)} Login portal.`;
+      setStudentError(msg);
+      showToast('Role Mismatch', `Account is a ${matched.role}. Please log in via the ${matched.role} portal.`, 'error');
+      return;
+    }
+
+    // 4. Password validation
     setIsSubmitting(true);
     const success = await login(studentUsername, studentPassword, 'student');
     setIsSubmitting(false);
     if (success) {
       showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
     } else {
-      if (checkIfBlocked(studentUsername)) {
-        setStudentError('Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.');
-        showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
-      } else {
-        setStudentError('Invalid Credentials: The entered Email ID, Roll No, or Password does not match any registered student account.');
-        showToast('Authentication Failed', 'Student email ID or password mismatch. Please check your credentials.', 'error');
-      }
+      const msg = 'Invalid Password: The password entered is incorrect. Please verify your password or use the Eye icon to view it.';
+      setStudentError(msg);
+      showToast('Authentication Failed', 'Student password mismatch. Please check your credentials.', 'error');
     }
   };
 
   const handleTeacherSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTeacherError('');
-    if (!teacherUsername) {
+    if (!teacherUsername.trim()) {
       showToast('Enter Email / Employee ID', 'Please enter your faculty email or employee ID', 'warning');
       return;
     }
+
+    // 1. Database account existence check
+    const matched = findUserInDirectory(teacherUsername);
+    if (!matched) {
+      const msg = 'Account Not Found: No registered faculty account matches the entered User ID. Please check your details or register.';
+      setTeacherError(msg);
+      showToast('Account Not Found', 'No registered faculty account matches the entered User ID.', 'error');
+      return;
+    }
+
+    // 2. Active vs Blocked status check
+    if (matched.isBlocked || matched.status === 'blocked') {
+      const msg = 'Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.';
+      setTeacherError(msg);
+      showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
+      return;
+    }
+
+    // 3. Strict Portal Role matching check
+    if (matched.role !== 'teacher') {
+      const msg = `Role Mismatch: This account belongs to a ${matched.role.toUpperCase()}. Please switch to the ${matched.role.charAt(0).toUpperCase() + matched.role.slice(1)} Login portal.`;
+      setTeacherError(msg);
+      showToast('Role Mismatch', `Account is a ${matched.role}. Please log in via the ${matched.role} portal.`, 'error');
+      return;
+    }
+
+    // 4. Password validation
     setIsSubmitting(true);
     const success = await login(teacherUsername, teacherPassword, 'teacher');
     setIsSubmitting(false);
     if (success) {
       showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
     } else {
-      if (checkIfBlocked(teacherUsername)) {
-        setTeacherError('Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.');
-        showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
-      } else {
-        setTeacherError('Invalid Credentials: The entered Email ID, Employee ID, or Password does not match any registered teacher account.');
-        showToast('Authentication Failed', 'Teacher email ID or password mismatch. Please check your credentials.', 'error');
-      }
+      const msg = 'Invalid Password: The password entered is incorrect. Please verify your password or use the Eye icon to view it.';
+      setTeacherError(msg);
+      showToast('Authentication Failed', 'Teacher password mismatch. Please check your credentials.', 'error');
     }
   };
 
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminError('');
+    if (!adminEmail.trim()) {
+      showToast('Enter Admin Email', 'Please enter your administrator email ID', 'warning');
+      return;
+    }
+
+    // 1. Database account existence check
+    const matched = findUserInDirectory(adminEmail);
+    if (!matched) {
+      const msg = 'Account Not Found: No registered administrator account matches the entered User ID.';
+      setAdminError(msg);
+      showToast('Account Not Found', 'No administrator account matches the entered User ID.', 'error');
+      return;
+    }
+
+    // 2. Active vs Blocked status check
+    if (matched.isBlocked || matched.status === 'blocked') {
+      const msg = 'Account Blocked: Your administrator account has been administratively suspended.';
+      setAdminError(msg);
+      showToast('Account Blocked', 'Your administrator account has been administratively suspended.', 'error');
+      return;
+    }
+
+    // 3. Strict Portal Role matching check
+    if (matched.role !== 'admin') {
+      const msg = `Role Mismatch: This account belongs to a ${matched.role.toUpperCase()}. Please switch to the ${matched.role.charAt(0).toUpperCase() + matched.role.slice(1)} Login portal.`;
+      setAdminError(msg);
+      showToast('Role Mismatch', `Account is a ${matched.role}. Please log in via the ${matched.role} portal.`, 'error');
+      return;
+    }
+
+    // 4. Password validation
     setIsSubmitting(true);
     const success = await login(adminEmail.trim(), adminPassword.trim(), 'admin');
     setIsSubmitting(false);
     if (success) {
       showToast('Master Access Granted', 'Logged into Central Administrator Control Center.', 'success');
     } else {
-      setAdminError('Access restricted: Invalid administrator email or password.');
+      const msg = 'Invalid Password: The administrator password entered is incorrect. Please verify your password.';
+      setAdminError(msg);
       showToast('Access Denied', 'Invalid administrator email or password.', 'error');
     }
   };
@@ -305,7 +365,22 @@ export const AuthPage: React.FC = () => {
                   <div className="space-y-1">
                     <div className="relative flex items-center border-b-2 border-[#2ECC71] pb-2 transition-colors">
                       <Lock className="w-4 h-4 text-slate-500 mr-3 shrink-0" />
-                      <input type="password" required value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} placeholder="Password" className="w-full bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none" />
+                      <input
+                        type={showStudentPassword ? 'text' : 'password'}
+                        required
+                        value={studentPassword}
+                        onChange={(e) => { setStudentPassword(e.target.value); setStudentError(''); }}
+                        placeholder="Password"
+                        className="w-full bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowStudentPassword(!showStudentPassword)}
+                        className="absolute right-0 text-slate-400 hover:text-slate-600 cursor-pointer p-1 transition-colors"
+                        title={showStudentPassword ? "Hide password" : "Show password"}
+                      >
+                        {showStudentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
@@ -360,7 +435,22 @@ export const AuthPage: React.FC = () => {
                   <div className="space-y-1">
                     <div className="relative flex items-center border-b border-slate-200 focus-within:border-slate-600 pb-2 transition-colors">
                       <Lock className="w-4 h-4 text-slate-400 mr-3 shrink-0" />
-                      <input type="password" required value={teacherPassword} onChange={(e) => setTeacherPassword(e.target.value)} placeholder="Password" className="w-full bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none" />
+                      <input
+                        type={showTeacherPassword ? 'text' : 'password'}
+                        required
+                        value={teacherPassword}
+                        onChange={(e) => { setTeacherPassword(e.target.value); setTeacherError(''); }}
+                        placeholder="Password"
+                        className="w-full bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowTeacherPassword(!showTeacherPassword)}
+                        className="absolute right-0 text-slate-400 hover:text-slate-600 cursor-pointer p-1 transition-colors"
+                        title={showTeacherPassword ? "Hide password" : "Show password"}
+                      >
+                        {showTeacherPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
@@ -412,7 +502,22 @@ export const AuthPage: React.FC = () => {
                     <label className="block text-[11px] font-bold uppercase text-slate-500 tracking-wider">Master Password</label>
                     <div className="relative flex items-center border border-slate-300 rounded-2xl bg-slate-50/70 px-3 py-2.5 focus-within:border-slate-800 focus-within:bg-white transition-all">
                       <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
-                      <input type="password" required value={adminPassword} onChange={(e) => { setAdminPassword(e.target.value); setAdminError(''); }} placeholder="••••••••••••" className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none" />
+                      <input
+                        type={showAdminPassword ? 'text' : 'password'}
+                        required
+                        value={adminPassword}
+                        onChange={(e) => { setAdminPassword(e.target.value); setAdminError(''); }}
+                        placeholder="••••••••••••"
+                        className="w-full bg-transparent text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none pr-7"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute right-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+                        title={showAdminPassword ? "Hide password" : "Show password"}
+                      >
+                        {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                   {adminError && (
