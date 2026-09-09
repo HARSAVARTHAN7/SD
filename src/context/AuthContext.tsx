@@ -211,21 +211,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // 1. Gather all users from localStorage ('eduportal_all_users') AND system presets
-    let allDirectoryUsers: User[] = [...DEFAULT_PRESET_USERS];
+    let allDirectoryUsers: User[] = [];
     try {
       const savedUsersRaw = localStorage.getItem('eduportal_all_users');
-      if (savedUsersRaw) {
-        const savedUsers: User[] = JSON.parse(savedUsersRaw);
-        const userMap = new Map<string, User>();
-        DEFAULT_PRESET_USERS.forEach((u) => userMap.set(u.id, u));
-        savedUsers.forEach((u) => {
-          const key = u.id || u.email || u.username;
-          if (key) userMap.set(key, u);
-        });
-        allDirectoryUsers = Array.from(userMap.values());
-      }
+      const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [];
+      const userMap = new Map<string, User>();
+
+      DEFAULT_PRESET_USERS.forEach((u) => {
+        if (u.id) userMap.set(u.id, u);
+        if (u.email) userMap.set(u.email.toLowerCase(), u);
+      });
+
+      savedUsers.forEach((u) => {
+        if (u.id) userMap.set(u.id, u);
+        if (u.email) userMap.set(u.email.toLowerCase(), u);
+        if (u.username) userMap.set(u.username.toLowerCase(), u);
+      });
+
+      allDirectoryUsers = Array.from(userMap.values());
     } catch (e) {
       console.warn('Error reading saved users directory:', e);
+      allDirectoryUsers = [...DEFAULT_PRESET_USERS];
     }
 
     // 2. Search for matching user in unified user directory
@@ -240,7 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return (
         email === cleanQuery ||
-        emailPrefix === cleanQuery ||
+        (emailPrefix && emailPrefix === cleanQuery) ||
         username === cleanQuery ||
         rollNo === cleanQuery ||
         studentId === cleanQuery ||
@@ -266,6 +272,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(matchedUser);
         return true;
       }
+      return false; // Wrong password for existing user, stop fallback
     }
 
     // 3. Dynamic Auto-Registration Fallback for institutional @bitsathy.ac.in handles

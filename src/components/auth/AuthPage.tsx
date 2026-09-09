@@ -18,7 +18,7 @@ import { SignupModal } from './SignupModal';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
-import { Role } from '../../types';
+import { User, Role } from '../../types';
 
 export const AuthPage: React.FC = () => {
   const { login } = useAuth();
@@ -49,6 +49,29 @@ export const AuthPage: React.FC = () => {
   const [signupRole, setSignupRole] = useState<Role>('student');
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
+  const checkIfBlocked = (query: string): boolean => {
+    try {
+      const savedUsersRaw = localStorage.getItem('eduportal_all_users');
+      if (savedUsersRaw) {
+        const allUsers: User[] = JSON.parse(savedUsersRaw);
+        const cleanQ = query.toLowerCase().trim();
+        const found = allUsers.find(
+          (u) =>
+            u.email?.toLowerCase().trim() === cleanQ ||
+            u.email?.toLowerCase().trim().split('@')[0] === cleanQ ||
+            u.username?.toLowerCase().trim() === cleanQ ||
+            u.rollNo?.toLowerCase().trim() === cleanQ ||
+            u.studentId?.toLowerCase().trim() === cleanQ ||
+            u.employeeId?.toLowerCase().trim() === cleanQ
+        );
+        if (found && (found.isBlocked || found.status === 'blocked')) {
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  };
+
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStudentError('');
@@ -62,8 +85,13 @@ export const AuthPage: React.FC = () => {
     if (success) {
       showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
     } else {
-      setStudentError('Invalid Credentials: The entered Email ID, Roll No, or Password does not match any registered student account.');
-      showToast('Authentication Failed', 'Student email ID or password mismatch. Please check your credentials.', 'error');
+      if (checkIfBlocked(studentUsername)) {
+        setStudentError('Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.');
+        showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
+      } else {
+        setStudentError('Invalid Credentials: The entered Email ID, Roll No, or Password does not match any registered student account.');
+        showToast('Authentication Failed', 'Student email ID or password mismatch. Please check your credentials.', 'error');
+      }
     }
   };
 
@@ -80,8 +108,13 @@ export const AuthPage: React.FC = () => {
     if (success) {
       showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
     } else {
-      setTeacherError('Invalid Credentials: The entered Email ID, Employee ID, or Password does not match any registered teacher account.');
-      showToast('Authentication Failed', 'Teacher email ID or password mismatch. Please check your credentials.', 'error');
+      if (checkIfBlocked(teacherUsername)) {
+        setTeacherError('Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.');
+        showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
+      } else {
+        setTeacherError('Invalid Credentials: The entered Email ID, Employee ID, or Password does not match any registered teacher account.');
+        showToast('Authentication Failed', 'Teacher email ID or password mismatch. Please check your credentials.', 'error');
+      }
     }
   };
 
