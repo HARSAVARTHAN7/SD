@@ -268,24 +268,52 @@ export const AuthPage: React.FC = () => {
 
   const fillQuickLogin = async (role: 'student' | 'teacher' | 'admin') => {
     setIsSubmitting(true);
+    const targetEmail = role === 'student' ? 'student@bitsathy.ac.in' : role === 'teacher' ? 'teacher@bitsathy.ac.in' : 'admin@bitsathy.ac.in';
+    const targetPass = role === 'student' ? 'password123' : role === 'teacher' ? 'password123' : 'admin@1234';
+
+    const blockCheck = isUserBlockedInDirectory(targetEmail);
+    if (blockCheck.isBlocked) {
+      setIsSubmitting(false);
+      const reason = blockCheck.reason || `Account Blocked: Your ${role} account has been administratively suspended by institutional authority. Access denied.`;
+      const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
+      if (role === 'student') setStudentError(msg);
+      else if (role === 'teacher') setTeacherError(msg);
+      else setAdminError(msg);
+      showToast('Account Blocked', reason, 'error');
+      return;
+    }
+
     if (role === 'student') {
       setStudentUsername('student@bitsathy.ac.in');
       setStudentPassword('password123');
-      const success = await login('student@bitsathy.ac.in', 'password123', 'student');
-      setIsSubmitting(false);
-      if (success) showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
     } else if (role === 'teacher') {
       setTeacherUsername('teacher@bitsathy.ac.in');
       setTeacherPassword('password123');
-      const success = await login('teacher@bitsathy.ac.in', 'password123', 'teacher');
-      setIsSubmitting(false);
-      if (success) showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
     } else if (role === 'admin') {
       setAdminEmail('admin@bitsathy.ac.in');
       setAdminPassword('admin@1234');
-      const success = await login('admin@bitsathy.ac.in', 'admin@1234', 'admin');
-      setIsSubmitting(false);
-      if (success) showToast('Master Access Granted', 'Logged into Central Administrator Control Center.', 'success');
+    }
+
+    const success = await login(targetEmail, targetPass, role);
+    setIsSubmitting(false);
+    if (success) {
+      showToast(role === 'admin' ? 'Master Access Granted' : 'Welcome!', `Logged into ${role.charAt(0).toUpperCase() + role.slice(1)} Dashboard.`, 'success');
+    } else {
+      const latestBlockCheck = isUserBlockedInDirectory(targetEmail);
+      if (latestBlockCheck.isBlocked) {
+        const reason = latestBlockCheck.reason || `Account Blocked: Your ${role} account has been administratively suspended.`;
+        const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
+        if (role === 'student') setStudentError(msg);
+        else if (role === 'teacher') setTeacherError(msg);
+        else setAdminError(msg);
+        showToast('Account Blocked', reason, 'error');
+      } else {
+        const msg = `Authentication Failed: Incorrect ${role} credentials.`;
+        if (role === 'student') setStudentError(msg);
+        else if (role === 'teacher') setTeacherError(msg);
+        else setAdminError(msg);
+        showToast('Authentication Failed', msg, 'error');
+      }
     }
   };
 

@@ -109,50 +109,70 @@ export const getAllDirectoryUsers = (): User[] => {
     const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [];
     const userMap = new Map<string, User>();
 
-    // 1. Initialize map with preset default users
+    // 1. Initialize map with preset default users (keyed by ID, email, and username)
     DEFAULT_PRESET_USERS.forEach((u) => {
       userMap.set(u.id, u);
+      if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
+      if (u.username) userMap.set(u.username.toLowerCase().trim(), u);
     });
 
-    // 2. Merge saved users from localStorage on top of defaults, preserving blocked status & details
+    // 2. Merge saved users from localStorage on top of defaults, consolidating blocked status
     savedUsers.forEach((savedUser) => {
-      const targetId = savedUser.id || (savedUser as unknown as { _id?: string })._id;
-      if (targetId) {
-        const existing = userMap.get(targetId);
-        const isBlocked = Boolean(savedUser.isBlocked || existing?.isBlocked || savedUser.status === 'blocked' || existing?.status === 'blocked');
-        const status = isBlocked ? 'blocked' : (savedUser.status || existing?.status || 'active');
-        const blockedReason = savedUser.blockedReason || existing?.blockedReason;
+      const sId = savedUser.id || (savedUser as unknown as { _id?: string })._id;
+      const sEmail = savedUser.email?.toLowerCase().trim();
+      const sUsername = savedUser.username?.toLowerCase().trim();
 
-        userMap.set(targetId, {
-          ...existing,
-          ...savedUser,
-          isBlocked,
-          status,
-          blockedReason,
-        });
-      } else if (savedUser.email) {
-        const existingEntry = Array.from(userMap.values()).find(
-          (u) => u.email?.toLowerCase().trim() === savedUser.email?.toLowerCase().trim()
-        );
-        if (existingEntry) {
-          const isBlocked = Boolean(savedUser.isBlocked || existingEntry.isBlocked || savedUser.status === 'blocked' || existingEntry.status === 'blocked');
-          const status = isBlocked ? 'blocked' : (savedUser.status || existingEntry.status || 'active');
-          const blockedReason = savedUser.blockedReason || existingEntry.blockedReason;
+      // Find any existing record matching ID, email, or username
+      let existing: User | undefined = undefined;
+      if (sId && userMap.has(sId)) existing = userMap.get(sId);
+      if (!existing && sEmail && userMap.has(sEmail)) existing = userMap.get(sEmail);
+      if (!existing && sUsername && userMap.has(sUsername)) existing = userMap.get(sUsername);
 
-          userMap.set(existingEntry.id, {
-            ...existingEntry,
-            ...savedUser,
-            isBlocked,
-            status,
-            blockedReason,
-          });
+      const isBlocked = Boolean(
+        savedUser.isBlocked ||
+        existing?.isBlocked ||
+        savedUser.status === 'blocked' ||
+        existing?.status === 'blocked'
+      );
+      const status = isBlocked ? 'blocked' : (savedUser.status || existing?.status || 'active');
+      const blockedReason = savedUser.blockedReason || existing?.blockedReason;
+
+      const mergedUser: User = {
+        ...existing,
+        ...savedUser,
+        isBlocked,
+        status,
+        blockedReason,
+      };
+
+      const key = existing?.id || sId || sEmail || sUsername || `user-${Date.now()}`;
+      userMap.set(key, mergedUser);
+      if (mergedUser.email) userMap.set(mergedUser.email.toLowerCase().trim(), mergedUser);
+      if (mergedUser.username) userMap.set(mergedUser.username.toLowerCase().trim(), mergedUser);
+    });
+
+    // Extract unique user objects by primary ID
+    const uniqueUsersMap = new Map<string, User>();
+    Array.from(userMap.values()).forEach((u) => {
+      const primaryKey = u.id || u.email || u.username;
+      if (primaryKey) {
+        const current = uniqueUsersMap.get(primaryKey);
+        if (!current) {
+          uniqueUsersMap.set(primaryKey, u);
         } else {
-          userMap.set(savedUser.email.toLowerCase(), savedUser);
+          const isBlocked = Boolean(current.isBlocked || u.isBlocked || current.status === 'blocked' || u.status === 'blocked');
+          uniqueUsersMap.set(primaryKey, {
+            ...current,
+            ...u,
+            isBlocked,
+            status: isBlocked ? 'blocked' : (current.status || u.status || 'active'),
+            blockedReason: current.blockedReason || u.blockedReason,
+          });
         }
       }
     });
 
-    return Array.from(userMap.values());
+    return Array.from(uniqueUsersMap.values());
   } catch (e) {
     console.warn('Error reading saved users directory:', e);
     return [...DEFAULT_PRESET_USERS];
