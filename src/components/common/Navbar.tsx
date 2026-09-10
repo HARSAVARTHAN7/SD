@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Camera,
   Upload,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
@@ -17,9 +18,10 @@ interface NavbarProps {
   currentTab: string;
   onSelectTab: (tab: string) => void;
   tabs: Array<{ id: string; label: string; icon: React.ComponentType<{ className?: string }> }>;
+  onRequestExit?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs, onRequestExit }) => {
   const { user, logout, updateProfile } = useAuth();
   const { notifications, markNotifRead, clearNotifs, updateUser, showToast } = useApp();
 
@@ -134,6 +136,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs })
 
           {/* Right Action Toolbar */}
           <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Back / Exit Button */}
+            {onRequestExit && (
+              <button
+                onClick={onRequestExit}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-2xl transition-all cursor-pointer shadow-2xs font-extrabold text-xs"
+                title="Quit Page & Log Out"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-rose-600" />
+                <span className="hidden sm:inline">Back / Exit</span>
+              </button>
+            )}
+
             {/* Notification Bell Dropdown */}
             <div className="relative">
               <button
