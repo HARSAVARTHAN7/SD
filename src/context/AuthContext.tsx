@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { User, Role } from '../types';
 import { AuthAPI } from '../services/apiService';
 import { getToken, setToken, clearToken } from '../services/api';
+import { dbService, STORES } from '../services/dbService';
 
 interface AuthContextType {
   user: User | null;
@@ -184,12 +185,11 @@ const USER_STORAGE_KEY = 'eduportal_current_user';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUserState] = useState<User | null>(() => {
     try {
-      // Clear legacy persistent localStorage user so initial site visit always lands on login page
-      localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem('eduportal_token');
-
-      const saved = sessionStorage.getItem(USER_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
+      const savedSession = sessionStorage.getItem(USER_STORAGE_KEY);
+      if (savedSession) return JSON.parse(savedSession);
+      const savedLocal = localStorage.getItem(USER_STORAGE_KEY);
+      if (savedLocal) return JSON.parse(savedLocal);
+      return null;
     } catch {
       return null;
     }
@@ -200,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserState(u);
     if (u) {
       sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
     } else {
       sessionStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
@@ -341,6 +342,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     clearToken();
+    try {
+      sessionStorage.removeItem('eduportal_active_tab');
+      sessionStorage.removeItem('eduportal_auth_step');
+    } catch {}
     setUser(null);
   };
 
@@ -388,6 +393,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(newUser);
       try {
+        dbService.put(STORES.USERS, newUser);
         const savedUsersRaw = localStorage.getItem('eduportal_all_users');
         const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
         if (!savedUsers.some((u) => u.email?.toLowerCase() === newUser.email.toLowerCase() || u.username?.toLowerCase() === newUser.username?.toLowerCase())) {
@@ -395,7 +401,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
         }
       } catch (e) {
-        console.warn('Failed to save registered user to eduportal_all_users:', e);
+        console.warn('Failed to save registered user to dbService:', e);
       }
       return true;
     }
@@ -407,8 +413,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newUserData = { ...user, ...updatedData };
       setUser(newUserData);
       try {
+        dbService.put(STORES.USERS, newUserData);
         localStorage.setItem('eduportal_user', JSON.stringify(newUserData));
-        // Persist to central directory database ('eduportal_all_users')
         const savedUsersRaw = localStorage.getItem('eduportal_all_users');
         const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
         const index = savedUsers.findIndex((u) => u.id === newUserData.id || (u.email && u.email.toLowerCase() === newUserData.email.toLowerCase()));
@@ -419,7 +425,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
       } catch (e) {
-        console.warn('Failed to save updated user to localStorage:', e);
+        console.warn('Failed to save updated user to dbService:', e);
       }
     }
 

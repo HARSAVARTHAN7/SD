@@ -150,7 +150,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   }, [academicTermPeriod?.startDate, academicTermPeriod?.endDate]);
 
   const [annModalOpen, setAnnModalOpen] = useState(false);
-  const [activeSubView, setActiveSubView] = useState<'admin' | 'student-preview' | 'teacher-preview'>('admin');
+  const [activeSubView, setActiveSubViewRaw] = useState<'admin' | 'student-preview' | 'teacher-preview'>(() => {
+    try {
+      const saved = sessionStorage.getItem('eduportal_admin_subview') || localStorage.getItem('eduportal_admin_subview');
+      if (saved && ['admin', 'student-preview', 'teacher-preview'].includes(saved)) {
+        return saved as 'admin' | 'student-preview' | 'teacher-preview';
+      }
+    } catch {}
+    return 'admin';
+  });
+
+  const setActiveSubView = (view: 'admin' | 'student-preview' | 'teacher-preview') => {
+    setActiveSubViewRaw(view);
+    try {
+      sessionStorage.setItem('eduportal_admin_subview', view);
+      localStorage.setItem('eduportal_admin_subview', view);
+    } catch {}
+  };
+
   const [previewTab, setPreviewTab] = useState<string>('overview');
 
   // Semester-Wise Timetable & Course Registration State
@@ -597,7 +614,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-purple-900 p-1 rounded-xl">
-              {['overview', 'timetable', 'attendance', 'courses', 'roster', 'announcements'].map((tab) => (
+              {['overview', 'timetable', 'attendance', 'courses', 'request', 'notices'].map((tab) => (
                 <button key={tab} onClick={() => setPreviewTab(tab)}
                   className={`px-3 py-1 rounded-lg text-xs font-bold capitalize cursor-pointer ${previewTab === tab ? 'bg-purple-500 text-white' : 'text-purple-300 hover:text-white'}`}>
                   {tab}
@@ -3875,7 +3892,7 @@ Subjects Taught: MATH-401, PHYS-302, CS-205
 
             {/* Tab Navigation for Inspected Teacher Dashboard */}
             <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-2xl border border-slate-800 text-xs font-semibold">
-              {(['courses', 'attendance', 'roster', 'results', 'timetable', 'notices'] as const).map((tab) => (
+              {(['courses', 'attendance', 'request', 'results', 'timetable', 'notices'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setInspectTeacherTab(tab)}

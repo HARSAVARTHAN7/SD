@@ -22,6 +22,7 @@ import {
 import type { TimetableSlot } from '../types';
 import { useAuth } from './AuthContext';
 import { generateTeacherEmailAndName, formatTeacherName } from '../utils/teacherUtils';
+import { dbService, STORES } from '../services/dbService';
 
 export interface Toast {
   id: string;
@@ -326,120 +327,123 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { user, role } = useAuth();
 
   const [courses, setCourses] = useState<Course[]>([]);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_attendance_records');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    if (attendance.length > 0) {
-      try {
-        localStorage.setItem('eduportal_attendance_records', JSON.stringify(attendance));
-      } catch (e) {
-        console.warn('Failed to save attendance to localStorage:', e);
-      }
-    }
-  }, [attendance]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_deleted_users');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // fallback
-    }
     const ramUser = INITIAL_DEFAULT_USERS.find((u) => u.id === 'student-ram');
     return ramUser ? [{ ...ramUser, deletedAt: 'Recently' }] : [];
   });
-
-  const [allUsers, setAllUsers] = useState<User[]>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_all_users');
-      const savedDeleted = localStorage.getItem('eduportal_deleted_users');
-      const deletedList: User[] = savedDeleted
-        ? JSON.parse(savedDeleted)
-        : [INITIAL_DEFAULT_USERS.find((u) => u.id === 'student-ram')].filter(Boolean) as User[];
-
-      if (saved) {
-        const parsed: User[] = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter(
-            (u) => !deletedList.some((du) => du && (du.id === u.id || du.email === u.email || du.username === u.username)),
-          );
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse saved users:', e);
-    }
-    return INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram');
-  });
-
+  const [allUsers, setAllUsers] = useState<User[]>(() => INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram'));
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
-  const [studentResults, setStudentResults] = useState<StudentResultReport[]>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_student_results');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse studentResults from localStorage:', e);
-    }
-    return DEFAULT_INITIAL_STUDENT_RESULTS;
-  });
+  const [studentResults, setStudentResults] = useState<StudentResultReport[]>(() => DEFAULT_INITIAL_STUDENT_RESULTS);
+  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+  const [academicTermPeriod, setAcademicTermPeriodState] = useState<AcademicTermPeriod>({ startDate: '2026-08-31', endDate: '2026-12-31' });
+
+  const [deletedCourses, setDeletedCourses] = useState<Array<Course & { deletedAt?: string }>>([]);
+  const [deletedAnnouncements, setDeletedAnnouncements] = useState<Array<Announcement & { deletedAt?: string }>>([]);
+  const [deletedResults, setDeletedResults] = useState<Array<StudentResultReport & { deletedAt?: string }>>([]);
+
+  // Initial DB Hydration & Migration from localStorage
+  useEffect(() => {
+    const initDB = async () => {
+      await dbService.migrateFromLocalStorage();
+
+      const [
+        dbUsers,
+        dbAtt,
+        dbRes,
+        dbTerm,
+        dbDelUsers,
+        dbDelCourses,
+        dbDelAnn,
+        dbDelRes,
+        dbCourses,
+        dbAnn,
+        dbTime,
+      ] = await Promise.all([
+        dbService.getAll<User>(STORES.USERS),
+        dbService.getAll<AttendanceRecord>(STORES.ATTENDANCE),
+        dbService.getAll<StudentResultReport>(STORES.STUDENT_RESULTS),
+        dbService.getMeta<AcademicTermPeriod>('academic_term_period'),
+        dbService.getAll<User & { deletedAt?: string }>(STORES.DELETED_USERS),
+        dbService.getAll<Course & { deletedAt?: string }>(STORES.DELETED_COURSES),
+        dbService.getAll<Announcement & { deletedAt?: string }>(STORES.DELETED_ANNOUNCEMENTS),
+        dbService.getAll<StudentResultReport & { deletedAt?: string }>(STORES.DELETED_RESULTS),
+        dbService.getAll<Course>(STORES.COURSES),
+        dbService.getAll<Announcement>(STORES.ANNOUNCEMENTS),
+        dbService.getAll<TimetableSlot>(STORES.TIMETABLE),
+      ]);
+
+      if (dbUsers.length > 0) setAllUsers(dbUsers);
+      if (dbAtt.length > 0) setAttendance(dbAtt);
+      if (dbRes.length > 0) setStudentResults(dbRes);
+      if (dbTerm && dbTerm.startDate && dbTerm.endDate) setAcademicTermPeriodState(dbTerm);
+      if (dbDelUsers.length > 0) setDeletedUsers(dbDelUsers);
+      if (dbDelCourses.length > 0) setDeletedCourses(dbDelCourses);
+      if (dbDelAnn.length > 0) setDeletedAnnouncements(dbDelAnn);
+      if (dbDelRes.length > 0) setDeletedResults(dbDelRes);
+      if (dbCourses.length > 0) setCourses(dbCourses);
+      if (dbAnn.length > 0) setAnnouncements(dbAnn);
+      if (dbTime.length > 0) setTimetable(dbTime);
+    };
+
+    initDB();
+  }, []);
+
+  // Sync state updates back to IndexedDB database
+  useEffect(() => {
+    if (attendance.length > 0) dbService.putMany(STORES.ATTENDANCE, attendance);
+  }, [attendance]);
 
   useEffect(() => {
-    if (studentResults.length > 0) {
-      try {
-        localStorage.setItem('eduportal_student_results', JSON.stringify(studentResults));
-      } catch (e) {
-        console.warn('Failed to save studentResults to localStorage:', e);
-      }
-    }
+    if (studentResults.length > 0) dbService.putMany(STORES.STUDENT_RESULTS, studentResults);
   }, [studentResults]);
 
-  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
+  useEffect(() => {
+    if (allUsers.length > 0) dbService.putMany(STORES.USERS, allUsers);
+  }, [allUsers]);
 
-  // Academic Term Attendance Period State (Default: Aug 31, 2026 to Dec 31, 2026)
-  const [academicTermPeriod, setAcademicTermPeriodState] = useState<AcademicTermPeriod>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_academic_term_period');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.startDate === '2026-06-01') {
-          const updated = { startDate: '2026-08-31', endDate: '2026-12-31' };
-          localStorage.setItem('eduportal_academic_term_period', JSON.stringify(updated));
-          return updated;
-        }
-        return parsed;
-      }
-    } catch {}
-    return { startDate: '2026-08-31', endDate: '2026-12-31' };
-  });
+  useEffect(() => {
+    if (courses.length > 0) dbService.putMany(STORES.COURSES, courses);
+  }, [courses]);
+
+  useEffect(() => {
+    if (announcements.length > 0) dbService.putMany(STORES.ANNOUNCEMENTS, announcements);
+  }, [announcements]);
+
+  useEffect(() => {
+    if (timetable.length > 0) dbService.putMany(STORES.TIMETABLE, timetable);
+  }, [timetable]);
+
+  useEffect(() => {
+    if (deletedUsers.length > 0) dbService.putMany(STORES.DELETED_USERS, deletedUsers);
+  }, [deletedUsers]);
+
+  useEffect(() => {
+    if (deletedCourses.length > 0) dbService.putMany(STORES.DELETED_COURSES, deletedCourses);
+  }, [deletedCourses]);
+
+  useEffect(() => {
+    if (deletedAnnouncements.length > 0) dbService.putMany(STORES.DELETED_ANNOUNCEMENTS, deletedAnnouncements);
+  }, [deletedAnnouncements]);
+
+  useEffect(() => {
+    if (deletedResults.length > 0) dbService.putMany(STORES.DELETED_RESULTS, deletedResults);
+  }, [deletedResults]);
 
   const updateAcademicTermPeriod = async (period: AcademicTermPeriod) => {
     setAcademicTermPeriodState(period);
     try {
       await AcademicTermPeriodAPI.update(period);
     } catch (e) {
-      console.warn('Backend AcademicTermPeriod API offline / fallback to local storage:', e);
+      console.warn('Backend AcademicTermPeriod API offline / fallback to IndexedDB:', e);
     }
     try {
+      await dbService.setMeta('academic_term_period', period);
       localStorage.setItem('eduportal_academic_term_period', JSON.stringify(period));
     } catch (e) {
-      console.warn('Failed to save academic term period to localStorage:', e);
+      console.warn('Failed to save academic term period to IndexedDB:', e);
     }
     showToast('Academic Period Updated!', `Attendance period set from ${period.startDate} to ${period.endDate}.`, 'success');
   };
@@ -454,64 +458,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [allUsers]);
 
-  const [deletedCourses, setDeletedCourses] = useState<Array<Course & { deletedAt?: string }>>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_deleted_courses');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
 
-  const [deletedAnnouncements, setDeletedAnnouncements] = useState<Array<Announcement & { deletedAt?: string }>>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_deleted_announcements');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [deletedResults, setDeletedResults] = useState<Array<StudentResultReport & { deletedAt?: string }>>(() => {
-    try {
-      const saved = localStorage.getItem('eduportal_deleted_results');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('eduportal_deleted_users', JSON.stringify(deletedUsers));
-    } catch (e) {
-      console.warn('Failed to save deletedUsers:', e);
-    }
-  }, [deletedUsers]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('eduportal_deleted_courses', JSON.stringify(deletedCourses));
-    } catch (e) {
-      console.warn('Failed to save deletedCourses:', e);
-    }
-  }, [deletedCourses]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('eduportal_deleted_announcements', JSON.stringify(deletedAnnouncements));
-    } catch (e) {
-      console.warn('Failed to save deletedAnnouncements:', e);
-    }
-  }, [deletedAnnouncements]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('eduportal_deleted_results', JSON.stringify(deletedResults));
-    } catch (e) {
-      console.warn('Failed to save deletedResults:', e);
-    }
-  }, [deletedResults]);
 
   // Auto-recover soft-deleted default users (e.g. ram.cs23) into deletedUsers if missing from both lists
   useEffect(() => {
@@ -560,37 +507,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsDataLoading(true);
 
     try {
-      // Fetch data in parallel based on role
       const promises: Promise<void>[] = [];
 
       // Everyone gets courses, announcements, timetable, notifications
       promises.push(
-        CourseAPI.getAll().then(({ data }) => setCourses(data.data)),
-        AnnouncementAPI.getAll({ limit: 50 }).then(({ data }) => setAnnouncements(data.data)),
-        TimetableAPI.getAll().then(({ data }) => setTimetable(data.data)),
-        NotificationAPI.getAll({ roleTarget: role || undefined }).then(({ data }) => setNotifications(data.data)),
+        CourseAPI.getAll().then(async ({ data }) => {
+          if (data && Array.isArray(data.data) && data.data.length > 0) {
+            setCourses((prev) => {
+              const map = new Map<string, Course>();
+              prev.forEach((c) => map.set(c.id, c));
+              data.data.forEach((c) => map.set(c.id, c));
+              const merged = Array.from(map.values());
+              dbService.putMany(STORES.COURSES, merged);
+              return merged;
+            });
+          }
+        }).catch(() => {}),
+
+        AnnouncementAPI.getAll({ limit: 50 }).then(async ({ data }) => {
+          if (data && Array.isArray(data.data) && data.data.length > 0) {
+            setAnnouncements((prev) => {
+              const map = new Map<string, Announcement>();
+              prev.forEach((a) => map.set(a.id, a));
+              data.data.forEach((a) => map.set(a.id, a));
+              const merged = Array.from(map.values());
+              dbService.putMany(STORES.ANNOUNCEMENTS, merged);
+              return merged;
+            });
+          }
+        }).catch(() => {}),
+
+        TimetableAPI.getAll().then(async ({ data }) => {
+          if (data && Array.isArray(data.data) && data.data.length > 0) {
+            setTimetable((prev) => {
+              const map = new Map<string, TimetableSlot>();
+              prev.forEach((t) => map.set(t.id, t));
+              data.data.forEach((t) => map.set(t.id, t));
+              const merged = Array.from(map.values());
+              dbService.putMany(STORES.TIMETABLE, merged);
+              return merged;
+            });
+          }
+        }).catch(() => {}),
+
+        NotificationAPI.getAll({ roleTarget: role || undefined }).then(({ data }) => setNotifications(data.data)).catch(() => {}),
       );
 
-      // Attendance (Merge server records with local state & localStorage)
+      // Attendance (Merge server records with DB & local state)
       promises.push(
         AttendanceAPI.getAll({ limit: 200 })
-          .then(({ data }) => {
-            const localSaved = (() => {
-              try {
-                const saved = localStorage.getItem('eduportal_attendance_records');
-                return saved ? JSON.parse(saved) : [];
-              } catch {
-                return [];
-              }
-            })();
-
+          .then(async ({ data }) => {
+            const dbSaved = await dbService.getAll<AttendanceRecord>(STORES.ATTENDANCE);
             setAttendance((prev) => {
               const map = new Map<string, AttendanceRecord>();
-              // 1. Local saved records
-              localSaved.forEach((item: AttendanceRecord) => map.set(`${item.date}_${item.studentId}`, item));
-              // 2. Current React state records
+              dbSaved.forEach((item: AttendanceRecord) => map.set(`${item.date}_${item.studentId}`, item));
               prev.forEach((item) => map.set(`${item.date}_${item.studentId}`, item));
-              // 3. Server records
               if (data && data.data && Array.isArray(data.data)) {
                 data.data.forEach((item) => {
                   const key = `${item.date}_${item.studentId}`;
@@ -598,39 +569,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 });
               }
               const merged = Array.from(map.values());
-              try {
-                localStorage.setItem('eduportal_attendance_records', JSON.stringify(merged));
-              } catch (e) {}
+              dbService.putMany(STORES.ATTENDANCE, merged);
               return merged;
             });
           })
-          .catch(() => {
-            try {
-              const saved = localStorage.getItem('eduportal_attendance_records');
-              if (saved) setAttendance(JSON.parse(saved));
-            } catch (e) {}
+          .catch(async () => {
+            const dbSaved = await dbService.getAll<AttendanceRecord>(STORES.ATTENDANCE);
+            if (dbSaved.length > 0) setAttendance(dbSaved);
           }),
       );
 
-      // Academic Term Period (Server + Local Storage fallback)
+      // Academic Term Period (Server + IndexedDB fallback)
       promises.push(
         AcademicTermPeriodAPI.get()
-          .then(({ data }) => {
+          .then(async ({ data }) => {
             if (data && data.data && data.data.startDate && data.data.endDate) {
               setAcademicTermPeriodState(data.data);
-              localStorage.setItem('eduportal_academic_term_period', JSON.stringify(data.data));
+              await dbService.setMeta('academic_term_period', data.data);
             }
           })
-          .catch(() => {
-            try {
-              const saved = localStorage.getItem('eduportal_academic_term_period');
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed && parsed.startDate && parsed.endDate) {
-                  setAcademicTermPeriodState(parsed);
-                }
-              }
-            } catch (e) {}
+          .catch(async () => {
+            const saved = await dbService.getMeta<AcademicTermPeriod>('academic_term_period');
+            if (saved && saved.startDate && saved.endDate) {
+              setAcademicTermPeriodState(saved);
+            }
           }),
       );
 
@@ -641,7 +603,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .then(({ data }) => {
               if (data && data.data && data.data.length > 0) {
                 setAllUsers((prev) => {
-                  return data.data
+                  const merged = data.data
                     .filter((serverUser) => !deletedUsers.some((du) => du.id === serverUser.id || du.email === serverUser.email))
                     .map((serverUser) => {
                       const localMatch = prev.find(
@@ -660,13 +622,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                       }
                       return serverUser;
                     });
+                  dbService.putMany(STORES.USERS, merged);
+                  return merged;
                 });
               }
             })
             .catch(() => {
-              console.warn('UserAPI.getAll failed or offline; keeping existing user list.');
+              console.warn('UserAPI.getAll failed or offline; keeping existing user list from DB.');
             }),
-          ResultAPI.getAll().then(({ data }) => setStudentResults(data.data)).catch(() => {}),
+          ResultAPI.getAll().then(async ({ data }) => {
+            if (data && Array.isArray(data.data) && data.data.length > 0) {
+              setStudentResults((prev) => {
+                const map = new Map<string, StudentResultReport>();
+                prev.forEach((r) => map.set(r.id, r));
+                data.data.forEach((r) => map.set(r.id, r));
+                const merged = Array.from(map.values());
+                dbService.putMany(STORES.STUDENT_RESULTS, merged);
+                return merged;
+              });
+            }
+          }).catch(() => {}),
         );
       }
 
@@ -679,7 +654,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Students get their own results
       if (role === 'student') {
         promises.push(
-          ResultAPI.getAll({ studentId: user.id }).then(({ data }) => setStudentResults(data.data)),
+          ResultAPI.getAll({ studentId: user.id }).then(async ({ data }) => {
+            if (data && Array.isArray(data.data) && data.data.length > 0) {
+              setStudentResults((prev) => {
+                const map = new Map<string, StudentResultReport>();
+                prev.forEach((r) => map.set(r.id, r));
+                data.data.forEach((r) => map.set(r.id, r));
+                const merged = Array.from(map.values());
+                dbService.putMany(STORES.STUDENT_RESULTS, merged);
+                return merged;
+              });
+            }
+          }).catch(() => {}),
         );
       }
 
@@ -689,7 +675,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setIsDataLoading(false);
     }
-  }, [user, role]);
+  }, [user, role, deletedUsers]);
 
   useEffect(() => {
     if (user) {
@@ -711,7 +697,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     courseId: string,
     records: Array<{ studentId: string; studentName: string; studentRoll: string; status: 'present' | 'absent' | 'late' | 'excused' | 'unmark'; notes?: string }>,
   ) => {
-    // 1. Instantly update local React state & sync with localStorage
+    // 1. Instantly update local React state & sync with IndexedDB
     setAttendance((prev) => {
       const next = [...prev];
       records.forEach((rec) => {
@@ -724,7 +710,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
         if (rec.status === 'unmark') {
           if (existingIdx !== -1) {
-            next.splice(existingIdx, 1);
+            const removed = next.splice(existingIdx, 1)[0];
+            if (removed && removed.id) dbService.delete(STORES.ATTENDANCE, removed.id);
           }
         } else {
           const newRecord: AttendanceRecord = {
@@ -745,9 +732,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
       try {
+        dbService.putMany(STORES.ATTENDANCE, next);
         localStorage.setItem('eduportal_attendance_records', JSON.stringify(next));
       } catch (e) {
-        console.warn('Failed to save attendance to localStorage:', e);
+        console.warn('Failed to save attendance to IndexedDB:', e);
       }
       return next;
     });
@@ -907,11 +895,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           : u,
       );
       try {
+        dbService.putMany(STORES.USERS, nextUsers);
         localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
         window.dispatchEvent(new Event('user:blocked'));
         window.dispatchEvent(new Event('storage'));
       } catch (e) {
-        console.warn('Failed to save allUsers to localStorage:', e);
+        console.warn('Failed to save allUsers to IndexedDB:', e);
       }
       return nextUsers;
     });
@@ -1108,9 +1097,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updated = [newReport, ...prev];
       }
       try {
+        dbService.putMany(STORES.STUDENT_RESULTS, updated);
         localStorage.setItem('eduportal_student_results', JSON.stringify(updated));
       } catch (e) {
-        console.warn('Failed to save studentResults to localStorage:', e);
+        console.warn('Failed to save studentResults to IndexedDB:', e);
       }
       return updated;
     });

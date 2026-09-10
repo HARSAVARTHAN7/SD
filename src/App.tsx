@@ -38,9 +38,9 @@ const TEACHER_TABS = [
   { id: 'timetable', label: 'Timetable', icon: Calendar },
   { id: 'attendance', label: 'Attendance Register', icon: CalendarCheck },
   { id: 'courses', label: 'Courses & Classes', icon: BookOpen },
-  { id: 'roster', label: 'Student Directory', icon: Users },
+  { id: 'request', label: 'Request', icon: Users },
   { id: 'results', label: 'Academic Results', icon: Award },
-  { id: 'announcements', label: 'Notice Board', icon: Megaphone },
+  { id: 'notices', label: 'Notice Board', icon: Megaphone },
 ];
 
 // Administrator Master Tabs
@@ -57,10 +57,53 @@ const ADMIN_TABS = [
 
 const MainApp: React.FC = () => {
   const { user, role, isLoading } = useAuth();
-  const [currentTab, setCurrentTab] = useState<string>('overview');
+  const [currentTab, setCurrentTabState] = useState<string>(() => {
+    try {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash) return hash;
+      const savedTab = sessionStorage.getItem('eduportal_active_tab') || localStorage.getItem('eduportal_active_tab');
+      return savedTab || 'overview';
+    } catch {
+      return 'overview';
+    }
+  });
+
+  const setCurrentTab = (tab: string) => {
+    setCurrentTabState(tab);
+    try {
+      sessionStorage.setItem('eduportal_active_tab', tab);
+      localStorage.setItem('eduportal_active_tab', tab);
+      if (window.location.hash !== `#${tab}`) {
+        window.history.replaceState(null, '', `#${tab}`);
+      }
+    } catch (e) {}
+  };
+
+  // Sync tab with URL hash change
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash) {
+        setCurrentTabState(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
-    setCurrentTab('overview');
+    if (!role) return;
+    const validTabs =
+      role === 'student'
+        ? STUDENT_TABS.map((t) => t.id)
+        : role === 'teacher'
+        ? TEACHER_TABS.map((t) => t.id)
+        : ADMIN_TABS.map((t) => t.id);
+
+    if (!validTabs.includes(currentTab)) {
+      const fallback = validTabs.includes(currentTab) ? currentTab : 'overview';
+      setCurrentTab(fallback);
+    }
   }, [role]);
 
   // Show loading screen while checking auth

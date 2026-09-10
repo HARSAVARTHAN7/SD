@@ -761,12 +761,12 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
         </div>
       )}
 
-      {/* ================= TAB 5: STUDENT ROSTER & ACCOMMODATION MANAGER ================= */}
-      {currentTab === 'roster' && (
+      {/* ================= TAB 5: STUDENT REQUEST & ACCOMMODATION MANAGER ================= */}
+      {(currentTab === 'request' || currentTab === 'roster') && (
         <div className="space-y-6 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Student Directory</h2>
+              <h2 className="text-2xl font-bold text-slate-800">Student Directory & Requests</h2>
               <p className="text-xs text-slate-500 mt-1">View student details. Use "Request Change" to notify the admin of any profile corrections needed.</p>
             </div>
 
@@ -1024,7 +1024,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ currentTab, 
       )}
 
       {/* ================= TAB 6: NOTICE BOARD ================= */}
-      {currentTab === 'announcements' && (
+      {(currentTab === 'notices' || currentTab === 'announcements') && (
         <div className="space-y-6 animate-fadeIn">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

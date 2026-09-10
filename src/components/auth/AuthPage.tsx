@@ -26,7 +26,22 @@ export const AuthPage: React.FC = () => {
   const { login } = useAuth();
   const { showToast } = useApp();
 
-  const [authStep, setAuthStep] = useState<'select-role' | 'student-login' | 'teacher-login' | 'admin-login'>('select-role');
+  const [authStep, setAuthStepState] = useState<'select-role' | 'student-login' | 'teacher-login' | 'admin-login'>(() => {
+    try {
+      const savedStep = sessionStorage.getItem('eduportal_auth_step');
+      if (savedStep && ['select-role', 'student-login', 'teacher-login', 'admin-login'].includes(savedStep)) {
+        return savedStep as 'select-role' | 'student-login' | 'teacher-login' | 'admin-login';
+      }
+    } catch {}
+    return 'select-role';
+  });
+
+  const setAuthStep = (step: 'select-role' | 'student-login' | 'teacher-login' | 'admin-login') => {
+    setAuthStepState(step);
+    try {
+      sessionStorage.setItem('eduportal_auth_step', step);
+    } catch {}
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Student Form State
