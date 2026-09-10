@@ -136,18 +136,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, tabs, o
 
           {/* Right Action Toolbar */}
           <div className="flex items-center gap-2.5 sm:gap-3">
-            {/* Back / Exit Button */}
-            {onRequestExit && (
-              <button
-                onClick={onRequestExit}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-2xl transition-all cursor-pointer shadow-2xs font-extrabold text-xs"
-                title="Quit Page & Log Out"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-rose-600" />
-                <span className="hidden sm:inline">Back / Exit</span>
-              </button>
-            )}
-
             {/* Notification Bell Dropdown */}
             <div className="relative">
               <button

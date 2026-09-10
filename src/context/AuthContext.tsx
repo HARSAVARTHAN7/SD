@@ -259,8 +259,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const savedSession = sessionStorage.getItem(USER_STORAGE_KEY);
       if (savedSession) return JSON.parse(savedSession);
-      const savedLocal = localStorage.getItem(USER_STORAGE_KEY);
-      if (savedLocal) return JSON.parse(savedLocal);
       return null;
     } catch {
       return null;
@@ -272,7 +270,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserState(u);
     if (u) {
       sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
     } else {
       sessionStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
