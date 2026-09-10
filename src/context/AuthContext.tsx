@@ -121,30 +121,39 @@ export const DEFAULT_PRESET_USERS: User[] = [
 ];
 
 export const getAllDirectoryUsers = (): User[] => {
-  let allDirectoryUsers: User[] = [];
   try {
     const savedUsersRaw = localStorage.getItem('eduportal_all_users');
     const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [];
     const userMap = new Map<string, User>();
 
+    // 1. Initialize map with preset default users
     DEFAULT_PRESET_USERS.forEach((u) => {
-      if (u.id) userMap.set(u.id, u);
-      if (u.email) userMap.set(u.email.toLowerCase(), u);
-      if (u.username) userMap.set(u.username.toLowerCase(), u);
+      userMap.set(u.id, u);
     });
 
-    savedUsers.forEach((u) => {
-      if (u.id) userMap.set(u.id, u);
-      if (u.email) userMap.set(u.email.toLowerCase(), u);
-      if (u.username) userMap.set(u.username.toLowerCase(), u);
+    // 2. Merge saved users from localStorage on top of defaults, preserving blocked status & details
+    savedUsers.forEach((savedUser) => {
+      const targetId = savedUser.id || (savedUser as unknown as { _id?: string })._id;
+      if (targetId) {
+        const existing = userMap.get(targetId);
+        userMap.set(targetId, { ...existing, ...savedUser });
+      } else if (savedUser.email) {
+        const existingEntry = Array.from(userMap.values()).find(
+          (u) => u.email?.toLowerCase().trim() === savedUser.email?.toLowerCase().trim()
+        );
+        if (existingEntry) {
+          userMap.set(existingEntry.id, { ...existingEntry, ...savedUser });
+        } else {
+          userMap.set(savedUser.email.toLowerCase(), savedUser);
+        }
+      }
     });
 
-    allDirectoryUsers = Array.from(userMap.values());
+    return Array.from(userMap.values());
   } catch (e) {
     console.warn('Error reading saved users directory:', e);
-    allDirectoryUsers = [...DEFAULT_PRESET_USERS];
+    return [...DEFAULT_PRESET_USERS];
   }
-  return allDirectoryUsers;
 };
 
 export const findUserInDirectory = (query: string): User | undefined => {

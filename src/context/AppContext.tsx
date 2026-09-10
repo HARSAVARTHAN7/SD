@@ -334,7 +334,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const ramUser = INITIAL_DEFAULT_USERS.find((u) => u.id === 'student-ram');
     return ramUser ? [{ ...ramUser, deletedAt: 'Recently' }] : [];
   });
-  const [allUsers, setAllUsers] = useState<User[]>(() => INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram'));
+  const [allUsers, setAllUsers] = useState<User[]>(() => {
+    try {
+      const savedRaw = localStorage.getItem('eduportal_all_users');
+      if (savedRaw) {
+        const savedUsers: User[] = JSON.parse(savedRaw);
+        if (Array.isArray(savedUsers) && savedUsers.length > 0) {
+          const userMap = new Map<string, User>();
+          INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram').forEach((u) => userMap.set(u.id, u));
+          savedUsers.forEach((u) => {
+            const key = u.id || u.email;
+            if (key) {
+              const existing = userMap.get(key);
+              userMap.set(key, { ...existing, ...u });
+            }
+          });
+          return Array.from(userMap.values());
+        }
+      }
+    } catch (e) {}
+    return INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram');
+  });
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>(() => DEFAULT_INITIAL_STUDENT_RESULTS);
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
@@ -375,7 +395,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dbService.getAll<TimetableSlot>(STORES.TIMETABLE),
       ]);
 
-      if (dbUsers.length > 0) setAllUsers(dbUsers);
+      if (dbUsers.length > 0) {
+        setAllUsers((prev) => {
+          const userMap = new Map<string, User>();
+          prev.forEach((u) => userMap.set(u.id, u));
+          dbUsers.forEach((u) => {
+            const existing = userMap.get(u.id);
+            userMap.set(u.id, { ...existing, ...u });
+          });
+          const merged = Array.from(userMap.values());
+          try {
+            localStorage.setItem('eduportal_all_users', JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        });
+      }
       if (dbAtt.length > 0) setAttendance(dbAtt);
       if (dbRes.length > 0) setStudentResults(dbRes);
       if (dbTerm && dbTerm.startDate && dbTerm.endDate) setAcademicTermPeriodState(dbTerm);
@@ -617,6 +651,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                           ...serverUser,
                           isBlocked: localMatch.isBlocked !== undefined ? localMatch.isBlocked : serverUser.isBlocked,
                           status: localMatch.status || serverUser.status,
+                          blockedReason: localMatch.blockedReason || serverUser.blockedReason,
                           password: localMatch.password || serverUser.password,
                         };
                       }
