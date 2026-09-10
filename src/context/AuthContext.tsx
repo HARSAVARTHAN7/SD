@@ -40,28 +40,11 @@ export const DEFAULT_PRESET_USERS: User[] = [
     employeeId: 'ADM-BIT-01',
   },
   {
-    id: 'student-ram-direct',
-    username: 'ram',
-    email: 'ram@bitsathy.ac.in',
-    password: '12345678',
-    name: 'Ram',
-    role: 'student',
-    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-    joinedDate: 'Sep 2023',
-    department: 'Computer Science & Engineering',
-    studentId: 'STU-2023-124',
-    rollNo: '2023-124',
-    semester: 'Semester 5',
-    cgpa: 3.88,
-    gpa: 3.88,
-    attendanceRate: 100.0,
-  },
-  {
     id: 'student-ram',
     username: 'ram.cs23',
     email: 'ram.cs23@bitsathy.ac.in',
-    password: 'password123',
-    name: 'Ram CS23',
+    password: '12345678',
+    name: 'Ram',
     role: 'student',
     avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
     joinedDate: 'Sep 2023',
@@ -154,6 +137,66 @@ export const getAllDirectoryUsers = (): User[] => {
     console.warn('Error reading saved users directory:', e);
     return [...DEFAULT_PRESET_USERS];
   }
+};
+
+export const isUserBlockedInDirectory = (userOrQuery: User | string | null | undefined): { isBlocked: boolean; reason?: string } => {
+  if (!userOrQuery) return { isBlocked: false };
+  const allUsers = getAllDirectoryUsers();
+  let searchTokens: string[] = [];
+
+  if (typeof userOrQuery === 'string') {
+    const q = userOrQuery.toLowerCase().trim();
+    if (!q) return { isBlocked: false };
+    searchTokens.push(q);
+    if (q.includes('@')) {
+      searchTokens.push(q.split('@')[0]);
+    }
+  } else if (typeof userOrQuery === 'object') {
+    if (userOrQuery.id) searchTokens.push(userOrQuery.id.toLowerCase().trim());
+    if ((userOrQuery as unknown as { _id?: string })._id) {
+      searchTokens.push(String((userOrQuery as unknown as { _id?: string })._id).toLowerCase().trim());
+    }
+    if (userOrQuery.email) {
+      const email = userOrQuery.email.toLowerCase().trim();
+      searchTokens.push(email);
+      if (email.includes('@')) searchTokens.push(email.split('@')[0]);
+    }
+    if (userOrQuery.username) searchTokens.push(userOrQuery.username.toLowerCase().trim());
+    if (userOrQuery.rollNo) searchTokens.push(userOrQuery.rollNo.toLowerCase().trim());
+    if (userOrQuery.studentId) searchTokens.push(userOrQuery.studentId.toLowerCase().trim());
+    if (userOrQuery.employeeId) searchTokens.push(userOrQuery.employeeId.toLowerCase().trim());
+    if (userOrQuery.name) searchTokens.push(userOrQuery.name.toLowerCase().trim());
+  }
+
+  searchTokens = Array.from(new Set(searchTokens.filter(Boolean)));
+
+  const matchedBlocked = allUsers.find((u) => {
+    if (!u.isBlocked && u.status !== 'blocked') return false;
+
+    const uEmail = u.email?.toLowerCase().trim() || '';
+    const uTokens = [
+      u.id?.toLowerCase().trim(),
+      (u as unknown as { _id?: string })._id ? String((u as unknown as { _id?: string })._id).toLowerCase().trim() : '',
+      uEmail,
+      uEmail.includes('@') ? uEmail.split('@')[0] : '',
+      u.username?.toLowerCase().trim(),
+      u.rollNo?.toLowerCase().trim(),
+      u.studentId?.toLowerCase().trim(),
+      u.employeeId?.toLowerCase().trim(),
+      u.name?.toLowerCase().trim(),
+    ].filter(Boolean);
+
+    return searchTokens.some((token) => uTokens.includes(token));
+  });
+
+  if (matchedBlocked) {
+    return {
+      isBlocked: true,
+      reason: matchedBlocked.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.',
+    };
+  }
+
+  return { isBlocked: false };
 };
 
 export const findUserInDirectory = (query: string): User | undefined => {
@@ -253,36 +296,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
 
-    if (user.isBlocked || user.status === 'blocked') {
-      const reason = user.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
-      try {
-        localStorage.setItem('eduportal_blocked_reason', reason);
-      } catch {}
-      logout();
-      return;
-    }
-
     const checkBlockedStatus = () => {
       try {
-        const savedUsersRaw = localStorage.getItem('eduportal_all_users');
-        if (savedUsersRaw) {
-          const allUsers: User[] = JSON.parse(savedUsersRaw);
-          const currentInDir = allUsers.find(
-            (u) =>
-              u.id === user.id ||
-              (u.email && user.email && u.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
-              (u.username && user.username && u.username.toLowerCase().trim() === user.username.toLowerCase().trim()) ||
-              (u.rollNo && user.rollNo && u.rollNo.trim() === user.rollNo.trim()) ||
-              (u.studentId && user.studentId && u.studentId.trim() === user.studentId.trim()) ||
-              (u.employeeId && user.employeeId && u.employeeId.trim() === user.employeeId.trim())
-          );
-          if (currentInDir && (currentInDir.isBlocked || currentInDir.status === 'blocked')) {
-            const reason = currentInDir.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
-            try {
-              localStorage.setItem('eduportal_blocked_reason', reason);
-            } catch {}
-            logout();
-          }
+        const blockCheck = isUserBlockedInDirectory(user);
+        if (user.isBlocked || user.status === 'blocked' || blockCheck.isBlocked) {
+          const reason = user.blockedReason || blockCheck.reason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
+          try {
+            localStorage.setItem('eduportal_blocked_reason', reason);
+          } catch {}
+          logout();
         }
       } catch (e) {
         console.warn('Error checking blocked status:', e);
@@ -307,12 +329,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!cleanQuery) return false;
 
+    // Direct multi-identifier directory block check before any authentication attempt
+    const queryBlockCheck = isUserBlockedInDirectory(cleanQuery);
+    if (queryBlockCheck.isBlocked) {
+      const reason = queryBlockCheck.reason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
+      try {
+        localStorage.setItem('eduportal_blocked_reason', reason);
+      } catch {}
+      console.warn('Login denied: Account is blocked.', reason);
+      return false;
+    }
+
     // Try backend API first
     try {
       const { data } = await AuthAPI.login(usernameOrEmail, password, intendedRole);
       if (data.success && data.token) {
-        if (data.user?.isBlocked || data.user?.status === 'blocked') {
-          const reason = data.user.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
+        const apiUserBlockCheck = isUserBlockedInDirectory(data.user);
+        if (data.user?.isBlocked || data.user?.status === 'blocked' || apiUserBlockCheck.isBlocked) {
+          const reason = data.user?.blockedReason || apiUserBlockCheck.reason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
           try {
             localStorage.setItem('eduportal_blocked_reason', reason);
           } catch {}
@@ -330,8 +364,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const matchedUser = findUserInDirectory(cleanQuery);
 
     if (matchedUser) {
-      if (matchedUser.isBlocked || matchedUser.status === 'blocked') {
-        const reason = matchedUser.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
+      const userBlockCheck = isUserBlockedInDirectory(matchedUser);
+      if (matchedUser.isBlocked || matchedUser.status === 'blocked' || userBlockCheck.isBlocked) {
+        const reason = matchedUser.blockedReason || userBlockCheck.reason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
         try {
           localStorage.setItem('eduportal_blocked_reason', reason);
         } catch {}

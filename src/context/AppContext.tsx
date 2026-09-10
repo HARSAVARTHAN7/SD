@@ -920,15 +920,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const userId = userData.id || (userData as unknown as { _id: string })._id;
     const updated: User = { ...userData };
 
-    // 1. Instantly & synchronously update local state and localStorage
+    const targetEmail = userData.email?.toLowerCase().trim();
+    const targetUsername = userData.username?.toLowerCase().trim();
+    const targetRoll = userData.rollNo?.toLowerCase().trim();
+    const targetStudentId = userData.studentId?.toLowerCase().trim();
+    const targetEmpId = userData.employeeId?.toLowerCase().trim();
+    const targetName = userData.name?.toLowerCase().trim();
+
+    // 1. Instantly & synchronously update local state and localStorage across all user record aliases
     setAllUsers((prev) => {
-      const nextUsers = prev.map((u) =>
-        u.id === userId ||
-        (u as unknown as { _id: string })._id === userId ||
-        (u.email && userData.email && u.email.toLowerCase().trim() === userData.email.toLowerCase().trim())
-          ? { ...u, ...updated }
-          : u,
-      );
+      const nextUsers = prev.map((u) => {
+        const uId = u.id?.toLowerCase().trim();
+        const u_Id = (u as unknown as { _id?: string })._id ? String((u as unknown as { _id?: string })._id).toLowerCase().trim() : '';
+        const uEmail = u.email?.toLowerCase().trim();
+        const uUsername = u.username?.toLowerCase().trim();
+        const uRoll = u.rollNo?.toLowerCase().trim();
+        const uStudentId = u.studentId?.toLowerCase().trim();
+        const uEmpId = u.employeeId?.toLowerCase().trim();
+        const uName = u.name?.toLowerCase().trim();
+
+        const isMatch =
+          (userId && uId === userId.toLowerCase().trim()) ||
+          (userId && u_Id === userId.toLowerCase().trim()) ||
+          (targetEmail && uEmail === targetEmail) ||
+          (targetUsername && uUsername === targetUsername) ||
+          (targetRoll && uRoll === targetRoll) ||
+          (targetStudentId && uStudentId === targetStudentId) ||
+          (targetEmpId && uEmpId === targetEmpId) ||
+          (targetName && uName === targetName);
+
+        if (isMatch) {
+          return {
+            ...u,
+            ...updated,
+            isBlocked: updated.isBlocked,
+            status: updated.status,
+            blockedReason: updated.blockedReason,
+          };
+        }
+        return u;
+      });
+
       try {
         dbService.putMany(STORES.USERS, nextUsers);
         localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
