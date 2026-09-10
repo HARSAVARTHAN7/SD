@@ -240,13 +240,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('auth:expired', handleExpiry);
   }, []);
 
-  // Listen for active user block status & cleanly log out blocked user without browser alert popups
+  // Listen for active user block status & cleanly log out blocked user with specific reason
   useEffect(() => {
     if (!user) return;
 
     if (user.isBlocked || user.status === 'blocked') {
+      const reason = user.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
       try {
-        localStorage.setItem('eduportal_blocked_reason', 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.');
+        localStorage.setItem('eduportal_blocked_reason', reason);
       } catch {}
       logout();
       return;
@@ -263,11 +264,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               (u.email && user.email && u.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
               (u.username && user.username && u.username.toLowerCase().trim() === user.username.toLowerCase().trim()) ||
               (u.rollNo && user.rollNo && u.rollNo.trim() === user.rollNo.trim()) ||
-              (u.studentId && user.studentId && u.studentId.trim() === user.studentId.trim())
+              (u.studentId && user.studentId && u.studentId.trim() === user.studentId.trim()) ||
+              (u.employeeId && user.employeeId && u.employeeId.trim() === user.employeeId.trim())
           );
           if (currentInDir && (currentInDir.isBlocked || currentInDir.status === 'blocked')) {
+            const reason = currentInDir.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
             try {
-              localStorage.setItem('eduportal_blocked_reason', 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.');
+              localStorage.setItem('eduportal_blocked_reason', reason);
             } catch {}
             logout();
           }
@@ -300,6 +303,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data } = await AuthAPI.login(usernameOrEmail, password, intendedRole);
       if (data.success && data.token) {
         if (data.user?.isBlocked || data.user?.status === 'blocked') {
+          const reason = data.user.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
+          try {
+            localStorage.setItem('eduportal_blocked_reason', reason);
+          } catch {}
           return false;
         }
         setToken(data.token);
@@ -315,7 +322,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (matchedUser) {
       if (matchedUser.isBlocked || matchedUser.status === 'blocked') {
-        console.warn('Login denied: Account is blocked.');
+        const reason = matchedUser.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
+        try {
+          localStorage.setItem('eduportal_blocked_reason', reason);
+        } catch {}
+        console.warn('Login denied: Account is blocked.', reason);
         return false;
       }
       if (intendedRole && matchedUser.role !== intendedRole) {

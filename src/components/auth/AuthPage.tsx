@@ -100,9 +100,10 @@ export const AuthPage: React.FC = () => {
 
     // 2. Active vs Blocked status check
     if (matched.isBlocked || matched.status === 'blocked') {
-      const msg = 'Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.';
+      const reason = matched.blockedReason || 'Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.';
+      const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
       setStudentError(msg);
-      showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
+      showToast('Account Blocked', reason, 'error');
       return;
     }
 
@@ -146,9 +147,10 @@ export const AuthPage: React.FC = () => {
 
     // 2. Active vs Blocked status check
     if (matched.isBlocked || matched.status === 'blocked') {
-      const msg = 'Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.';
+      const reason = matched.blockedReason || 'Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.';
+      const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
       setTeacherError(msg);
-      showToast('Account Blocked', 'Your account has been administratively suspended by the admin.', 'error');
+      showToast('Account Blocked', reason, 'error');
       return;
     }
 

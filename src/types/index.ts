@@ -13,6 +13,7 @@ export interface User {
   joinedDate: string;
   isBlocked?: boolean;
   status?: 'active' | 'blocked';
+  blockedReason?: string;
 
   // Student-specific fields
   studentId?: string;

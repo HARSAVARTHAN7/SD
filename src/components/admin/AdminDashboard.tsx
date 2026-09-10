@@ -233,6 +233,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  // Block Account Modal State
+  const [blockModalTarget, setBlockModalTarget] = useState<User | null>(null);
+  const [blockReasonInput, setBlockReasonInput] = useState<string>('Account Blocked: Administrative suspension by institutional authority. Access denied.');
+
   // Broadcast filter state
   const [adminBroadcastFilter, setAdminBroadcastFilter] = useState<'all' | 'admin' | 'teacher'>('all');
 
@@ -1076,18 +1080,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                             >
                               <KeyRound className="w-3.5 h-3.5" /> Edit Credentials
                             </button>
-                            {!isTeacher && (
-                              <button
-                                onClick={() => {
-                                  updateUser({ ...account, isBlocked: true, status: 'blocked' });
-                                  showToast('Student Blocked', `Access suspended for ${account.name} (${account.email}). Moved to Blocked tab.`, 'warning');
-                                }}
-                                className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                title="Block student account access"
-                              >
-                                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" /> Block Student
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                setBlockModalTarget(account as User);
+                                setBlockReasonInput(`Account Blocked: Administrative suspension by institutional authority for ${account.name}. Access denied.`);
+                              }}
+                              className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-2xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              title="Block account access"
+                            >
+                              <ShieldAlert className="w-3.5 h-3.5 text-rose-600" /> Block Account
+                            </button>
                           </div>
                         </div>
                       );
@@ -1098,22 +1100,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
             </div>
           )}
 
-          {/* Sub-Tab 4: BLOCKED STUDENT ACCOUNTS & RETRIEVAL DIRECTORY */}
+          {/* Sub-Tab 4: BLOCKED ACCOUNTS & RETRIEVAL DIRECTORY */}
           {accountSubTab === 'blocked' && (
             <div className="space-y-4">
               {(() => {
-                const blockedStudents = allUsers.filter((u) => {
-                  if (u.role !== 'student') return false;
+                const blockedAccounts = allUsers.filter((u) => {
+                  if (u.role === 'admin') return false;
                   return Boolean(u.isBlocked || u.status === 'blocked');
                 });
 
-                if (blockedStudents.length === 0) {
+                if (blockedAccounts.length === 0) {
                   return (
                     <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center">
                       <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                      <h3 className="text-base font-bold text-slate-800">No Blocked Student Accounts</h3>
+                      <h3 className="text-base font-bold text-slate-800">No Blocked User Accounts</h3>
                       <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                        All registered student accounts are currently active with full access.
+                        All registered student and faculty accounts are currently active with full access.
                       </p>
                     </div>
                   );
@@ -1121,7 +1123,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
 
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {blockedStudents.map((account) => {
+                    {blockedAccounts.map((account) => {
                       const isPassVisible = visiblePasswords[account.id] || false;
                       const accountPass = account.password || 'password123';
 
@@ -1134,15 +1136,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                             {/* Status Header */}
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1.5 shadow-xs">
-                                <ShieldAlert className="w-3.5 h-3.5 text-rose-600 animate-pulse" /> STUDENT ACCOUNT BLOCKED
+                                <ShieldAlert className="w-3.5 h-3.5 text-rose-600 animate-pulse" /> {account.role.toUpperCase()} ACCOUNT BLOCKED
                               </span>
 
                               <span className="text-xs text-rose-700 font-mono font-bold">
-                                Roll #: {account.rollNo || account.studentId || account.id}
+                                ID: {account.studentId || account.rollNo || account.employeeId || account.id}
                               </span>
                             </div>
 
-                            {/* Student Profile Info */}
+                            {/* Profile Info */}
                             <div className="flex items-start gap-4">
                               <img
                                 src={account.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(account.name)}&background=random`}
@@ -1156,28 +1158,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                                   <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
                                     {account.department || 'Computer Science'}
                                   </span>
-                                  <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
-                                    {account.semester || '5th Semester'}
-                                  </span>
-                                  {account.gpa !== undefined && (
-                                    <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                                      GPA: {account.gpa}
+                                  {account.semester && (
+                                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                                      {account.semester}
                                     </span>
                                   )}
                                 </div>
                               </div>
                             </div>
 
-                            {/* Extra Details (Mentor & Residence) */}
-                            <div className="p-3 bg-rose-100/40 rounded-2xl border border-rose-200/80 grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="text-[10px] font-bold uppercase text-slate-500 block">Residence Type:</span>
-                                <span className="font-semibold text-slate-800">{account.residenceType || 'Day Scholar'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] font-bold uppercase text-slate-500 block">Assigned Mentor:</span>
-                                <span className="font-semibold text-slate-800">{account.mentorName || 'Dr. Sarah Jenkins'}</span>
-                              </div>
+                            {/* Reason for Block Banner */}
+                            <div className="p-3 bg-rose-100/70 border border-rose-300 rounded-2xl text-xs space-y-1">
+                              <span className="text-[10px] font-black uppercase text-rose-800 tracking-wider block">Reason for Block:</span>
+                              <p className="font-semibold text-rose-950 leading-relaxed">
+                                {account.blockedReason || 'Account Blocked: Administrative suspension by institutional authority. Access denied.'}
+                              </p>
                             </div>
 
                             {/* Registered Login Password Box */}
@@ -1208,12 +1203,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                           <div className="pt-4 border-t border-rose-200">
                             <button
                               onClick={() => {
-                                updateUser({ ...account, isBlocked: false, status: 'active' });
-                                showToast('Block Revoked', `Full access & credentials retrieved for ${account.name} (${account.email}). Moved back to Active Directory.`, 'success');
+                                updateUser({ ...account, isBlocked: false, status: 'active', blockedReason: undefined });
+                                showToast('Block Revoked', `Full access & credentials restored for ${account.name} (${account.email}). Moved back to Active Directory.`, 'success');
                               }}
                               className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-extrabold text-xs shadow-lg shadow-emerald-600/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
                             >
-                              <RotateCcw className="w-4 h-4" /> Revoke Block / Restore Student Access
+                              <RotateCcw className="w-4 h-4" /> Revoke Block / Restore User Access
                             </button>
                           </div>
                         </div>
@@ -3926,6 +3921,118 @@ Subjects Taught: MATH-401, PHYS-302, CS-205
 
       {/* Broadcast Announcement Modal */}
       <PostAnnouncementModal isOpen={annModalOpen} onClose={() => setAnnModalOpen(false)} />
+
+      {/* Block Account Confirmation & Custom Reason Modal */}
+      {blockModalTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn" onClick={() => setBlockModalTarget(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 bg-gradient-to-r from-rose-600 to-rose-800 text-white relative">
+              <button
+                onClick={() => setBlockModalTarget(null)}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <span className="text-[10px] uppercase font-black text-rose-200 tracking-wider">
+                Institutional Governance
+              </span>
+              <h3 className="text-xl font-bold mt-0.5">Suspend & Block Account</h3>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!blockModalTarget) return;
+                const finalReason = blockReasonInput.trim() || 'Account Blocked: Administrative suspension by institutional authority. Access denied.';
+
+                updateUser({
+                  ...blockModalTarget,
+                  isBlocked: true,
+                  status: 'blocked',
+                  blockedReason: finalReason,
+                });
+
+                showToast('Account Blocked', `Access suspended for ${blockModalTarget.name}. User will be immediately logged out.`, 'warning');
+                setBlockModalTarget(null);
+              }}
+              className="p-6 space-y-4 text-xs font-sans"
+            >
+              <div className="flex items-center gap-3.5 p-3.5 bg-rose-50 border border-rose-200 rounded-2xl">
+                <img
+                  src={blockModalTarget.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(blockModalTarget.name)}&background=random`}
+                  alt={blockModalTarget.name}
+                  className="w-12 h-12 rounded-2xl object-cover ring-2 ring-rose-300 shadow-xs shrink-0"
+                />
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-sm">{blockModalTarget.name}</h4>
+                  <p className="text-rose-700 font-mono font-bold text-xs">{blockModalTarget.email}</p>
+                  <p className="text-[11px] text-slate-500 capitalize">{blockModalTarget.role} • ID: {blockModalTarget.studentId || blockModalTarget.rollNo || blockModalTarget.employeeId || blockModalTarget.id}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Specify Reason for Administrative Block *
+                </label>
+
+                <div className="space-y-1.5 mb-3">
+                  {[
+                    `Account Blocked: Administrative suspension by institutional authority. Access denied.`,
+                    `Account Blocked: Disciplinary hold due to misconduct. Access denied.`,
+                    `Account Blocked: Fee non-payment hold. Contact administrative office.`,
+                    `Account Blocked: Security hold due to unauthorized system access.`,
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setBlockReasonInput(preset)}
+                      className={`w-full text-left p-2.5 rounded-xl text-[11px] font-medium border transition-all cursor-pointer ${
+                        blockReasonInput === preset
+                          ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      • {preset}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  required
+                  rows={3}
+                  value={blockReasonInput}
+                  onChange={(e) => setBlockReasonInput(e.target.value)}
+                  placeholder="Enter the detailed reason for blocking this account..."
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:border-rose-500 font-medium text-slate-800 leading-relaxed"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-[11px] text-amber-900 font-medium flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Immediate Action:</strong> Blocking will immediately terminate any active session for <strong>{blockModalTarget.name}</strong>, log out their ID in real-time, and deny future login attempts until unblocked.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setBlockModalTarget(null)}
+                  className="px-4 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-extrabold shadow-md shadow-rose-600/25 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <ShieldAlert className="w-4 h-4" /> Block & Terminate Session
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
