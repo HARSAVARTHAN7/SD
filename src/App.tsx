@@ -17,7 +17,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 import { AuthPage } from './components/auth/AuthPage';
 import { Navbar } from './components/common/Navbar';
 import { ToastContainer } from './components/common/ToastContainer';
@@ -60,6 +60,7 @@ const ADMIN_TABS = [
 
 const MainApp: React.FC = () => {
   const { user, role, isLoading, logout } = useAuth();
+  const { showToast } = useApp();
   const [currentTab, setCurrentTabState] = useState<string>(() => {
     try {
       const hash = window.location.hash.replace('#', '').trim();
@@ -71,7 +72,23 @@ const MainApp: React.FC = () => {
     }
   });
 
-  // Intercept browser back button (popstate) navigation: immediately log out to Login page
+  // Browser tab / window exit warning listener (beforeunload)
+  useEffect(() => {
+    if (!user) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Are you sure you want to exit the portal? Your session will end.';
+      return 'Are you sure you want to exit the portal? Your session will end.';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [user]);
+
+  // Intercept browser back button (popstate) navigation: log out and return to Login page
   useEffect(() => {
     if (!user) return;
 
@@ -80,6 +97,7 @@ const MainApp: React.FC = () => {
     } catch (e) {}
 
     const handlePopState = () => {
+      showToast('Session Ended', 'You navigated back and have been safely logged out.', 'info');
       logout();
     };
 
@@ -87,7 +105,7 @@ const MainApp: React.FC = () => {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [user, logout]);
+  }, [user, logout, showToast]);
 
   const setCurrentTab = (tab: string) => {
     setCurrentTabState(tab);
