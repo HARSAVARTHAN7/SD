@@ -248,6 +248,19 @@ export async function migrateFromLocalStorage(): Promise<void> {
   }
 }
 
+export async function clearAllLocalData(): Promise<void> {
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+    const storeKeys = Object.values(STORES);
+    for (const store of storeKeys) {
+      await dbClear(store);
+    }
+  } catch (e) {
+    console.warn('Error clearing all local data:', e);
+  }
+}
+
 export const dbService = {
   get: dbGet,
   getAll: dbGetAll,
@@ -255,6 +268,7 @@ export const dbService = {
   putMany: dbPutMany,
   delete: dbDelete,
   clear: dbClear,
+  clearAllLocalData,
   getMeta: dbGetMeta,
   setMeta: dbSetMeta,
   migrateFromLocalStorage,

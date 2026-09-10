@@ -13,6 +13,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  RotateCcw,
 } from 'lucide-react';
 import { StudentIllustration } from '../illustrations/StudentIllustration';
 import { TeacherIllustration } from '../illustrations/TeacherIllustration';
@@ -20,6 +21,7 @@ import { SignupModal } from './SignupModal';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { useAuth, findUserInDirectory } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
+import { clearAllLocalData } from '../../services/dbService';
 import { Role } from '../../types';
 
 export const AuthPage: React.FC = () => {
@@ -564,8 +566,22 @@ export const AuthPage: React.FC = () => {
         )}
       </main>
 
-      <footer className="max-w-5xl mx-auto w-full text-center py-3 text-xs text-slate-400">
+      <footer className="max-w-5xl mx-auto w-full text-center py-4 text-xs text-slate-400 space-y-1">
         <p>Student Dashboard • Role-Based Academic Management</p>
+        <button
+          type="button"
+          onClick={async () => {
+            await clearAllLocalData();
+            showToast('Local Data Cleared', 'All cached local storage and temporary data deleted cleanly.', 'info');
+            setTimeout(() => {
+              window.location.reload();
+            }, 600);
+          }}
+          className="text-[11px] font-bold text-rose-500 hover:text-rose-700 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+          title="Delete all local cached data, IndexedDB, and reset portal session"
+        >
+          <RotateCcw className="w-3.5 h-3.5" /> Clear All Local Data & Reset Cache
+        </button>
       </footer>
 
       <SignupModal isOpen={signupModalOpen} onClose={() => setSignupModalOpen(false)} initialRole={signupRole} />
