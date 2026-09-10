@@ -568,6 +568,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
     }
 
     if (editMode === 'add') {
+      const isDuplicate = allUsers.some((u) => {
+        const uEmail = u.email?.toLowerCase().trim();
+        const uUsername = u.username?.toLowerCase().trim();
+        const uRoll = u.rollNo?.toLowerCase().trim();
+        const uEmp = u.employeeId?.toLowerCase().trim();
+
+        const bEmail = base.email?.toLowerCase().trim();
+        const bUsername = base.username?.toLowerCase().trim();
+        const bRoll = base.rollNo?.toLowerCase().trim();
+        const bEmp = base.employeeId?.toLowerCase().trim();
+
+        return (
+          (bEmail && bEmail !== '-' && uEmail === bEmail) ||
+          (bUsername && bUsername !== '-' && uUsername === bUsername) ||
+          (bRoll && bRoll !== '-' && uRoll === bRoll) ||
+          (bEmp && bEmp !== '-' && uEmp === bEmp)
+        );
+      });
+
+      if (isDuplicate) {
+        showToast('Duplicate Entry', `A ${editRole} record with this Email, Username, Roll No, or Employee ID already exists.`, 'warning');
+        return;
+      }
       addUser(base);
     } else {
       updateUser(base);

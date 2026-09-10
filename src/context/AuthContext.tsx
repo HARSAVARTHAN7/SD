@@ -282,36 +282,61 @@ export const getAllDirectoryUsers = (): User[] => {
       if (mergedUser.username) userMap.set(mergedUser.username.toLowerCase().trim(), mergedUser);
     });
 
-    // Extract unique user objects by primary ID, STRICTLY EXCLUDING DELETED USERS
-    const uniqueUsersMap = new Map<string, User>();
+    // Extract unique user objects by strictly deduplicating across ALL unique identifiers (id, email, username, rollNo, studentId, employeeId), EXCLUDING DELETED USERS
+    const uniqueUsersList: User[] = [];
+
     Array.from(userMap.values()).forEach((u) => {
       const isDeleted = deletedUsers.some(
         (du) =>
           du.id === u.id ||
           (du.email && u.email && du.email.toLowerCase().trim() === u.email.toLowerCase().trim()) ||
-          (du.username && u.username && du.username.toLowerCase().trim() === u.username.toLowerCase().trim())
+          (du.username && u.username && du.username.toLowerCase().trim() === u.username.toLowerCase().trim()) ||
+          (du.rollNo && u.rollNo && du.rollNo.toLowerCase().trim() === u.rollNo.toLowerCase().trim()) ||
+          (du.employeeId && u.employeeId && du.employeeId.toLowerCase().trim() === u.employeeId.toLowerCase().trim())
       );
       if (isDeleted) return; // STRICTLY EXCLUDE DELETED ACCOUNTS!
 
-      const primaryKey = u.id || u.email || u.username;
-      if (primaryKey) {
-        const current = uniqueUsersMap.get(primaryKey);
-        if (!current) {
-          uniqueUsersMap.set(primaryKey, u);
-        } else {
-          const isBlocked = Boolean(current.isBlocked || u.isBlocked || current.status === 'blocked' || u.status === 'blocked');
-          uniqueUsersMap.set(primaryKey, {
-            ...current,
-            ...u,
-            isBlocked,
-            status: isBlocked ? 'blocked' : (current.status || u.status || 'active'),
-            blockedReason: current.blockedReason || u.blockedReason,
-          });
-        }
+      const uId = u.id?.toLowerCase().trim();
+      const uEmail = u.email?.toLowerCase().trim();
+      const uUsername = u.username?.toLowerCase().trim();
+      const uRollNo = u.rollNo?.toLowerCase().trim();
+      const uStudentId = u.studentId?.toLowerCase().trim();
+      const uEmployeeId = u.employeeId?.toLowerCase().trim();
+
+      const existingIndex = uniqueUsersList.findIndex((existing) => {
+        const eId = existing.id?.toLowerCase().trim();
+        const eEmail = existing.email?.toLowerCase().trim();
+        const eUsername = existing.username?.toLowerCase().trim();
+        const eRollNo = existing.rollNo?.toLowerCase().trim();
+        const eStudentId = existing.studentId?.toLowerCase().trim();
+        const eEmployeeId = existing.employeeId?.toLowerCase().trim();
+
+        return (
+          (uId && eId && uId === eId) ||
+          (uEmail && eEmail && uEmail !== '-' && uEmail === eEmail) ||
+          (uUsername && eUsername && uUsername !== '-' && uUsername === eUsername) ||
+          (uRollNo && eRollNo && uRollNo !== '-' && uRollNo === eRollNo) ||
+          (uStudentId && eStudentId && uStudentId !== '-' && uStudentId === eStudentId) ||
+          (uEmployeeId && eEmployeeId && uEmployeeId !== '-' && uEmployeeId === eEmployeeId)
+        );
+      });
+
+      if (existingIndex === -1) {
+        uniqueUsersList.push(u);
+      } else {
+        const existing = uniqueUsersList[existingIndex];
+        const isBlocked = Boolean(existing.isBlocked || u.isBlocked || existing.status === 'blocked' || u.status === 'blocked');
+        uniqueUsersList[existingIndex] = {
+          ...existing,
+          ...u,
+          isBlocked,
+          status: isBlocked ? 'blocked' : (existing.status || u.status || 'active'),
+          blockedReason: existing.blockedReason || u.blockedReason,
+        };
       }
     });
 
-    return Array.from(uniqueUsersMap.values());
+    return uniqueUsersList;
   } catch (e) {
     console.warn('Error reading saved users directory:', e);
     return [...DEFAULT_PRESET_USERS];

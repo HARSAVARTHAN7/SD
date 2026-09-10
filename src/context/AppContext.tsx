@@ -983,8 +983,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } as User;
     }
 
-    setAllUsers((prev) => [createdUser!, ...prev]);
-    showToast('User Added', `${createdUser.name} has been registered successfully.`, 'success');
+    let isDuplicate = false;
+
+    const targetId = createdUser!.id?.toLowerCase().trim();
+    const targetEmail = createdUser!.email?.toLowerCase().trim();
+    const targetUsername = createdUser!.username?.toLowerCase().trim();
+    const targetRoll = createdUser!.rollNo?.toLowerCase().trim();
+    const targetStudentId = createdUser!.studentId?.toLowerCase().trim();
+    const targetEmpId = createdUser!.employeeId?.toLowerCase().trim();
+
+    setAllUsers((prev) => {
+      const existingIndex = prev.findIndex((u) => {
+        const uId = u.id?.toLowerCase().trim();
+        const uEmail = u.email?.toLowerCase().trim();
+        const uUsername = u.username?.toLowerCase().trim();
+        const uRoll = u.rollNo?.toLowerCase().trim();
+        const uStudentId = u.studentId?.toLowerCase().trim();
+        const uEmpId = u.employeeId?.toLowerCase().trim();
+
+        return (
+          (targetId && uId && targetId === uId) ||
+          (targetEmail && uEmail && targetEmail !== '-' && targetEmail === uEmail) ||
+          (targetUsername && uUsername && targetUsername !== '-' && targetUsername === uUsername) ||
+          (targetRoll && uRoll && targetRoll !== '-' && targetRoll === uRoll) ||
+          (targetStudentId && uStudentId && targetStudentId !== '-' && targetStudentId === uStudentId) ||
+          (targetEmpId && uEmpId && targetEmpId !== '-' && targetEmpId === uEmpId)
+        );
+      });
+
+      if (existingIndex !== -1) {
+        isDuplicate = true;
+        const nextUsers = [...prev];
+        nextUsers[existingIndex] = {
+          ...nextUsers[existingIndex],
+          ...createdUser!,
+        };
+        try {
+          dbService.putMany(STORES.USERS, nextUsers);
+          localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
+        } catch (e) {}
+        return nextUsers;
+      }
+
+      const nextUsers = [createdUser!, ...prev];
+      try {
+        dbService.putMany(STORES.USERS, nextUsers);
+        localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
+      } catch (e) {}
+      return nextUsers;
+    });
+
+    if (isDuplicate) {
+      showToast('Record Updated', `${createdUser.name}'s profile details have been updated. Duplicate entry prevented.`, 'info');
+    } else {
+      showToast('User Added', `${createdUser.name} has been registered successfully.`, 'success');
+    }
   };
 
   const updateUser = async (userData: User) => {
