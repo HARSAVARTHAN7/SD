@@ -119,13 +119,33 @@ export const getAllDirectoryUsers = (): User[] => {
       const targetId = savedUser.id || (savedUser as unknown as { _id?: string })._id;
       if (targetId) {
         const existing = userMap.get(targetId);
-        userMap.set(targetId, { ...existing, ...savedUser });
+        const isBlocked = Boolean(savedUser.isBlocked || existing?.isBlocked || savedUser.status === 'blocked' || existing?.status === 'blocked');
+        const status = isBlocked ? 'blocked' : (savedUser.status || existing?.status || 'active');
+        const blockedReason = savedUser.blockedReason || existing?.blockedReason;
+
+        userMap.set(targetId, {
+          ...existing,
+          ...savedUser,
+          isBlocked,
+          status,
+          blockedReason,
+        });
       } else if (savedUser.email) {
         const existingEntry = Array.from(userMap.values()).find(
           (u) => u.email?.toLowerCase().trim() === savedUser.email?.toLowerCase().trim()
         );
         if (existingEntry) {
-          userMap.set(existingEntry.id, { ...existingEntry, ...savedUser });
+          const isBlocked = Boolean(savedUser.isBlocked || existingEntry.isBlocked || savedUser.status === 'blocked' || existingEntry.status === 'blocked');
+          const status = isBlocked ? 'blocked' : (savedUser.status || existingEntry.status || 'active');
+          const blockedReason = savedUser.blockedReason || existingEntry.blockedReason;
+
+          userMap.set(existingEntry.id, {
+            ...existingEntry,
+            ...savedUser,
+            isBlocked,
+            status,
+            blockedReason,
+          });
         } else {
           userMap.set(savedUser.email.toLowerCase(), savedUser);
         }

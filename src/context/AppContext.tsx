@@ -330,10 +330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>(() => {
-    const ramUser = INITIAL_DEFAULT_USERS.find((u) => u.id === 'student-ram');
-    return ramUser ? [{ ...ramUser, deletedAt: 'Recently' }] : [];
-  });
+  const [deletedUsers, setDeletedUsers] = useState<Array<User & { deletedAt?: string }>>([]);
   const [allUsers, setAllUsers] = useState<User[]>(() => {
     try {
       const savedRaw = localStorage.getItem('eduportal_all_users');
@@ -341,19 +338,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const savedUsers: User[] = JSON.parse(savedRaw);
         if (Array.isArray(savedUsers) && savedUsers.length > 0) {
           const userMap = new Map<string, User>();
-          INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram').forEach((u) => userMap.set(u.id, u));
+          INITIAL_DEFAULT_USERS.forEach((u) => userMap.set(u.id, u));
           savedUsers.forEach((u) => {
             const key = u.id || u.email;
             if (key) {
               const existing = userMap.get(key);
-              userMap.set(key, { ...existing, ...u });
+              const isBlocked = Boolean(u.isBlocked || existing?.isBlocked || u.status === 'blocked' || existing?.status === 'blocked');
+              const status = isBlocked ? 'blocked' : (u.status || existing?.status || 'active');
+              const blockedReason = u.blockedReason || existing?.blockedReason;
+              userMap.set(key, { ...existing, ...u, isBlocked, status, blockedReason });
             }
           });
           return Array.from(userMap.values());
         }
       }
     } catch (e) {}
-    return INITIAL_DEFAULT_USERS.filter((u) => u.id !== 'student-ram');
+    return [...INITIAL_DEFAULT_USERS];
   });
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [studentResults, setStudentResults] = useState<StudentResultReport[]>(() => DEFAULT_INITIAL_STUDENT_RESULTS);
@@ -401,7 +401,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           prev.forEach((u) => userMap.set(u.id, u));
           dbUsers.forEach((u) => {
             const existing = userMap.get(u.id);
-            userMap.set(u.id, { ...existing, ...u });
+            const isBlocked = Boolean(existing?.isBlocked || u.isBlocked || existing?.status === 'blocked' || u.status === 'blocked');
+            const status = isBlocked ? 'blocked' : (existing?.status || u.status || 'active');
+            const blockedReason = existing?.blockedReason || u.blockedReason;
+
+            userMap.set(u.id, {
+              ...u,
+              ...existing,
+              isBlocked,
+              status,
+              blockedReason,
+            });
           });
           const merged = Array.from(userMap.values());
           try {

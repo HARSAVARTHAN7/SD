@@ -100,9 +100,15 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 2. Active vs Blocked status check
-    if (matched.isBlocked || matched.status === 'blocked') {
-      const reason = matched.blockedReason || 'Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.';
+    // 2. Active vs Blocked status check across all user identifiers
+    const queryBlockCheck = isUserBlockedInDirectory(studentUsername);
+    const userBlockCheck = isUserBlockedInDirectory(matched);
+    if (matched.isBlocked || matched.status === 'blocked' || queryBlockCheck.isBlocked || userBlockCheck.isBlocked) {
+      const reason =
+        matched.blockedReason ||
+        queryBlockCheck.reason ||
+        userBlockCheck.reason ||
+        'Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.';
       const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
       setStudentError(msg);
       showToast('Account Blocked', reason, 'error');
@@ -117,16 +123,24 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 4. Password validation
+    // 4. Password validation & Login Execution
     setIsSubmitting(true);
     const success = await login(studentUsername, studentPassword, 'student');
     setIsSubmitting(false);
     if (success) {
       showToast('Welcome!', 'Logged into Student Dashboard.', 'success');
     } else {
-      const msg = 'Invalid Password: The password entered is incorrect. Please verify your password or use the Eye icon to view it.';
-      setStudentError(msg);
-      showToast('Authentication Failed', 'Student password mismatch. Please check your credentials.', 'error');
+      const latestBlockCheck = isUserBlockedInDirectory(studentUsername) || isUserBlockedInDirectory(matched);
+      if (latestBlockCheck.isBlocked) {
+        const reason = latestBlockCheck.reason || 'Account Blocked: Your student account has been administratively suspended by the institutional authority. Access denied.';
+        const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
+        setStudentError(msg);
+        showToast('Account Blocked', reason, 'error');
+      } else {
+        const msg = 'Invalid Password: The password entered is incorrect. Please verify your password or use the Eye icon to view it.';
+        setStudentError(msg);
+        showToast('Authentication Failed', 'Student password mismatch. Please check your credentials.', 'error');
+      }
     }
   };
 
@@ -147,9 +161,15 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 2. Active vs Blocked status check
-    if (matched.isBlocked || matched.status === 'blocked') {
-      const reason = matched.blockedReason || 'Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.';
+    // 2. Active vs Blocked status check across all user identifiers
+    const queryBlockCheck = isUserBlockedInDirectory(teacherUsername);
+    const userBlockCheck = isUserBlockedInDirectory(matched);
+    if (matched.isBlocked || matched.status === 'blocked' || queryBlockCheck.isBlocked || userBlockCheck.isBlocked) {
+      const reason =
+        matched.blockedReason ||
+        queryBlockCheck.reason ||
+        userBlockCheck.reason ||
+        'Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.';
       const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
       setTeacherError(msg);
       showToast('Account Blocked', reason, 'error');
@@ -164,16 +184,24 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 4. Password validation
+    // 4. Password validation & Login Execution
     setIsSubmitting(true);
     const success = await login(teacherUsername, teacherPassword, 'teacher');
     setIsSubmitting(false);
     if (success) {
       showToast('Welcome!', 'Logged into Teacher Dashboard.', 'success');
     } else {
-      const msg = 'Invalid Password: The password entered is incorrect. Please verify your password or use the Eye icon to view it.';
-      setTeacherError(msg);
-      showToast('Authentication Failed', 'Teacher password mismatch. Please check your credentials.', 'error');
+      const latestBlockCheck = isUserBlockedInDirectory(teacherUsername) || isUserBlockedInDirectory(matched);
+      if (latestBlockCheck.isBlocked) {
+        const reason = latestBlockCheck.reason || 'Account Blocked: Your faculty account has been administratively suspended by the institutional authority. Access denied.';
+        const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
+        setTeacherError(msg);
+        showToast('Account Blocked', reason, 'error');
+      } else {
+        const msg = 'Invalid Password: The password entered is incorrect. Please verify your password or use the Eye icon to view it.';
+        setTeacherError(msg);
+        showToast('Authentication Failed', 'Teacher password mismatch. Please check your credentials.', 'error');
+      }
     }
   };
 
@@ -194,11 +222,18 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 2. Active vs Blocked status check
-    if (matched.isBlocked || matched.status === 'blocked') {
-      const msg = 'Account Blocked: Your administrator account has been administratively suspended.';
+    // 2. Active vs Blocked status check across all user identifiers
+    const queryBlockCheck = isUserBlockedInDirectory(adminEmail);
+    const userBlockCheck = isUserBlockedInDirectory(matched);
+    if (matched.isBlocked || matched.status === 'blocked' || queryBlockCheck.isBlocked || userBlockCheck.isBlocked) {
+      const reason =
+        matched.blockedReason ||
+        queryBlockCheck.reason ||
+        userBlockCheck.reason ||
+        'Account Blocked: Your administrator account has been administratively suspended.';
+      const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
       setAdminError(msg);
-      showToast('Account Blocked', 'Your administrator account has been administratively suspended.', 'error');
+      showToast('Account Blocked', reason, 'error');
       return;
     }
 
@@ -210,16 +245,24 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 4. Password validation
+    // 4. Password validation & Login Execution
     setIsSubmitting(true);
     const success = await login(adminEmail.trim(), adminPassword.trim(), 'admin');
     setIsSubmitting(false);
     if (success) {
       showToast('Master Access Granted', 'Logged into Central Administrator Control Center.', 'success');
     } else {
-      const msg = 'Invalid Password: The administrator password entered is incorrect. Please verify your password.';
-      setAdminError(msg);
-      showToast('Access Denied', 'Invalid administrator email or password.', 'error');
+      const latestBlockCheck = isUserBlockedInDirectory(adminEmail) || isUserBlockedInDirectory(matched);
+      if (latestBlockCheck.isBlocked) {
+        const reason = latestBlockCheck.reason || 'Account Blocked: Your administrator account has been administratively suspended.';
+        const msg = reason.startsWith('Account Blocked:') ? reason : `Account Blocked: ${reason}`;
+        setAdminError(msg);
+        showToast('Account Blocked', reason, 'error');
+      } else {
+        const msg = 'Invalid Password: The administrator password entered is incorrect. Please verify your password.';
+        setAdminError(msg);
+        showToast('Access Denied', 'Invalid administrator email or password.', 'error');
+      }
     }
   };
 
