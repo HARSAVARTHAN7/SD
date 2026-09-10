@@ -19,7 +19,7 @@ import { StudentIllustration } from '../illustrations/StudentIllustration';
 import { TeacherIllustration } from '../illustrations/TeacherIllustration';
 import { SignupModal } from './SignupModal';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
-import { useAuth, findUserInDirectory } from '../../context/AuthContext';
+import { useAuth, findUserInDirectory, isUserBlockedInDirectory } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { clearAllLocalData } from '../../services/dbService';
 import { Role } from '../../types';
