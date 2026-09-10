@@ -461,7 +461,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [timetable]);
 
   useEffect(() => {
-    if (deletedUsers.length > 0) dbService.putMany(STORES.DELETED_USERS, deletedUsers);
+    try {
+      localStorage.setItem('eduportal_deleted_users', JSON.stringify(deletedUsers));
+      if (deletedUsers.length > 0) dbService.putMany(STORES.DELETED_USERS, deletedUsers);
+    } catch (e) {}
   }, [deletedUsers]);
 
   useEffect(() => {
@@ -1005,11 +1008,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteUser = async (id: string) => {
     const target = allUsers.find((u) => u.id === id || (u as unknown as { _id: string })._id === id);
+    let nextDeleted = [...deletedUsers];
     if (target) {
-      setDeletedUsers((prev) => [
-        { ...target, deletedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
-        ...prev,
-      ]);
+      const deletedEntry = {
+        ...target,
+        deletedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      };
+      nextDeleted = [deletedEntry, ...deletedUsers.filter((u) => u.id !== target.id && (u as unknown as { _id: string })._id !== target.id)];
+      setDeletedUsers(nextDeleted);
+      try {
+        localStorage.setItem('eduportal_deleted_users', JSON.stringify(nextDeleted));
+        dbService.putMany(STORES.DELETED_USERS, nextDeleted);
+      } catch (e) {}
     }
 
     try {
@@ -1018,7 +1028,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Backend user delete error / offline. Removing user locally...', err);
     }
 
-    setAllUsers((prev) => prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id));
+    setAllUsers((prev) => {
+      const filtered = prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id);
+      try {
+        localStorage.setItem('eduportal_all_users', JSON.stringify(filtered));
+        dbService.putMany(STORES.USERS, filtered);
+      } catch (e) {}
+      return filtered;
+    });
+
+    try {
+      window.dispatchEvent(new Event('user:blocked'));
+      window.dispatchEvent(new Event('storage'));
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('eduportal_auth_channel');
+        bc.postMessage({ type: 'USER_DELETED', user: target });
+        setTimeout(() => {
+          try {
+            bc.close();
+          } catch {}
+        }, 500);
+      }
+    } catch (e) {}
+
     showToast('Moved to Recycle Bin', `${target?.name || 'User'} has been moved to the Institutional Recycle Center.`, 'info');
   };
 
@@ -1077,15 +1109,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const target = deletedUsers.find((u) => u.id === id || (u as unknown as { _id: string })._id === id);
     if (target) {
       const { deletedAt, ...cleanedUser } = target;
-      setDeletedUsers((prev) => prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id));
-      setAllUsers((prev) => [cleanedUser as User, ...prev]);
+      const nextDeleted = deletedUsers.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id);
+      setDeletedUsers(nextDeleted);
+      try {
+        localStorage.setItem('eduportal_deleted_users', JSON.stringify(nextDeleted));
+      } catch (e) {}
+
+      setAllUsers((prev) => {
+        const nextUsers = [cleanedUser as User, ...prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id)];
+        try {
+          localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
+          dbService.putMany(STORES.USERS, nextUsers);
+        } catch (e) {}
+        return nextUsers;
+      });
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('eduportal_auth_channel');
+          bc.postMessage({ type: 'USER_RESTORED', user: cleanedUser });
+          setTimeout(() => {
+            try {
+              bc.close();
+            } catch {}
+          }, 500);
+        }
+      } catch (e) {}
+
       showToast('Restored Successfully', `${target.name}'s account has been restored to active users.`, 'success');
     }
   };
 
   const permanentlyDeleteUser = (id: string) => {
     const target = deletedUsers.find((u) => u.id === id || (u as unknown as { _id: string })._id === id);
-    setDeletedUsers((prev) => prev.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id));
+    const nextDeleted = deletedUsers.filter((u) => u.id !== id && (u as unknown as { _id: string })._id !== id);
+    setDeletedUsers(nextDeleted);
+    try {
+      localStorage.setItem('eduportal_deleted_users', JSON.stringify(nextDeleted));
+      if (target) {
+        const savedPurgedRaw = localStorage.getItem('eduportal_purged_users');
+        const savedPurged: string[] = savedPurgedRaw ? JSON.parse(savedPurgedRaw) : [];
+        if (target.id && !savedPurged.includes(target.id)) savedPurged.push(target.id);
+        if (target.email && !savedPurged.includes(target.email.toLowerCase().trim())) savedPurged.push(target.email.toLowerCase().trim());
+        if (target.username && !savedPurged.includes(target.username.toLowerCase().trim())) savedPurged.push(target.username.toLowerCase().trim());
+        localStorage.setItem('eduportal_purged_users', JSON.stringify(savedPurged));
+      }
+    } catch (e) {}
     showToast('Permanently Deleted', `${target?.name || 'User'} account permanently purged.`, 'warning');
   };
 

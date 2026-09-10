@@ -103,10 +103,83 @@ export const DEFAULT_PRESET_USERS: User[] = [
   },
 ];
 
+export const getDeletedDirectoryUsers = (): User[] => {
+  try {
+    const savedDeletedRaw = localStorage.getItem('eduportal_deleted_users');
+    const savedDeleted: User[] = savedDeletedRaw ? JSON.parse(savedDeletedRaw) : [];
+    const purgedRaw = localStorage.getItem('eduportal_purged_users');
+    const purgedIds: string[] = purgedRaw ? JSON.parse(purgedRaw) : [];
+
+    return savedDeleted.filter((u) => u && !purgedIds.includes(u.id));
+  } catch (e) {
+    return [];
+  }
+};
+
+export const isUserDeletedInDirectory = (userOrQuery: User | string | null | undefined): { isDeleted: boolean; reason?: string } => {
+  if (!userOrQuery) return { isDeleted: false };
+  const deletedUsers = getDeletedDirectoryUsers();
+  let searchTokens: string[] = [];
+
+  if (typeof userOrQuery === 'string') {
+    const q = userOrQuery.toLowerCase().trim();
+    if (!q) return { isDeleted: false };
+    searchTokens.push(q);
+    if (q.includes('@')) {
+      searchTokens.push(q.split('@')[0]);
+    }
+  } else if (typeof userOrQuery === 'object') {
+    if (userOrQuery.id) searchTokens.push(userOrQuery.id.toLowerCase().trim());
+    if ((userOrQuery as unknown as { _id?: string })._id) {
+      searchTokens.push(String((userOrQuery as unknown as { _id?: string })._id).toLowerCase().trim());
+    }
+    if (userOrQuery.email) {
+      const email = userOrQuery.email.toLowerCase().trim();
+      searchTokens.push(email);
+      if (email.includes('@')) searchTokens.push(email.split('@')[0]);
+    }
+    if (userOrQuery.username) searchTokens.push(userOrQuery.username.toLowerCase().trim());
+    if (userOrQuery.rollNo) searchTokens.push(userOrQuery.rollNo.toLowerCase().trim());
+    if (userOrQuery.studentId) searchTokens.push(userOrQuery.studentId.toLowerCase().trim());
+    if (userOrQuery.employeeId) searchTokens.push(userOrQuery.employeeId.toLowerCase().trim());
+    if (userOrQuery.name) searchTokens.push(userOrQuery.name.toLowerCase().trim());
+  }
+
+  searchTokens = Array.from(new Set(searchTokens.filter(Boolean)));
+
+  const matchedDeleted = deletedUsers.find((u) => {
+    const uEmail = u.email?.toLowerCase().trim() || '';
+    const uTokens = [
+      u.id?.toLowerCase().trim(),
+      (u as unknown as { _id?: string })._id ? String((u as unknown as { _id?: string })._id).toLowerCase().trim() : '',
+      uEmail,
+      uEmail.includes('@') ? uEmail.split('@')[0] : '',
+      u.username?.toLowerCase().trim(),
+      u.rollNo?.toLowerCase().trim(),
+      u.studentId?.toLowerCase().trim(),
+      u.employeeId?.toLowerCase().trim(),
+      u.name?.toLowerCase().trim(),
+    ].filter(Boolean);
+
+    return searchTokens.some((token) => uTokens.includes(token));
+  });
+
+  if (matchedDeleted) {
+    return {
+      isDeleted: true,
+      reason: `Account Deleted: The account for ${matchedDeleted.name || matchedDeleted.email || 'this user'} has been deleted and moved to the Recycle Bin. Access denied.`,
+    };
+  }
+
+  return { isDeleted: false };
+};
+
 export const getAllDirectoryUsers = (): User[] => {
   try {
     const savedUsersRaw = localStorage.getItem('eduportal_all_users');
     const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [];
+    const deletedUsers = getDeletedDirectoryUsers();
+
     const userMap = new Map<string, User>();
 
     // 1. Initialize map with preset default users (keyed by ID, email, and username)
@@ -151,9 +224,17 @@ export const getAllDirectoryUsers = (): User[] => {
       if (mergedUser.username) userMap.set(mergedUser.username.toLowerCase().trim(), mergedUser);
     });
 
-    // Extract unique user objects by primary ID
+    // Extract unique user objects by primary ID, STRICTLY EXCLUDING DELETED USERS
     const uniqueUsersMap = new Map<string, User>();
     Array.from(userMap.values()).forEach((u) => {
+      const isDeleted = deletedUsers.some(
+        (du) =>
+          du.id === u.id ||
+          (du.email && u.email && du.email.toLowerCase().trim() === u.email.toLowerCase().trim()) ||
+          (du.username && u.username && du.username.toLowerCase().trim() === u.username.toLowerCase().trim())
+      );
+      if (isDeleted) return; // STRICTLY EXCLUDE DELETED ACCOUNTS!
+
       const primaryKey = u.id || u.email || u.username;
       if (primaryKey) {
         const current = uniqueUsersMap.get(primaryKey);
@@ -181,6 +262,11 @@ export const getAllDirectoryUsers = (): User[] => {
 
 export const isUserBlockedInDirectory = (userOrQuery: User | string | null | undefined): { isBlocked: boolean; reason?: string } => {
   if (!userOrQuery) return { isBlocked: false };
+  const deleteCheck = isUserDeletedInDirectory(userOrQuery);
+  if (deleteCheck.isDeleted) {
+    return { isBlocked: true, reason: deleteCheck.reason };
+  }
+
   const allUsers = getAllDirectoryUsers();
   let searchTokens: string[] = [];
 
@@ -356,7 +442,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         bc = new BroadcastChannel('eduportal_auth_channel');
         bc.onmessage = (event) => {
-          if (event.data?.type === 'USER_BLOCKED') {
+          if (event.data?.type === 'USER_BLOCKED' || event.data?.type === 'USER_DELETED') {
             checkBlockedStatus();
           }
         };

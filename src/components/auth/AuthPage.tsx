@@ -19,7 +19,7 @@ import { StudentIllustration } from '../illustrations/StudentIllustration';
 import { TeacherIllustration } from '../illustrations/TeacherIllustration';
 import { SignupModal } from './SignupModal';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
-import { useAuth, findUserInDirectory, isUserBlockedInDirectory } from '../../context/AuthContext';
+import { useAuth, findUserInDirectory, isUserBlockedInDirectory, isUserDeletedInDirectory } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { clearAllLocalData } from '../../services/dbService';
 import { Role } from '../../types';
@@ -91,7 +91,16 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 1. Database account existence check
+    // 1. Account Deletion check FIRST before searching active directory
+    const deleteCheck = isUserDeletedInDirectory(studentUsername);
+    if (deleteCheck.isDeleted) {
+      const msg = deleteCheck.reason || 'Account Deleted: Your account has been deleted and moved to the Recycle Bin. Access denied.';
+      setStudentError(msg);
+      showToast('Account Deleted', deleteCheck.reason || 'Your account has been deleted.', 'error');
+      return;
+    }
+
+    // 2. Database account existence check
     const matched = findUserInDirectory(studentUsername);
     if (!matched) {
       const msg = 'Account Not Found: No registered student account matches the entered User ID. Please check your details or register.';
@@ -152,7 +161,16 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 1. Database account existence check
+    // 1. Account Deletion check FIRST before searching active directory
+    const deleteCheck = isUserDeletedInDirectory(teacherUsername);
+    if (deleteCheck.isDeleted) {
+      const msg = deleteCheck.reason || 'Account Deleted: Your faculty account has been deleted and moved to the Recycle Bin. Access denied.';
+      setTeacherError(msg);
+      showToast('Account Deleted', deleteCheck.reason || 'Your faculty account has been deleted.', 'error');
+      return;
+    }
+
+    // 2. Database account existence check
     const matched = findUserInDirectory(teacherUsername);
     if (!matched) {
       const msg = 'Account Not Found: No registered faculty account matches the entered User ID. Please check your details or register.';
@@ -213,7 +231,16 @@ export const AuthPage: React.FC = () => {
       return;
     }
 
-    // 1. Database account existence check
+    // 1. Account Deletion check FIRST before searching active directory
+    const deleteCheck = isUserDeletedInDirectory(adminEmail);
+    if (deleteCheck.isDeleted) {
+      const msg = deleteCheck.reason || 'Account Deleted: Your administrator account has been deleted and moved to the Recycle Bin. Access denied.';
+      setAdminError(msg);
+      showToast('Account Deleted', deleteCheck.reason || 'Your administrator account has been deleted.', 'error');
+      return;
+    }
+
+    // 2. Database account existence check
     const matched = findUserInDirectory(adminEmail);
     if (!matched) {
       const msg = 'Account Not Found: No registered administrator account matches the entered User ID.';
@@ -270,6 +297,17 @@ export const AuthPage: React.FC = () => {
     setIsSubmitting(true);
     const targetEmail = role === 'student' ? 'student@bitsathy.ac.in' : role === 'teacher' ? 'teacher@bitsathy.ac.in' : 'admin@bitsathy.ac.in';
     const targetPass = role === 'student' ? 'password123' : role === 'teacher' ? 'password123' : 'admin@1234';
+
+    const deleteCheck = isUserDeletedInDirectory(targetEmail);
+    if (deleteCheck.isDeleted) {
+      setIsSubmitting(false);
+      const reason = deleteCheck.reason || `Account Deleted: The ${role} account has been deleted and moved to the Recycle Bin. Access denied.`;
+      if (role === 'student') setStudentError(reason);
+      else if (role === 'teacher') setTeacherError(reason);
+      else setAdminError(reason);
+      showToast('Account Deleted', reason, 'error');
+      return;
+    }
 
     const blockCheck = isUserBlockedInDirectory(targetEmail);
     if (blockCheck.isBlocked) {
