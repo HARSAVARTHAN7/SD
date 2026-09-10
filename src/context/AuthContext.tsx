@@ -312,7 +312,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('auth:expired', handleExpiry);
   }, []);
 
-  // Listen for active user block status & cleanly log out blocked user with specific reason
+  // BroadcastChannel for instant real-time block notifications across browser tabs/windows
   useEffect(() => {
     if (!user) return;
 
@@ -332,12 +332,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkBlockedStatus();
-    const interval = setInterval(checkBlockedStatus, 300);
+    const interval = setInterval(checkBlockedStatus, 100);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('eduportal_auth_channel');
+        bc.onmessage = (event) => {
+          if (event.data?.type === 'USER_BLOCKED') {
+            checkBlockedStatus();
+          }
+        };
+      }
+    } catch {}
+
     window.addEventListener('storage', checkBlockedStatus);
     window.addEventListener('user:blocked', checkBlockedStatus);
 
     return () => {
       clearInterval(interval);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {}
+      }
       window.removeEventListener('storage', checkBlockedStatus);
       window.removeEventListener('user:blocked', checkBlockedStatus);
     };

@@ -976,6 +976,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
         window.dispatchEvent(new Event('user:blocked'));
         window.dispatchEvent(new Event('storage'));
+
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('eduportal_auth_channel');
+          bc.postMessage({ type: 'USER_BLOCKED', user: updated });
+          setTimeout(() => {
+            try {
+              bc.close();
+            } catch {}
+          }, 500);
+        }
       } catch (e) {
         console.warn('Failed to save allUsers to IndexedDB:', e);
       }
