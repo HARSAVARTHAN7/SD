@@ -381,9 +381,7 @@ export const isUserBlockedInDirectory = (userOrQuery: User | string | null | und
 
   searchTokens = Array.from(new Set(searchTokens.filter(Boolean)));
 
-  const matchedBlocked = allUsers.find((u) => {
-    if (!u.isBlocked && u.status !== 'blocked') return false;
-
+  const matchingUser = allUsers.find((u) => {
     const uEmail = u.email?.toLowerCase().trim() || '';
     const uTokens = [
       u.id?.toLowerCase().trim(),
@@ -400,11 +398,14 @@ export const isUserBlockedInDirectory = (userOrQuery: User | string | null | und
     return searchTokens.some((token) => uTokens.includes(token));
   });
 
-  if (matchedBlocked) {
-    return {
-      isBlocked: true,
-      reason: matchedBlocked.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.',
-    };
+  if (matchingUser) {
+    if (matchingUser.isBlocked || matchingUser.status === 'blocked') {
+      return {
+        isBlocked: true,
+        reason: matchingUser.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.',
+      };
+    }
+    return { isBlocked: false };
   }
 
   return { isBlocked: false };

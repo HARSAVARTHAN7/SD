@@ -81,7 +81,30 @@ export const AuthPage: React.FC = () => {
         localStorage.removeItem('eduportal_blocked_reason');
       }
     } catch {}
-  }, [showToast]);
+
+    const handleSync = (e?: Event) => {
+      try {
+        const customEvt = e as CustomEvent;
+        const targetUser = customEvt?.detail;
+        if (targetUser && (!targetUser.isBlocked && targetUser.status !== 'blocked')) {
+          setStudentError('');
+          setTeacherError('');
+          setAdminError('');
+        } else {
+          if (studentUsername && !isUserBlockedInDirectory(studentUsername).isBlocked) setStudentError('');
+          if (teacherUsername && !isUserBlockedInDirectory(teacherUsername).isBlocked) setTeacherError('');
+        }
+      } catch {}
+    };
+
+    window.addEventListener('user:blocked', handleSync);
+    window.addEventListener('storage', handleSync);
+
+    return () => {
+      window.removeEventListener('user:blocked', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, [showToast, studentUsername, teacherUsername]);
 
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
