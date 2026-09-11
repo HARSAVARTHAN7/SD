@@ -73,9 +73,15 @@ export const AuthPage: React.FC = () => {
 
   React.useEffect(() => {
     try {
-      localStorage.removeItem('eduportal_blocked_reason');
+      const blockedMsg = localStorage.getItem('eduportal_blocked_reason');
+      if (blockedMsg) {
+        setStudentError(blockedMsg);
+        setTeacherError(blockedMsg);
+        showToast('Account Blocked', blockedMsg, 'error');
+        localStorage.removeItem('eduportal_blocked_reason');
+      }
     } catch {}
-  }, []);
+  }, [showToast]);
 
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

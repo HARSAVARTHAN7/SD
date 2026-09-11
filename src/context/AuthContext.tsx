@@ -464,6 +464,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       sessionStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem('eduportal_user');
     }
   }, []);
 
@@ -547,7 +548,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('eduportal_blocked_reason', reason);
           } catch {}
           logout();
+          return;
         }
+
+        // Check 3: Raw scan of eduportal_all_users array in localStorage
+        try {
+          const rawAll = localStorage.getItem('eduportal_all_users');
+          if (rawAll) {
+            const parsedUsers: User[] = JSON.parse(rawAll);
+            const myId = user.id || (user as unknown as { _id?: string })._id;
+            const myEmail = user.email?.toLowerCase().trim();
+            const myUsername = user.username?.toLowerCase().trim();
+            const myRoll = user.rollNo?.toLowerCase().trim();
+            const myStudentId = user.studentId?.toLowerCase().trim();
+            const myEmpId = user.employeeId?.toLowerCase().trim();
+
+            const rawMatch = parsedUsers.find((u) => {
+              if (!u.isBlocked && u.status !== 'blocked') return false;
+              const uId = u.id || (u as unknown as { _id?: string })._id;
+              const uEmail = u.email?.toLowerCase().trim();
+              const uUsername = u.username?.toLowerCase().trim();
+              const uRoll = u.rollNo?.toLowerCase().trim();
+              const uStudentId = u.studentId?.toLowerCase().trim();
+              const uEmpId = u.employeeId?.toLowerCase().trim();
+
+              return (
+                (uId && myId && String(uId).toLowerCase().trim() === String(myId).toLowerCase().trim()) ||
+                (uEmail && myEmail && uEmail !== '-' && uEmail === myEmail) ||
+                (uUsername && myUsername && uUsername !== '-' && uUsername === myUsername) ||
+                (uRoll && myRoll && uRoll !== '-' && uRoll === myRoll) ||
+                (uStudentId && myStudentId && uStudentId !== '-' && uStudentId === myStudentId) ||
+                (uEmpId && myEmpId && uEmpId !== '-' && uEmpId === myEmpId)
+              );
+            });
+
+            if (rawMatch) {
+              const reason = rawMatch.blockedReason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
+              try {
+                localStorage.setItem('eduportal_blocked_reason', reason);
+              } catch {}
+              logout();
+              return;
+            }
+          }
+        } catch {}
       } catch (e) {
         console.warn('Error checking blocked status:', e);
       }
