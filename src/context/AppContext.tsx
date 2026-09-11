@@ -1098,7 +1098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!updated.isBlocked) {
           localStorage.removeItem('eduportal_blocked_reason');
         }
-        window.dispatchEvent(new Event('user:blocked'));
+        window.dispatchEvent(new CustomEvent('user:blocked', { detail: updated }));
         window.dispatchEvent(new Event('storage'));
 
         if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {

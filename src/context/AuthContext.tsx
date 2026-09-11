@@ -467,6 +467,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const logout = useCallback(() => {
+    clearToken();
+    try {
+      sessionStorage.removeItem('eduportal_active_tab');
+      sessionStorage.removeItem('eduportal_auth_step');
+    } catch {}
+    setUser(null);
+  }, [setUser]);
+
   // Hydrate user from JWT on mount
   const refreshUser = useCallback(async () => {
     const token = getToken();
@@ -500,12 +509,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('auth:expired', handleExpiry);
   }, []);
 
-  // BroadcastChannel for instant real-time block notifications across browser tabs/windows
+  // BroadcastChannel & custom events for instant real-time block notifications across browser tabs/windows
   useEffect(() => {
     if (!user) return;
 
-    const checkBlockedStatus = () => {
+    const checkBlockedStatus = (targetUser?: User) => {
       try {
+        if (!user) return;
+
+        // Check 1: Direct target check if event/message passes the updated user object
+        if (targetUser) {
+          const tId = targetUser.id || (targetUser as unknown as { _id?: string })._id;
+          const uId = user.id || (user as unknown as { _id?: string })._id;
+          const isMatch =
+            (tId && uId && String(tId).toLowerCase().trim() === String(uId).toLowerCase().trim()) ||
+            (targetUser.email && user.email && targetUser.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
+            (targetUser.username && user.username && targetUser.username.toLowerCase().trim() === user.username.toLowerCase().trim()) ||
+            (targetUser.rollNo && user.rollNo && targetUser.rollNo.toLowerCase().trim() === user.rollNo.toLowerCase().trim()) ||
+            (targetUser.studentId && user.studentId && targetUser.studentId.toLowerCase().trim() === user.studentId.toLowerCase().trim()) ||
+            (targetUser.employeeId && user.employeeId && targetUser.employeeId.toLowerCase().trim() === user.employeeId.toLowerCase().trim());
+
+          if (isMatch && (targetUser.isBlocked || targetUser.status === 'blocked')) {
+            const reason = targetUser.blockedReason || 'Account Blocked: Administrative suspension by institutional authority. Access denied.';
+            try {
+              localStorage.setItem('eduportal_blocked_reason', reason);
+            } catch {}
+            logout();
+            return;
+          }
+        }
+
+        // Check 2: Directory lookup check against current allUsers/localStorage
         const blockCheck = isUserBlockedInDirectory(user);
         if (user.isBlocked || user.status === 'blocked' || blockCheck.isBlocked) {
           const reason = user.blockedReason || blockCheck.reason || 'Account Blocked: Your account has been administratively suspended by the institutional authority. Access denied.';
@@ -520,7 +554,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkBlockedStatus();
-    const interval = setInterval(checkBlockedStatus, 100);
+    const interval = setInterval(() => checkBlockedStatus(), 100);
 
     let bc: BroadcastChannel | null = null;
     try {
@@ -528,14 +562,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         bc = new BroadcastChannel('eduportal_auth_channel');
         bc.onmessage = (event) => {
           if (event.data?.type === 'USER_BLOCKED' || event.data?.type === 'USER_DELETED') {
-            checkBlockedStatus();
+            checkBlockedStatus(event.data?.user);
           }
         };
       }
     } catch {}
 
-    window.addEventListener('storage', checkBlockedStatus);
-    window.addEventListener('user:blocked', checkBlockedStatus);
+    const handleCustomEvent = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      checkBlockedStatus(customEvt.detail);
+    };
+
+    window.addEventListener('storage', (() => checkBlockedStatus()) as EventListener);
+    window.addEventListener('user:blocked', handleCustomEvent);
 
     return () => {
       clearInterval(interval);
@@ -544,10 +583,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           bc.close();
         } catch {}
       }
-      window.removeEventListener('storage', checkBlockedStatus);
-      window.removeEventListener('user:blocked', checkBlockedStatus);
+      window.removeEventListener('storage', (() => checkBlockedStatus()) as EventListener);
+      window.removeEventListener('user:blocked', handleCustomEvent);
     };
-  }, [user]);
+  }, [user, logout]);
 
   const login = async (usernameOrEmail: string, password: string, intendedRole?: Role): Promise<boolean> => {
     const cleanQuery = usernameOrEmail.toLowerCase().trim();
@@ -619,15 +658,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return false;
-  };
-
-  const logout = () => {
-    clearToken();
-    try {
-      sessionStorage.removeItem('eduportal_active_tab');
-      sessionStorage.removeItem('eduportal_auth_step');
-    } catch {}
-    setUser(null);
   };
 
   const register = async (userData: {

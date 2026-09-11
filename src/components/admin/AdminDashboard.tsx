@@ -2508,7 +2508,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                               ) : (
                                 <button
                                   onClick={() => {
-                                    updateUser({ ...st, isBlocked: true, status: 'blocked' });
+                                    updateUser({ ...st, isBlocked: true, status: 'blocked', blockedReason: 'Account Blocked: Administrative suspension by institutional authority. Access denied.' });
                                     showToast('Student Blocked', `Access suspended for ${st.name}. Moved to Blocked tab.`, 'warning');
                                   }}
                                   className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
