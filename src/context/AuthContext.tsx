@@ -136,9 +136,8 @@ export const DEFAULT_PRESET_USERS: User[] = [
     cgpa: 3.92,
     gpa: 3.92,
     attendanceRate: 99.0,
-    isBlocked: true,
-    status: 'blocked',
-    blockedReason: 'Account Blocked: Administrative suspension by institutional authority. Access denied.',
+    isBlocked: false,
+    status: 'active',
   },
   {
     id: 'student-murat',
@@ -259,14 +258,13 @@ export const getAllDirectoryUsers = (): User[] => {
       if (!existing && sEmail && userMap.has(sEmail)) existing = userMap.get(sEmail);
       if (!existing && sUsername && userMap.has(sUsername)) existing = userMap.get(sUsername);
 
-      const isBlocked = Boolean(
-        savedUser.isBlocked ||
-        existing?.isBlocked ||
-        savedUser.status === 'blocked' ||
-        existing?.status === 'blocked'
-      );
+      const isBlocked = typeof savedUser.isBlocked !== 'undefined'
+        ? Boolean(savedUser.isBlocked || savedUser.status === 'blocked')
+        : (savedUser.status !== undefined
+          ? savedUser.status === 'blocked'
+          : Boolean(existing?.isBlocked || existing?.status === 'blocked'));
       const status = isBlocked ? 'blocked' : (savedUser.status || existing?.status || 'active');
-      const blockedReason = savedUser.blockedReason || existing?.blockedReason;
+      const blockedReason = isBlocked ? (savedUser.blockedReason || existing?.blockedReason) : undefined;
 
       const mergedUser: User = {
         ...existing,
@@ -325,13 +323,17 @@ export const getAllDirectoryUsers = (): User[] => {
         uniqueUsersList.push(u);
       } else {
         const existing = uniqueUsersList[existingIndex];
-        const isBlocked = Boolean(existing.isBlocked || u.isBlocked || existing.status === 'blocked' || u.status === 'blocked');
+        const isBlocked = typeof u.isBlocked !== 'undefined'
+          ? Boolean(u.isBlocked || u.status === 'blocked')
+          : (u.status !== undefined
+            ? u.status === 'blocked'
+            : Boolean(existing.isBlocked || existing.status === 'blocked'));
         uniqueUsersList[existingIndex] = {
           ...existing,
           ...u,
           isBlocked,
-          status: isBlocked ? 'blocked' : (existing.status || u.status || 'active'),
-          blockedReason: existing.blockedReason || u.blockedReason,
+          status: isBlocked ? 'blocked' : (u.status || existing.status || 'active'),
+          blockedReason: isBlocked ? (u.blockedReason || existing.blockedReason) : undefined,
         };
       }
     });

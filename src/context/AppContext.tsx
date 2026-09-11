@@ -221,9 +221,8 @@ const INITIAL_DEFAULT_USERS: User[] = [
     cgpa: 3.92,
     gpa: 3.92,
     attendanceRate: 99.0,
-    isBlocked: true,
-    status: 'blocked',
-    blockedReason: 'Account Blocked: Administrative suspension by institutional authority. Access denied.',
+    isBlocked: false,
+    status: 'active',
   },
   {
     id: 'student-murat',
@@ -401,9 +400,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const key = u.id || u.email;
             if (key) {
               const existing = userMap.get(key);
-              const isBlocked = Boolean(u.isBlocked || existing?.isBlocked || u.status === 'blocked' || existing?.status === 'blocked');
+              const isBlocked = typeof u.isBlocked !== 'undefined'
+                ? Boolean(u.isBlocked || u.status === 'blocked')
+                : (u.status !== undefined
+                  ? u.status === 'blocked'
+                  : Boolean(existing?.isBlocked || existing?.status === 'blocked'));
               const status = isBlocked ? 'blocked' : (u.status || existing?.status || 'active');
-              const blockedReason = u.blockedReason || existing?.blockedReason;
+              const blockedReason = isBlocked ? (u.blockedReason || existing?.blockedReason) : undefined;
               userMap.set(key, { ...existing, ...u, isBlocked, status, blockedReason });
             }
           });
@@ -459,13 +462,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           prev.forEach((u) => userMap.set(u.id, u));
           dbUsers.forEach((u) => {
             const existing = userMap.get(u.id);
-            const isBlocked = Boolean(existing?.isBlocked || u.isBlocked || existing?.status === 'blocked' || u.status === 'blocked');
-            const status = isBlocked ? 'blocked' : (existing?.status || u.status || 'active');
-            const blockedReason = existing?.blockedReason || u.blockedReason;
+            const isBlocked = typeof u.isBlocked !== 'undefined'
+              ? Boolean(u.isBlocked || u.status === 'blocked')
+              : (u.status !== undefined
+                ? u.status === 'blocked'
+                : Boolean(existing?.isBlocked || existing?.status === 'blocked'));
+            const status = isBlocked ? 'blocked' : (u.status || existing?.status || 'active');
+            const blockedReason = isBlocked ? (u.blockedReason || existing?.blockedReason) : undefined;
 
             userMap.set(u.id, {
-              ...u,
               ...existing,
+              ...u,
               isBlocked,
               status,
               blockedReason,
@@ -1088,6 +1095,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         dbService.putMany(STORES.USERS, nextUsers);
         localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
+        if (!updated.isBlocked) {
+          localStorage.removeItem('eduportal_blocked_reason');
+        }
         window.dispatchEvent(new Event('user:blocked'));
         window.dispatchEvent(new Event('storage'));
 

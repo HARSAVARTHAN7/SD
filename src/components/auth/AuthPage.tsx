@@ -73,15 +73,9 @@ export const AuthPage: React.FC = () => {
 
   React.useEffect(() => {
     try {
-      const blockedMsg = localStorage.getItem('eduportal_blocked_reason');
-      if (blockedMsg) {
-        setStudentError(blockedMsg);
-        setTeacherError(blockedMsg);
-        showToast('Account Blocked', 'Your account has been administratively suspended.', 'error');
-        localStorage.removeItem('eduportal_blocked_reason');
-      }
+      localStorage.removeItem('eduportal_blocked_reason');
     } catch {}
-  }, [showToast]);
+  }, []);
 
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

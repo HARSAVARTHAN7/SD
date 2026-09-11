@@ -1227,6 +1227,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentTab, onSe
                             <button
                               onClick={() => {
                                 updateUser({ ...account, isBlocked: false, status: 'active', blockedReason: undefined });
+                                try {
+                                  localStorage.removeItem('eduportal_blocked_reason');
+                                } catch {}
                                 showToast('Block Revoked', `Full access & credentials restored for ${account.name} (${account.email}). Moved back to Active Directory.`, 'success');
                               }}
                               className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-extrabold text-xs shadow-lg shadow-emerald-600/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
