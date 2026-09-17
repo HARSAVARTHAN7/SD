@@ -258,12 +258,16 @@ export const getAllDirectoryUsers = (): User[] => {
       if (!existing && sEmail && userMap.has(sEmail)) existing = userMap.get(sEmail);
       if (!existing && sUsername && userMap.has(sUsername)) existing = userMap.get(sUsername);
 
-      const isBlocked = typeof savedUser.isBlocked !== 'undefined'
-        ? Boolean(savedUser.isBlocked || savedUser.status === 'blocked')
-        : (savedUser.status !== undefined
-          ? savedUser.status === 'blocked'
-          : Boolean(existing?.isBlocked || existing?.status === 'blocked'));
-      const status = isBlocked ? 'blocked' : (savedUser.status || existing?.status || 'active');
+      const isBlocked = savedUser.isBlocked === false
+        ? false
+        : (savedUser.isBlocked === true
+          ? true
+          : (savedUser.status === 'active'
+            ? false
+            : (savedUser.status === 'blocked'
+              ? true
+              : Boolean(existing?.isBlocked || existing?.status === 'blocked'))));
+      const status = isBlocked ? 'blocked' : 'active';
       const blockedReason = isBlocked ? (savedUser.blockedReason || existing?.blockedReason) : undefined;
 
       const mergedUser: User = {
@@ -323,17 +327,23 @@ export const getAllDirectoryUsers = (): User[] => {
         uniqueUsersList.push(u);
       } else {
         const existing = uniqueUsersList[existingIndex];
-        const isBlocked = typeof u.isBlocked !== 'undefined'
-          ? Boolean(u.isBlocked || u.status === 'blocked')
-          : (u.status !== undefined
-            ? u.status === 'blocked'
-            : Boolean(existing.isBlocked || existing.status === 'blocked'));
+        const isBlocked = u.isBlocked === false
+          ? false
+          : (u.isBlocked === true
+            ? true
+            : (u.status === 'active'
+              ? false
+              : (u.status === 'blocked'
+                ? true
+                : Boolean(existing.isBlocked || existing.status === 'blocked'))));
+        const status = isBlocked ? 'blocked' : 'active';
+        const blockedReason = isBlocked ? (u.blockedReason || existing.blockedReason) : undefined;
         uniqueUsersList[existingIndex] = {
           ...existing,
           ...u,
           isBlocked,
-          status: isBlocked ? 'blocked' : (u.status || existing.status || 'active'),
-          blockedReason: isBlocked ? (u.blockedReason || existing.blockedReason) : undefined,
+          status,
+          blockedReason,
         };
       }
     });
@@ -352,51 +362,14 @@ export const isUserBlockedInDirectory = (userOrQuery: User | string | null | und
     return { isBlocked: true, reason: deleteCheck.reason };
   }
 
-  const allUsers = getAllDirectoryUsers();
-  let searchTokens: string[] = [];
-
+  let matchingUser: User | undefined;
   if (typeof userOrQuery === 'string') {
-    const q = userOrQuery.toLowerCase().trim();
-    if (!q) return { isBlocked: false };
-    searchTokens.push(q);
-    if (q.includes('@')) {
-      searchTokens.push(q.split('@')[0]);
-    }
+    matchingUser = findUserInDirectory(userOrQuery);
   } else if (typeof userOrQuery === 'object') {
-    if (userOrQuery.id) searchTokens.push(userOrQuery.id.toLowerCase().trim());
-    if ((userOrQuery as unknown as { _id?: string })._id) {
-      searchTokens.push(String((userOrQuery as unknown as { _id?: string })._id).toLowerCase().trim());
-    }
-    if (userOrQuery.email) {
-      const email = userOrQuery.email.toLowerCase().trim();
-      searchTokens.push(email);
-      if (email.includes('@')) searchTokens.push(email.split('@')[0]);
-    }
-    if (userOrQuery.username) searchTokens.push(userOrQuery.username.toLowerCase().trim());
-    if (userOrQuery.rollNo) searchTokens.push(userOrQuery.rollNo.toLowerCase().trim());
-    if (userOrQuery.studentId) searchTokens.push(userOrQuery.studentId.toLowerCase().trim());
-    if (userOrQuery.employeeId) searchTokens.push(userOrQuery.employeeId.toLowerCase().trim());
-    if (userOrQuery.name) searchTokens.push(userOrQuery.name.toLowerCase().trim());
+    const q = userOrQuery.id || userOrQuery.email || userOrQuery.username || userOrQuery.rollNo || userOrQuery.studentId || userOrQuery.employeeId;
+    if (q) matchingUser = findUserInDirectory(q);
+    if (!matchingUser) matchingUser = userOrQuery;
   }
-
-  searchTokens = Array.from(new Set(searchTokens.filter(Boolean)));
-
-  const matchingUser = allUsers.find((u) => {
-    const uEmail = u.email?.toLowerCase().trim() || '';
-    const uTokens = [
-      u.id?.toLowerCase().trim(),
-      (u as unknown as { _id?: string })._id ? String((u as unknown as { _id?: string })._id).toLowerCase().trim() : '',
-      uEmail,
-      uEmail.includes('@') ? uEmail.split('@')[0] : '',
-      u.username?.toLowerCase().trim(),
-      u.rollNo?.toLowerCase().trim(),
-      u.studentId?.toLowerCase().trim(),
-      u.employeeId?.toLowerCase().trim(),
-      u.name?.toLowerCase().trim(),
-    ].filter(Boolean);
-
-    return searchTokens.some((token) => uTokens.includes(token));
-  });
 
   if (matchingUser) {
     if (matchingUser.isBlocked || matchingUser.status === 'blocked') {

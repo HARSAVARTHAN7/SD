@@ -91,8 +91,9 @@ export const AuthPage: React.FC = () => {
           setTeacherError('');
           setAdminError('');
         } else {
-          if (studentUsername && !isUserBlockedInDirectory(studentUsername).isBlocked) setStudentError('');
-          if (teacherUsername && !isUserBlockedInDirectory(teacherUsername).isBlocked) setTeacherError('');
+          if (!studentUsername || !isUserBlockedInDirectory(studentUsername).isBlocked) setStudentError('');
+          if (!teacherUsername || !isUserBlockedInDirectory(teacherUsername).isBlocked) setTeacherError('');
+          if (!adminEmail || !isUserBlockedInDirectory(adminEmail).isBlocked) setAdminError('');
         }
       } catch {}
     };

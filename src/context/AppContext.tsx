@@ -400,12 +400,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const key = u.id || u.email;
             if (key) {
               const existing = userMap.get(key);
-              const isBlocked = typeof u.isBlocked !== 'undefined'
-                ? Boolean(u.isBlocked || u.status === 'blocked')
-                : (u.status !== undefined
-                  ? u.status === 'blocked'
-                  : Boolean(existing?.isBlocked || existing?.status === 'blocked'));
-              const status = isBlocked ? 'blocked' : (u.status || existing?.status || 'active');
+              const isBlocked = u.isBlocked === false
+                ? false
+                : (u.isBlocked === true
+                  ? true
+                  : (u.status === 'active'
+                    ? false
+                    : (u.status === 'blocked'
+                      ? true
+                      : Boolean(existing?.isBlocked || existing?.status === 'blocked'))));
+              const status: 'active' | 'blocked' = isBlocked ? 'blocked' : 'active';
               const blockedReason = isBlocked ? (u.blockedReason || existing?.blockedReason) : undefined;
               userMap.set(key, { ...existing, ...u, isBlocked, status, blockedReason });
             }
@@ -462,12 +466,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           prev.forEach((u) => userMap.set(u.id, u));
           dbUsers.forEach((u) => {
             const existing = userMap.get(u.id);
-            const isBlocked = typeof u.isBlocked !== 'undefined'
-              ? Boolean(u.isBlocked || u.status === 'blocked')
-              : (u.status !== undefined
-                ? u.status === 'blocked'
-                : Boolean(existing?.isBlocked || existing?.status === 'blocked'));
-            const status = isBlocked ? 'blocked' : (u.status || existing?.status || 'active');
+            const isBlocked = u.isBlocked === false
+              ? false
+              : (u.isBlocked === true
+                ? true
+                : (u.status === 'active'
+                  ? false
+                  : (u.status === 'blocked'
+                    ? true
+                    : Boolean(existing?.isBlocked || existing?.status === 'blocked'))));
+            const status: 'active' | 'blocked' = isBlocked ? 'blocked' : 'active';
             const blockedReason = isBlocked ? (u.blockedReason || existing?.blockedReason) : undefined;
 
             userMap.set(u.id, {
@@ -725,11 +733,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                           u.email === serverUser.email,
                       );
                       if (localMatch) {
+                        const isBlocked = localMatch.isBlocked === false
+                          ? false
+                          : (localMatch.isBlocked === true
+                            ? true
+                            : (localMatch.status === 'active'
+                              ? false
+                              : (localMatch.status === 'blocked'
+                                ? true
+                                : Boolean(serverUser.isBlocked || serverUser.status === 'blocked'))));
+                        const status: 'active' | 'blocked' = isBlocked ? 'blocked' : 'active';
+                        const blockedReason = isBlocked ? (localMatch.blockedReason || serverUser.blockedReason) : undefined;
+
                         return {
                           ...serverUser,
-                          isBlocked: localMatch.isBlocked !== undefined ? localMatch.isBlocked : serverUser.isBlocked,
-                          status: localMatch.status || serverUser.status,
-                          blockedReason: localMatch.blockedReason || serverUser.blockedReason,
+                          ...localMatch,
+                          isBlocked,
+                          status,
+                          blockedReason,
                           password: localMatch.password || serverUser.password,
                         };
                       }
@@ -1081,12 +1102,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           (targetName && uName === targetName);
 
         if (isMatch) {
+          const isBlocked = updated.isBlocked === false
+            ? false
+            : (updated.isBlocked === true
+              ? true
+              : (updated.status === 'active'
+                ? false
+                : (updated.status === 'blocked'
+                  ? true
+                  : Boolean(u.isBlocked || u.status === 'blocked'))));
+          const status: 'active' | 'blocked' = isBlocked ? 'blocked' : 'active';
+          const blockedReason = isBlocked ? (updated.blockedReason || u.blockedReason || 'Account Blocked: Administrative suspension by institutional authority. Access denied.') : undefined;
+
           return {
             ...u,
             ...updated,
-            isBlocked: updated.isBlocked,
-            status: updated.status,
-            blockedReason: updated.blockedReason,
+            isBlocked,
+            status,
+            blockedReason,
           };
         }
         return u;
@@ -1095,7 +1128,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         dbService.putMany(STORES.USERS, nextUsers);
         localStorage.setItem('eduportal_all_users', JSON.stringify(nextUsers));
-        if (!updated.isBlocked) {
+        if (!updated.isBlocked && updated.status !== 'blocked') {
           localStorage.removeItem('eduportal_blocked_reason');
         }
         window.dispatchEvent(new CustomEvent('user:blocked', { detail: updated }));
