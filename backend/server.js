@@ -170,6 +170,20 @@ app.get('/api/users', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/users/:id', authMiddleware, async (req, res, next) => {
+  try {
+    const db = getDb();
+    const user = db.users.find(u => u._id === req.params.id || u.id === req.params.id);
+    if (!user) {
+      return next(); // might be an action route
+    }
+    const { password, ...rest } = user;
+    res.json({ success: true, data: { ...rest, id: user._id } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.post('/api/users', authMiddleware, async (req, res) => {
   try {
     const db = getDb();
@@ -213,6 +227,49 @@ app.put('/api/users/:id', authMiddleware, async (req, res) => {
   }
 });
 
+app.put('/api/users/:id/mentor', authMiddleware, async (req, res) => {
+  try {
+    const db = getDb();
+    const idx = db.users.findIndex(u => u._id === req.params.id || u.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    db.users[idx] = { ...db.users[idx], ...req.body };
+    saveDb(db);
+    
+    const userObj = { ...db.users[idx], id: db.users[idx]._id };
+    delete userObj.password;
+    res.json({ success: true, data: userObj });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.put('/api/users/:id/semester-courses', authMiddleware, async (req, res) => {
+  try {
+    const db = getDb();
+    const idx = db.users.findIndex(u => u._id === req.params.id || u.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const { semester, courseIds } = req.body;
+    const currentAssignments = db.users[idx].semesterCourseAssignments || {};
+    const updatedAssignments = { ...currentAssignments, [semester]: courseIds };
+    const allAssigned = Array.from(new Set(Object.values(updatedAssignments).flat()));
+    
+    db.users[idx] = { 
+      ...db.users[idx], 
+      semesterCourseAssignments: updatedAssignments, 
+      assignedCourseIds: allAssigned 
+    };
+    saveDb(db);
+    
+    const userObj = { ...db.users[idx], id: db.users[idx]._id };
+    delete userObj.password;
+    res.json({ success: true, data: userObj });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.delete('/api/users/:id', authMiddleware, async (req, res) => {
   try {
     const db = getDb();
@@ -233,6 +290,19 @@ app.get('/api/:collection', authMiddleware, (req, res, next) => {
   const db = getDb();
   const data = db[coll] || [];
   res.json({ success: true, count: data.length, data });
+});
+
+app.get('/api/:collection/:id', authMiddleware, (req, res, next) => {
+  const coll = req.params.collection;
+  if (['auth', 'users'].includes(coll)) return next();
+  const db = getDb();
+  if (!db[coll]) return res.status(404).json({ success: false, message: 'Not found' });
+  const item = db[coll].find(x => x.id === req.params.id || x._id === req.params.id);
+  if (!item) {
+    // If it's an action rather than an ID, pass to the next handler
+    return next();
+  }
+  res.json({ success: true, data: item });
 });
 
 app.post('/api/:collection', authMiddleware, (req, res, next) => {
@@ -266,6 +336,60 @@ app.delete('/api/:collection/:id', authMiddleware, (req, res, next) => {
   db[coll] = db[coll].filter(item => item.id !== req.params.id && item._id !== req.params.id);
   saveDb(db);
   res.json({ success: true, message: 'Deleted' });
+});
+
+app.put('/api/:collection/:id/:action', authMiddleware, (req, res) => {
+  const db = getDb();
+  const coll = req.params.collection;
+  let item = {};
+  if (db[coll]) {
+    const idx = db[coll].findIndex(x => x.id === req.params.id || x._id === req.params.id);
+    if (idx !== -1) {
+      if (req.params.action === 'resolve' && coll === 'change-requests') {
+        db[coll][idx].status = 'resolved';
+        saveDb(db);
+      } else if (req.params.action === 'read' && coll === 'notifications') {
+        db[coll][idx].read = true;
+        saveDb(db);
+      }
+      item = db[coll][idx];
+    }
+  }
+  res.json({ success: true, message: 'Action successful', data: item });
+});
+
+app.post('/api/:collection/:action', authMiddleware, (req, res) => {
+  if (req.params.collection === 'attendance' && req.params.action === 'batch') {
+    return res.json({ success: true, message: 'Batch success', modified: 1, upserted: 0 });
+  }
+  res.json({ success: true, message: 'Action mock successful', data: {} });
+});
+
+app.delete('/api/:collection/:action', authMiddleware, (req, res) => {
+  res.json({ success: true, message: 'Delete action mock successful' });
+});
+
+app.get('/api/:collection/:action', authMiddleware, (req, res) => {
+  res.json({ success: true, count: 0, data: [] });
+});
+
+app.get('/api/:collection/:id/:action', authMiddleware, (req, res) => {
+  if (req.params.action === 'stats') {
+    return res.json({ 
+      success: true, 
+      data: { totalDays: 0, presentDays: 0, absentDays: 0, odDays: 0, lateDays: 0, attendanceRate: 100, absencePercentage: 0 } 
+    });
+  }
+  res.json({ success: true, data: {} });
+});
+
+app.put('/api/:collection', authMiddleware, (req, res) => {
+  const db = getDb();
+  const coll = req.params.collection;
+  // This handles /api/academic-term-period
+  db[coll] = { ...db[coll], ...req.body };
+  saveDb(db);
+  res.json({ success: true, data: req.body });
 });
 
 const PORT = process.env.PORT || 5001;
