@@ -4,7 +4,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 
 if (typeof window !== 'undefined' && pdfjsLib && 'GlobalWorkerOptions' in pdfjsLib) {
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '4.0.379'}/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '4.0.379'}/pdf.worker.min.js`;
   } catch (e) {
     // Ignore worker setup error fallback
   }
