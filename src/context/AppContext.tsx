@@ -580,7 +580,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
 
-  // Auto-recover soft-deleted default users (e.g. ram.cs23) into deletedUsers if missing from both lists
+  // Auto-recover soft-deleted default users
   useEffect(() => {
     try {
       const purgedRaw = localStorage.getItem('eduportal_purged_users');
@@ -606,6 +606,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Error syncing missing deleted users:', e);
     }
   }, [allUsers, deletedUsers]);
+
+  // Sync profile updates to allUsers
+  useEffect(() => {
+    const handleProfileUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const updatedUser = customEvent.detail;
+      if (updatedUser) {
+        setAllUsers(prev => {
+          const newUsers = [...prev];
+          const idx = newUsers.findIndex(u => u.id === updatedUser.id || u._id === updatedUser.id || u._id === updatedUser._id);
+          if (idx !== -1) {
+            newUsers[idx] = { ...newUsers[idx], ...updatedUser };
+          }
+          return newUsers;
+        });
+      }
+    };
+    window.addEventListener('user:updated', handleProfileUpdate);
+    return () => window.removeEventListener('user:updated', handleProfileUpdate);
+  }, []);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(false);

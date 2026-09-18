@@ -738,21 +738,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProfile = async (updatedData: Partial<User>) => {
+    let newUserData = user ? { ...user, ...updatedData } : null;
+    
     if (user) {
-      const newUserData = { ...user, ...updatedData };
       setUser(newUserData);
       try {
         dbService.put(STORES.USERS, newUserData);
         localStorage.setItem('eduportal_user', JSON.stringify(newUserData));
         const savedUsersRaw = localStorage.getItem('eduportal_all_users');
         const savedUsers: User[] = savedUsersRaw ? JSON.parse(savedUsersRaw) : [...DEFAULT_PRESET_USERS];
-        const index = savedUsers.findIndex((u) => u.id === newUserData.id || (u.email && u.email.toLowerCase() === newUserData.email.toLowerCase()));
+        const index = savedUsers.findIndex((u) => u.id === newUserData!.id || (u.email && u.email.toLowerCase() === newUserData!.email.toLowerCase()));
         if (index !== -1) {
-          savedUsers[index] = newUserData;
+          savedUsers[index] = newUserData!;
         } else {
-          savedUsers.push(newUserData);
+          savedUsers.push(newUserData!);
         }
         localStorage.setItem('eduportal_all_users', JSON.stringify(savedUsers));
+        window.dispatchEvent(new CustomEvent('user:updated', { detail: newUserData }));
       } catch (e) {
         console.warn('Failed to save updated user to dbService:', e);
       }
@@ -762,6 +764,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data } = await AuthAPI.updateProfile(updatedData);
       if (data.success && data.user) {
         setUser(data.user);
+        window.dispatchEvent(new CustomEvent('user:updated', { detail: data.user }));
         try {
           localStorage.setItem('eduportal_user', JSON.stringify(data.user));
         } catch {}
